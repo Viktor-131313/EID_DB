@@ -1,0 +1,152 @@
+import React, { useState, useEffect, useRef } from 'react';
+import './Dashboard.css';
+import SummaryCards from './SummaryCards';
+import Container from './Container';
+import StatisticsWidget from './StatisticsWidget';
+import DevelopmentTasks from './DevelopmentTasks';
+import { updateContainer } from '../services/api-containers';
+import { exportDashboardToPDF } from '../utils/pdfExport';
+
+const Dashboard = ({ containers, globalStats, loading, onContainerUpdate }) => {
+  const currentDate = new Date().toLocaleDateString('ru-RU', {
+    day: 'numeric',
+    month: 'long',
+    year: 'numeric'
+  });
+
+  const [isEditingMainTitle, setIsEditingMainTitle] = useState(false);
+  const [mainTitle, setMainTitle] = useState('Объекты');
+  const [statisticsExpanded, setStatisticsExpanded] = useState(false);
+  const [statisticsData, setStatisticsData] = useState(null);
+  const dashboardRef = useRef(null);
+
+  useEffect(() => {
+    // Сохраняем заголовок в localStorage
+    const saved = localStorage.getItem('mainTitle');
+    if (saved) {
+      setMainTitle(saved);
+    }
+  }, []);
+
+  const handleMainTitleDoubleClick = () => {
+    setIsEditingMainTitle(true);
+  };
+
+  const handleMainTitleKeyPress = (e) => {
+    if (e.key === 'Enter') {
+      e.preventDefault();
+      localStorage.setItem('mainTitle', mainTitle);
+      setIsEditingMainTitle(false);
+    } else if (e.key === 'Escape') {
+      const saved = localStorage.getItem('mainTitle') || 'Объекты';
+      setMainTitle(saved);
+      setIsEditingMainTitle(false);
+    }
+  };
+
+  const handleMainTitleBlur = () => {
+    localStorage.setItem('mainTitle', mainTitle);
+    setIsEditingMainTitle(false);
+  };
+
+  const handleExportPDF = async () => {
+    if (!dashboardRef.current) {
+      alert('Ошибка: не удалось найти элемент для экспорта');
+      return;
+    }
+
+    try {
+      await exportDashboardToPDF(dashboardRef.current, statisticsData, 1);
+    } catch (error) {
+      console.error('Error exporting PDF:', error);
+      alert('Ошибка при экспорте в PDF: ' + error.message);
+    }
+  };
+
+  if (loading) {
+    return (
+      <div className="container">
+        <div className="loading">Загрузка данных...</div>
+      </div>
+    );
+  }
+
+  return (
+    <div className="dashboard-container" ref={dashboardRef}>
+      <div className="container">
+        <div className="header">
+          <div className="logo">
+            <div className="logo-icon">
+              <img src="/favicon.png" alt="Logo" className="logo-image" />
+            </div>
+            <div className="logo-text">
+              <h1>Praktis ID - Пилотные объекты</h1>
+              <p>Мониторинг внедрения электронной исполнительной документации</p>
+            </div>
+          </div>
+              <div style={{ display: 'flex', alignItems: 'center', gap: '15px' }}>
+                <div className="date-display">
+                  <i className="far fa-calendar-alt"></i> {currentDate}
+                </div>
+                <button 
+                  className="btn btn-export-pdf" 
+                  onClick={handleExportPDF}
+                  title="Экспортировать дашборд в PDF"
+                >
+                  <i className="fas fa-file-pdf"></i> Экспорт в PDF
+                </button>
+              </div>
+        </div>
+
+        <SummaryCards stats={globalStats} />
+
+        <StatisticsWidget 
+          expanded={statisticsExpanded}
+          onToggle={() => setStatisticsExpanded(!statisticsExpanded)}
+          onDataChange={setStatisticsData}
+        />
+
+        <div className="dashboard-section">
+          <div className="section-header">
+            {isEditingMainTitle ? (
+              <input
+                type="text"
+                className="main-title-input"
+                value={mainTitle}
+                onChange={(e) => setMainTitle(e.target.value)}
+                onKeyDown={handleMainTitleKeyPress}
+                onBlur={handleMainTitleBlur}
+                autoFocus
+              />
+            ) : (
+              <div
+                className="section-title main-title-editable"
+                onDoubleClick={handleMainTitleDoubleClick}
+                title="Двойной клик для переименования"
+              >
+                <i className="fas fa-list-alt"></i> {mainTitle} ({containers.length})
+              </div>
+            )}
+          </div>
+          <div className="containers-list">
+            {containers.map(container => (
+              <Container
+                key={container.id}
+                container={container}
+                onUpdate={onContainerUpdate}
+              />
+            ))}
+          </div>
+        </div>
+
+        <DevelopmentTasks />
+
+        <div className="footer">
+          Дашборд обновлен: {new Date().toLocaleString('ru-RU')} | Praktis ID Пилот v1.0
+        </div>
+      </div>
+    </div>
+  );
+};
+
+export default Dashboard;

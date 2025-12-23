@@ -1,0 +1,14 @@
+{
+  "containers": [
+    {
+      "id": 1,
+      "name": "Объекты SetlGroup",
+      "objects": []
+    },
+    {
+      "id": 3,
+      "name": "Объекты ГСН",
+      "objects": []
+    }
+  ]
+}
