@@ -1,8 +1,8 @@
 name: Wake Up Render
 on:
   schedule:
-    - cron: '*/13 * * * *'  # каждые 13 минут
-  workflow_dispatch:  # для ручного запуска
+    - cron: '*/13 * * * *'  # КАВЫЧКИ важны!
+  workflow_dispatch:
 
 jobs:
   ping:
@@ -10,6 +10,5 @@ jobs:
     steps:
       - name: Ping Render App
         run: |
-          curl -s -o /dev/null -w "Status: %{http_code}" \
-          https://eid-praktis-id.onrender.com/
-          echo " - Pinged at $(date)"
+          curl -s https://eid-praktis-id.onrender.com/
+          echo "Pinged at $(date)"
