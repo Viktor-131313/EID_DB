@@ -787,12 +787,13 @@ const createTasksPage = (tasks) => {
     headerRow.style.backgroundColor = '#2c5aa0';
     headerRow.style.color = 'white';
     
-    ['ID', 'Описание', 'Дата обнаружения', 'Статус', 'Планируется устранить'].forEach(text => {
+    ['ID', 'Описание', 'Дата обнаружения', 'Статус', 'Планируется устранить', 'Критичность'].forEach((text, index) => {
       const th = document.createElement('th');
       th.textContent = text;
       th.style.padding = '12px';
-      th.style.textAlign = 'left';
+      th.style.textAlign = index === 5 ? 'center' : 'left'; // Критичность по центру
       th.style.fontWeight = '600';
+      th.style.verticalAlign = 'middle'; // Выравнивание по вертикали
       headerRow.appendChild(th);
     });
     thead.appendChild(headerRow);
@@ -811,12 +812,14 @@ const createTasksPage = (tasks) => {
       const idCell = document.createElement('td');
       idCell.textContent = `DEV-${task.taskNumber || task.id}`;
       idCell.style.padding = '10px';
+      idCell.style.verticalAlign = 'middle';
       row.appendChild(idCell);
 
       // Описание
       const descCell = document.createElement('td');
       descCell.textContent = task.description || '';
       descCell.style.padding = '10px';
+      descCell.style.verticalAlign = 'middle';
       row.appendChild(descCell);
 
       // Дата обнаружения
@@ -825,12 +828,14 @@ const createTasksPage = (tasks) => {
         ? new Date(task.discoveryDate).toLocaleDateString('ru-RU')
         : '';
       dateCell.style.padding = '10px';
+      dateCell.style.verticalAlign = 'middle';
       row.appendChild(dateCell);
 
       // Статус
       const statusCell = document.createElement('td');
       statusCell.textContent = task.status || '';
       statusCell.style.padding = '10px';
+      statusCell.style.verticalAlign = 'middle';
       row.appendChild(statusCell);
 
       // Планируется устранить
@@ -844,7 +849,63 @@ const createTasksPage = (tasks) => {
         plannedCell.textContent = '-';
       }
       plannedCell.style.padding = '10px';
+      plannedCell.style.verticalAlign = 'middle';
       row.appendChild(plannedCell);
+
+      // Критичность
+      const priorityCell = document.createElement('td');
+      priorityCell.style.padding = '10px';
+      priorityCell.style.textAlign = 'center';
+      priorityCell.style.verticalAlign = 'middle'; // Выравнивание по вертикали
+      
+      const priority = task.priority || 'non-critical';
+      let prioritySymbol = '';
+      let priorityText = '';
+      let priorityColor = '';
+      
+      if (priority === 'critical') {
+        prioritySymbol = '⚠'; // Красный восклицательный знак (Unicode)
+        priorityText = 'Критично';
+        priorityColor = '#e74c3c';
+      } else if (priority === 'non-critical') {
+        prioritySymbol = '⚡'; // Желтый значок (Unicode)
+        priorityText = 'Некритично';
+        priorityColor = '#f39c12';
+      } else if (priority === 'user-request') {
+        prioritySymbol = '💡'; // Зеленая лампочка (Unicode)
+        priorityText = 'Пожелания от пользователей';
+        priorityColor = '#27ae60';
+      } else {
+        prioritySymbol = '⚡';
+        priorityText = 'Некритично';
+        priorityColor = '#f39c12';
+      }
+      
+      // Создаем контейнер для иконки и текста
+      const priorityContainer = document.createElement('div');
+      priorityContainer.style.display = 'flex';
+      priorityContainer.style.alignItems = 'center';
+      priorityContainer.style.justifyContent = 'center';
+      priorityContainer.style.gap = '5px';
+      priorityContainer.style.minHeight = '100%'; // Занимает всю высоту ячейки
+      
+      const priorityIcon = document.createElement('span');
+      priorityIcon.textContent = prioritySymbol;
+      priorityIcon.style.fontSize = '18px';
+      priorityIcon.style.color = priorityColor;
+      priorityIcon.style.lineHeight = '1'; // Убираем лишние отступы
+      priorityContainer.appendChild(priorityIcon);
+      
+      const priorityLabel = document.createElement('span');
+      priorityLabel.textContent = priorityText;
+      priorityLabel.style.fontSize = '11px';
+      priorityLabel.style.color = priorityColor;
+      priorityLabel.style.fontWeight = '600';
+      priorityLabel.style.lineHeight = '1.2';
+      priorityContainer.appendChild(priorityLabel);
+      
+      priorityCell.appendChild(priorityContainer);
+      row.appendChild(priorityCell);
 
       tbody.appendChild(row);
     });

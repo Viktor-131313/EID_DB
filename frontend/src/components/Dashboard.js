@@ -60,21 +60,32 @@ const Dashboard = ({ containers, globalStats, loading, onContainerUpdate, isAuth
     }
 
     try {
-      // Загружаем задачи для экспорта
-      let tasks = [];
-      try {
-        tasks = await fetchTasks();
-      } catch (error) {
-        console.warn('Could not load tasks for PDF export:', error);
-      }
-      
-      await exportDashboardToPDF(
-        dashboardRef.current, 
-        statisticsData, 
-        containers,
-        globalStats,
-        tasks
-      );
+              // Загружаем задачи для экспорта
+              let tasks = [];
+              try {
+                tasks = await fetchTasks();
+                // Сортируем задачи по критичности перед экспортом
+                const priorityOrder = {
+                  'critical': 1,
+                  'non-critical': 2,
+                  'user-request': 3
+                };
+                tasks = tasks.sort((a, b) => {
+                  const priorityA = priorityOrder[a.priority || 'non-critical'] || 2;
+                  const priorityB = priorityOrder[b.priority || 'non-critical'] || 2;
+                  return priorityA - priorityB;
+                });
+              } catch (error) {
+                console.warn('Could not load tasks for PDF export:', error);
+              }
+              
+              await exportDashboardToPDF(
+                dashboardRef.current, 
+                statisticsData, 
+                containers,
+                globalStats,
+                tasks
+              );
     } catch (error) {
       console.error('Error exporting PDF:', error);
       alert('Ошибка при экспорте в PDF: ' + error.message);
