@@ -112,16 +112,18 @@ git push -u origin main
    - **Name:** `praktis-id-dashboard` (или любое другое имя)
    - **Region:** `Frankfurt` (ближайший к России)
    - **Branch:** `main`
-   - **Root Directory:** `ID` (если репозиторий содержит папку ID) или оставьте пустым если код в корне
+   - **Root Directory:** `ID` ⚠️ **ВАЖНО:** Заглавными буквами! (если репозиторий содержит папку ID) или оставьте пустым если код в корне
    - **Runtime:** `Node`
    - **Build Command:** 
      ```bash
      cd backend && npm install && cd ../frontend && npm install && npm run build
      ```
+     ⚠️ **НЕ включайте** префикс промпта терминала (`id/ $`) - только саму команду!
    - **Start Command:**
      ```bash
      cd backend && npm start
      ```
+     ⚠️ **НЕ включайте** префикс промпта терминала (`id/ $`) - только саму команду!
    - **Instance Type:** `Free` (для начала)
 
 5. Нажмите **"Create Web Service"**

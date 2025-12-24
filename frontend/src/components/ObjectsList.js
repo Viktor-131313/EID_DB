@@ -45,10 +45,13 @@ const ObjectsList = ({ objects, onEditObject }) => {
         // Подсчитываем общее количество из массивов СМР
         // Поддержка старого формата данных (числа) для обратной совместимости
         let generated = 0;
+        let generatedTotal = 0;
         if (Array.isArray(obj.generatedActs)) {
           generated = obj.generatedActs.reduce((sum, smr) => sum + (smr.count || 0), 0);
+          generatedTotal = obj.generatedActs.reduce((sum, smr) => sum + (smr.total || 0), 0);
         } else if (typeof obj.generatedActs === 'number') {
           generated = obj.generatedActs;
+          generatedTotal = obj.generatedActs; // Для старого формата принимаем count как total
         }
         
         let sent = 0;
@@ -72,8 +75,17 @@ const ObjectsList = ({ objects, onEditObject }) => {
           rejected = obj.rejectedActs;
         }
 
+        let signed = 0;
+        if (Array.isArray(obj.signedActs)) {
+          signed = obj.signedActs.reduce((sum, smr) => sum + (smr.count || 0), 0);
+        } else if (typeof obj.signedActs === 'number') {
+          signed = obj.signedActs;
+        }
+
+        const generatedPercent = generatedTotal > 0 ? Math.round((generated / generatedTotal) * 100) : 0;
         const sentPercent = generated > 0 ? Math.round((sent / generated) * 100) : 0;
         const approvedPercent = sent > 0 ? Math.round((approved / sent) * 100) : 0;
+        const signedPercent = approved > 0 ? Math.round((signed / approved) * 100) : 0;
 
         return (
           <div
@@ -106,9 +118,22 @@ const ObjectsList = ({ objects, onEditObject }) => {
                 ></div>
               </div>
             </div>
+
+            <div className="progress-container">
+              <div className="progress-label">
+                <span>Подписано</span>
+                <span>{signedPercent}%</span>
+              </div>
+              <div className="progress-bar">
+                <div
+                  className="progress-fill progress-signed"
+                  style={{ width: `${signedPercent}%` }}
+                ></div>
+              </div>
+            </div>
             
             <div className="stats-row">
-              <div className="stat-item">Сгенерировано: {generated}</div>
+              <div className="stat-item">Сгенерировано: {generated} ({generatedPercent}%)</div>
               <div className="stat-item">Отправлено: {sent} ({sentPercent}%)</div>
               <div className="stat-item">Согласовано: {approved} ({approvedPercent}%)</div>
               <div className="stat-item">Отклонено: {rejected}</div>

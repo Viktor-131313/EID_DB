@@ -1,7 +1,7 @@
 import React, { useState, useEffect, useCallback, useRef } from 'react';
 import './ObjectModal.css';
 
-const ObjectModal = ({ object, onSave, onDelete, onClose }) => {
+const ObjectModal = ({ object, onSave, onDelete, onClose, isAuthenticated = false }) => {
   const [formData, setFormData] = useState({
     name: '',
     description: '',
@@ -212,6 +212,7 @@ const ObjectModal = ({ object, onSave, onDelete, onClose }) => {
   };
 
   const handleSMRDoubleClick = (smrId, smrName, listType) => {
+    if (!isAuthenticated) return;
     setEditingSMRId(smrId);
     setEditingSMRName(smrName);
     setEditingSMRList(listType);
@@ -230,6 +231,7 @@ const ObjectModal = ({ object, onSave, onDelete, onClose }) => {
   };
 
   const handleSMRNameKeyPress = (e) => {
+    if (!isAuthenticated) return;
     if (e.key === 'Enter') {
       e.preventDefault();
       saveSMRName();
@@ -281,7 +283,7 @@ const ObjectModal = ({ object, onSave, onDelete, onClose }) => {
   };
 
   const deleteSMR = useCallback((smrId, listType) => {
-    if (!smrId) {
+    if (!isAuthenticated || !smrId) {
       return;
     }
 
@@ -448,6 +450,10 @@ const ObjectModal = ({ object, onSave, onDelete, onClose }) => {
 
   const handleSubmit = (e) => {
     e.preventDefault();
+    if (!isAuthenticated) {
+      onClose();
+      return;
+    }
 
     const totalGenerated = calculateTotalGenerated();
     const totalSent = calculateTotalSent();
@@ -488,10 +494,12 @@ const ObjectModal = ({ object, onSave, onDelete, onClose }) => {
   };
 
   const totalGenerated = calculateTotalGenerated();
+  const totalGeneratedFrom = calculateTotalGeneratedFrom();
   const totalSent = calculateTotalSent();
   const totalApproved = calculateTotalApproved();
   const totalRejected = calculateTotalRejected();
   const totalSigned = calculateTotalSigned();
+  const generatedPercent = totalGeneratedFrom > 0 ? Math.round((totalGenerated / totalGeneratedFrom) * 100) : 0;
 
   // Автоматическое изменение высоты textarea при загрузке
   useEffect(() => {
@@ -505,9 +513,9 @@ const ObjectModal = ({ object, onSave, onDelete, onClose }) => {
   return (
     <div className="modal" onClick={handleBackdropClick}>
       <div className="modal-content object-modal-content">
-        <div className="modal-header">
+          <div className="modal-header">
           <div className="modal-title">
-            {object ? 'Редактировать объект' : 'Добавить новый объект'}
+            {isAuthenticated ? (object ? 'Редактировать объект' : 'Добавить новый объект') : 'Просмотр объекта'}
           </div>
           <button className="close-modal" onClick={onClose}>&times;</button>
         </div>
@@ -523,6 +531,8 @@ const ObjectModal = ({ object, onSave, onDelete, onClose }) => {
               onChange={handleChange}
               placeholder="Например: ПА8-кладка2"
               required
+              disabled={!isAuthenticated}
+              readOnly={!isAuthenticated}
             />
           </div>
 
@@ -536,6 +546,8 @@ const ObjectModal = ({ object, onSave, onDelete, onClose }) => {
               value={formData.description}
               onChange={handleChange}
               placeholder="Например: Корпус 8, ООО «Компонент»"
+              disabled={!isAuthenticated}
+              readOnly={!isAuthenticated}
             />
           </div>
 
@@ -545,6 +557,8 @@ const ObjectModal = ({ object, onSave, onDelete, onClose }) => {
               className="form-textarea form-textarea-auto-resize"
               id="objectStatus"
               name="status"
+              disabled={!isAuthenticated}
+              readOnly={!isAuthenticated}
               value={formData.status}
               onChange={handleChange}
               placeholder="Введите статус объекта..."
@@ -561,7 +575,9 @@ const ObjectModal = ({ object, onSave, onDelete, onClose }) => {
               <div>
                 <i className={`fas fa-chevron-${expandedSections.generated ? 'down' : 'right'}`}></i>
                 <span className="form-section-title">Сгенерированных актов</span>
-                <span className="form-section-count">({totalGenerated} из {calculateTotalGeneratedFrom()})</span>
+                <span className="form-section-count">
+                  ({totalGenerated} из {totalGeneratedFrom} - {generatedPercent}%)
+                </span>
               </div>
             </div>
             
@@ -585,12 +601,13 @@ const ObjectModal = ({ object, onSave, onDelete, onClose }) => {
                       />
                     ) : (
                       <label
-                        className="smr-label smr-label-editable"
-                        onDoubleClick={(e) => {
+                        className={isAuthenticated ? "smr-label smr-label-editable" : "smr-label"}
+                        onDoubleClick={isAuthenticated ? (e) => {
                           e.stopPropagation();
                           handleSMRDoubleClick(smr.id, smr.name, 'generated');
-                        }}
-                        title="Двойной клик для переименования, Delete для удаления"
+                        } : undefined}
+                        title={isAuthenticated ? "Двойной клик для переименования, Delete для удаления" : ""}
+                        style={{ cursor: isAuthenticated ? 'pointer' : 'default' }}
                       >
                         {smr.name}
                       </label>
@@ -604,6 +621,8 @@ const ObjectModal = ({ object, onSave, onDelete, onClose }) => {
                       min="0"
                       max={smr.total || undefined}
                       placeholder="Сколько"
+                      disabled={!isAuthenticated}
+                      readOnly={!isAuthenticated}
                     />
                     <span className="smr-input-separator">из</span>
                     <input
@@ -614,32 +633,36 @@ const ObjectModal = ({ object, onSave, onDelete, onClose }) => {
                       onClick={(e) => e.stopPropagation()}
                       min="0"
                       placeholder="Из скольки"
+                      disabled={!isAuthenticated}
+                      readOnly={!isAuthenticated}
                     />
                   </div>
                 ))}
                 
-                <div className="smr-add">
-                  <input
-                    type="text"
-                    className="smr-name-input"
-                    placeholder="Название СМР"
-                    value={newSMRName}
-                    onChange={(e) => setNewSMRName(e.target.value)}
-                    onKeyPress={(e) => {
-                      if (e.key === 'Enter') {
-                        e.preventDefault();
-                        addNewSMR();
-                      }
-                    }}
-                  />
-                  <button
-                    type="button"
-                    className="btn-add-smr"
-                    onClick={addNewSMR}
-                  >
-                    <i className="fas fa-plus"></i> Добавить СМР
-                  </button>
-                </div>
+                {isAuthenticated && (
+                  <div className="smr-add">
+                    <input
+                      type="text"
+                      className="smr-name-input"
+                      placeholder="Название СМР"
+                      value={newSMRName}
+                      onChange={(e) => setNewSMRName(e.target.value)}
+                      onKeyPress={(e) => {
+                        if (e.key === 'Enter') {
+                          e.preventDefault();
+                          addNewSMR();
+                        }
+                      }}
+                    />
+                    <button
+                      type="button"
+                      className="btn-add-smr"
+                      onClick={addNewSMR}
+                    >
+                      <i className="fas fa-plus"></i> Добавить СМР
+                    </button>
+                  </div>
+                )}
               </div>
             )}
           </div>
@@ -679,25 +702,28 @@ const ObjectModal = ({ object, onSave, onDelete, onClose }) => {
                         />
                       ) : (
                         <label
-                          className="smr-label smr-label-editable"
-                          onDoubleClick={(e) => {
+                          className={isAuthenticated ? "smr-label smr-label-editable" : "smr-label"}
+                          onDoubleClick={isAuthenticated ? (e) => {
                             e.stopPropagation();
                             handleSMRDoubleClick(smr.id, smr.name, 'sent');
-                          }}
-                          title="Двойной клик для переименования, Delete для удаления"
+                          } : undefined}
+                          title={isAuthenticated ? "Двойной клик для переименования, Delete для удаления" : ""}
+                          style={{ cursor: isAuthenticated ? 'pointer' : 'default' }}
                         >
                           {smr.name}
                         </label>
                       )}
-                      <input
-                        type="number"
-                        className="smr-input"
-                        value={smr.count}
-                        onChange={(e) => updateSentCount(smr.id, e.target.value)}
-                        onClick={(e) => e.stopPropagation()}
-                        min="0"
-                        max={maxCount}
-                      />
+                    <input
+                      type="number"
+                      className="smr-input"
+                      value={smr.count}
+                      onChange={(e) => updateSentCount(smr.id, e.target.value)}
+                      onClick={(e) => e.stopPropagation()}
+                      min="0"
+                      max={maxCount}
+                      disabled={!isAuthenticated}
+                      readOnly={!isAuthenticated}
+                    />
                       {maxCount > 0 && (
                         <span className="smr-max-hint">(макс: {maxCount})</span>
                       )}
@@ -748,12 +774,13 @@ const ObjectModal = ({ object, onSave, onDelete, onClose }) => {
                         />
                       ) : (
                         <label
-                          className="smr-label smr-label-editable"
-                          onDoubleClick={(e) => {
+                          className={isAuthenticated ? "smr-label smr-label-editable" : "smr-label"}
+                          onDoubleClick={isAuthenticated ? (e) => {
                             e.stopPropagation();
                             handleSMRDoubleClick(smr.id, smr.name, 'approved');
-                          }}
-                          title="Двойной клик для переименования, Delete для удаления"
+                          } : undefined}
+                          title={isAuthenticated ? "Двойной клик для переименования, Delete для удаления" : ""}
+                          style={{ cursor: isAuthenticated ? 'pointer' : 'default' }}
                         >
                           {smr.name}
                         </label>
@@ -766,6 +793,8 @@ const ObjectModal = ({ object, onSave, onDelete, onClose }) => {
                         onClick={(e) => e.stopPropagation()}
                         min="0"
                         max={maxCount}
+                        disabled={!isAuthenticated}
+                        readOnly={!isAuthenticated}
                       />
                       {maxCount > 0 && (
                         <span className="smr-max-hint">(макс: {maxCount})</span>
@@ -817,12 +846,13 @@ const ObjectModal = ({ object, onSave, onDelete, onClose }) => {
                         />
                       ) : (
                         <label
-                          className="smr-label smr-label-editable"
-                          onDoubleClick={(e) => {
+                          className={isAuthenticated ? "smr-label smr-label-editable" : "smr-label"}
+                          onDoubleClick={isAuthenticated ? (e) => {
                             e.stopPropagation();
                             handleSMRDoubleClick(smr.id, smr.name, 'rejected');
-                          }}
-                          title="Двойной клик для переименования, Delete для удаления"
+                          } : undefined}
+                          title={isAuthenticated ? "Двойной клик для переименования, Delete для удаления" : ""}
+                          style={{ cursor: isAuthenticated ? 'pointer' : 'default' }}
                         >
                           {smr.name}
                         </label>
@@ -835,6 +865,8 @@ const ObjectModal = ({ object, onSave, onDelete, onClose }) => {
                         onClick={(e) => e.stopPropagation()}
                         min="0"
                         max={maxCount}
+                        disabled={!isAuthenticated}
+                        readOnly={!isAuthenticated}
                       />
                       {maxCount > 0 && (
                         <span className="smr-max-hint">(макс: {maxCount})</span>
@@ -886,12 +918,13 @@ const ObjectModal = ({ object, onSave, onDelete, onClose }) => {
                         />
                       ) : (
                         <label
-                          className="smr-label smr-label-editable"
-                          onDoubleClick={(e) => {
+                          className={isAuthenticated ? "smr-label smr-label-editable" : "smr-label"}
+                          onDoubleClick={isAuthenticated ? (e) => {
                             e.stopPropagation();
                             handleSMRDoubleClick(smr.id, smr.name, 'signed');
-                          }}
-                          title="Двойной клик для переименования, Delete для удаления"
+                          } : undefined}
+                          title={isAuthenticated ? "Двойной клик для переименования, Delete для удаления" : ""}
+                          style={{ cursor: isAuthenticated ? 'pointer' : 'default' }}
                         >
                           {smr.name}
                         </label>
@@ -904,6 +937,8 @@ const ObjectModal = ({ object, onSave, onDelete, onClose }) => {
                         onClick={(e) => e.stopPropagation()}
                         min="0"
                         max={maxCount}
+                        disabled={!isAuthenticated}
+                        readOnly={!isAuthenticated}
                       />
                       {maxCount > 0 && (
                         <span className="smr-max-hint">(макс: {maxCount})</span>
@@ -948,34 +983,61 @@ const ObjectModal = ({ object, onSave, onDelete, onClose }) => {
                         }));
                       }}
                       placeholder="ФИО сотрудника"
+                      disabled={!isAuthenticated}
+                      readOnly={!isAuthenticated}
+                    />
+                    {isAuthenticated && (
+                      <button
+                        type="button"
+                        className="btn-remove-factor"
+                        onClick={() => {
+                          const updated = formData.blockingFactors.filter((_, i) => i !== index);
+                          setFormData(prev => ({
+                            ...prev,
+                            blockingFactors: updated
+                          }));
+                        }}
+                      >
+                        <i className="fas fa-times"></i>
+                      </button>
+                    )}
+                  </div>
+                ))}
+                {isAuthenticated && (
+                  <div className="blocking-factor-add">
+                    <input
+                      type="text"
+                      className="blocking-factor-input"
+                      value={newEmployeeName}
+                      onChange={(e) => setNewEmployeeName(e.target.value)}
+                      onKeyPress={(e) => {
+                        if (e.key === 'Enter') {
+                          e.preventDefault();
+                          const employeeName = newEmployeeName.trim();
+                          if (employeeName) {
+                            console.log('Adding employee via Enter:', employeeName);
+                            console.log('Current blockingFactors before add:', formData.blockingFactors);
+                            setFormData(prev => {
+                              const updated = {
+                                ...prev,
+                                blockingFactors: [...(prev.blockingFactors || []), employeeName]
+                              };
+                              console.log('Updated blockingFactors after add:', updated.blockingFactors);
+                              return updated;
+                            });
+                            setNewEmployeeName('');
+                          }
+                        }
+                      }}
+                      placeholder="Введите ФИО сотрудника"
                     />
                     <button
                       type="button"
-                      className="btn-remove-factor"
+                      className="btn-add-factor"
                       onClick={() => {
-                        const updated = formData.blockingFactors.filter((_, i) => i !== index);
-                        setFormData(prev => ({
-                          ...prev,
-                          blockingFactors: updated
-                        }));
-                      }}
-                    >
-                      <i className="fas fa-times"></i>
-                    </button>
-                  </div>
-                ))}
-                <div className="blocking-factor-add">
-                  <input
-                    type="text"
-                    className="blocking-factor-input"
-                    value={newEmployeeName}
-                    onChange={(e) => setNewEmployeeName(e.target.value)}
-                    onKeyPress={(e) => {
-                      if (e.key === 'Enter') {
-                        e.preventDefault();
                         const employeeName = newEmployeeName.trim();
                         if (employeeName) {
-                          console.log('Adding employee via Enter:', employeeName);
+                          console.log('Adding employee via button:', employeeName);
                           console.log('Current blockingFactors before add:', formData.blockingFactors);
                           setFormData(prev => {
                             const updated = {
@@ -987,52 +1049,35 @@ const ObjectModal = ({ object, onSave, onDelete, onClose }) => {
                           });
                           setNewEmployeeName('');
                         }
-                      }
-                    }}
-                    placeholder="Введите ФИО сотрудника"
-                  />
-                  <button
-                    type="button"
-                    className="btn-add-factor"
-                    onClick={() => {
-                      const employeeName = newEmployeeName.trim();
-                      if (employeeName) {
-                        console.log('Adding employee via button:', employeeName);
-                        console.log('Current blockingFactors before add:', formData.blockingFactors);
-                        setFormData(prev => {
-                          const updated = {
-                            ...prev,
-                            blockingFactors: [...(prev.blockingFactors || []), employeeName]
-                          };
-                          console.log('Updated blockingFactors after add:', updated.blockingFactors);
-                          return updated;
-                        });
-                        setNewEmployeeName('');
-                      }
-                    }}
-                  >
-                    <i className="fas fa-plus"></i>
-                  </button>
-                </div>
+                      }}
+                    >
+                      <i className="fas fa-plus"></i>
+                    </button>
+                  </div>
+                )}
               </div>
             </div>
           </div>
 
           <div className="actions-row">
-            <div>
-              {object && (
-                <button type="button" className="btn btn-danger" onClick={handleDelete}>
-                  <i className="fas fa-trash"></i> Удалить объект
+            {isAuthenticated && (
+              <div>
+                {object && (
+                  <button type="button" className="btn btn-danger" onClick={handleDelete}>
+                    <i className="fas fa-trash"></i> Удалить объект
+                  </button>
+                )}
+              </div>
+            )}
+            <div style={{ display: 'flex', gap: '10px', marginLeft: 'auto' }}>
+              <button type="button" className="btn" onClick={onClose}>
+                {isAuthenticated ? 'Отмена' : 'Закрыть'}
+              </button>
+              {isAuthenticated && (
+                <button type="submit" className="btn">
+                  {object ? 'Сохранить изменения' : 'Добавить объект'}
                 </button>
               )}
-            </div>
-            <div style={{ display: 'flex', gap: '10px' }}>
-              <button type="button" className="btn" onClick={onClose}>
-                Отмена
-              </button>
-              <button type="submit" className="btn">
-                {object ? 'Сохранить изменения' : 'Добавить объект'}
-              </button>
             </div>
           </div>
         </form>

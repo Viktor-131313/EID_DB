@@ -2,7 +2,7 @@ import React, { useState, useEffect } from 'react';
 import './DevelopmentTasks.css';
 import { fetchTasks, createTask, updateTask, deleteTask } from '../services/api-tasks';
 
-const DevelopmentTasks = () => {
+const DevelopmentTasks = ({ isAuthenticated = false }) => {
   const [tasks, setTasks] = useState([]);
   const [loading, setLoading] = useState(true);
   const [filterStatus, setFilterStatus] = useState('all');
@@ -59,6 +59,7 @@ const DevelopmentTasks = () => {
   };
 
   const handleKeyDown = async (e, taskId) => {
+    if (!isAuthenticated) return;
     if (e.key === 'Delete' && !e.ctrlKey && !e.altKey && !e.shiftKey) {
       // Проверяем, не в поле ввода ли мы
       if (e.target.tagName === 'INPUT' || e.target.tagName === 'SELECT' || e.target.tagName === 'TEXTAREA') {
@@ -70,6 +71,7 @@ const DevelopmentTasks = () => {
   };
 
   const handleFieldEdit = (taskId, field, currentValue) => {
+    if (!isAuthenticated) return;
     setEditingField({ taskId, field });
     setEditingValue(currentValue || '');
   };
@@ -198,9 +200,10 @@ const DevelopmentTasks = () => {
                 <td>{task.description}</td>
                 <td>{new Date(task.discoveryDate).toLocaleDateString('ru-RU')}</td>
                 <td 
-                  onClick={() => !editingField && handleFieldEdit(task.id, 'status', task.status)}
-                  className="editable-cell"
-                  title="Кликните для редактирования"
+                  onClick={() => isAuthenticated && !editingField && handleFieldEdit(task.id, 'status', task.status)}
+                  className={isAuthenticated ? "editable-cell" : ""}
+                  title={isAuthenticated ? "Кликните для редактирования" : ""}
+                  style={{ cursor: isAuthenticated ? 'pointer' : 'default' }}
                 >
                   {editingField && editingField.taskId === task.id && editingField.field === 'status' ? (
                     <select
@@ -239,9 +242,10 @@ const DevelopmentTasks = () => {
                   )}
                 </td>
                 <td 
-                  onClick={() => !editingField && handleFieldEdit(task.id, 'plannedFix', `${task.plannedFixMonth || ''}/${task.plannedFixYear || ''}`)}
-                  className="editable-cell"
-                  title="Кликните для редактирования"
+                  onClick={() => isAuthenticated && !editingField && handleFieldEdit(task.id, 'plannedFix', `${task.plannedFixMonth || ''}/${task.plannedFixYear || ''}`)}
+                  className={isAuthenticated ? "editable-cell" : ""}
+                  title={isAuthenticated ? "Кликните для редактирования" : ""}
+                  style={{ cursor: isAuthenticated ? 'pointer' : 'default' }}
                 >
                   {editingField && editingField.taskId === task.id && editingField.field === 'plannedFix' ? (
                     <div className="planned-fix-edit" onClick={(e) => e.stopPropagation()}>
@@ -292,20 +296,24 @@ const DevelopmentTasks = () => {
                   )}
                 </td>
                 <td>
-                  <button 
-                    className="btn-edit-task" 
-                    onClick={() => handleEditTask(task)}
-                    title="Редактировать"
-                  >
-                    <i className="fas fa-edit"></i>
-                  </button>
-                  <button 
-                    className="btn-delete-task" 
-                    onClick={() => handleDeleteTask(task.id)}
-                    title="Удалить (или нажмите Delete)"
-                  >
-                    <i className="fas fa-trash"></i>
-                  </button>
+                  {isAuthenticated && (
+                    <>
+                      <button 
+                        className="btn-edit-task" 
+                        onClick={() => handleEditTask(task)}
+                        title="Редактировать"
+                      >
+                        <i className="fas fa-edit"></i>
+                      </button>
+                      <button 
+                        className="btn-delete-task" 
+                        onClick={() => handleDeleteTask(task.id)}
+                        title="Удалить (или нажмите Delete)"
+                      >
+                        <i className="fas fa-trash"></i>
+                      </button>
+                    </>
+                  )}
                 </td>
               </tr>
             ))}
@@ -321,11 +329,13 @@ const DevelopmentTasks = () => {
       </div>
 
       {/* Кнопка добавления */}
-      <div className="tasks-footer">
-        <button className="btn-add-task" onClick={handleAddNew}>
-          <i className="fas fa-plus"></i> Добавить задачу
-        </button>
-      </div>
+      {isAuthenticated && (
+        <div className="tasks-footer">
+          <button className="btn-add-task" onClick={handleAddNew}>
+            <i className="fas fa-plus"></i> Добавить задачу
+          </button>
+        </div>
+      )}
 
       {/* Модальное окно для редактирования/добавления задачи */}
       {(editingTask !== null || showAddForm) && (

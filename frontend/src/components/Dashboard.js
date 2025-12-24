@@ -4,10 +4,12 @@ import SummaryCards from './SummaryCards';
 import Container from './Container';
 import StatisticsWidget from './StatisticsWidget';
 import DevelopmentTasks from './DevelopmentTasks';
+import AuthModal from './AuthModal';
 import { updateContainer } from '../services/api-containers';
 import { exportDashboardToPDF } from '../utils/pdfExport';
+import { fetchTasks } from '../services/api-tasks';
 
-const Dashboard = ({ containers, globalStats, loading, onContainerUpdate }) => {
+const Dashboard = ({ containers, globalStats, loading, onContainerUpdate, isAuthenticated, onLogin, onLogout }) => {
   const currentDate = new Date().toLocaleDateString('ru-RU', {
     day: 'numeric',
     month: 'long',
@@ -19,6 +21,7 @@ const Dashboard = ({ containers, globalStats, loading, onContainerUpdate }) => {
   const [statisticsExpanded, setStatisticsExpanded] = useState(false);
   const [statisticsData, setStatisticsData] = useState(null);
   const dashboardRef = useRef(null);
+  const [authModalOpen, setAuthModalOpen] = useState(false);
 
   useEffect(() => {
     // Сохраняем заголовок в localStorage
@@ -29,6 +32,7 @@ const Dashboard = ({ containers, globalStats, loading, onContainerUpdate }) => {
   }, []);
 
   const handleMainTitleDoubleClick = () => {
+    if (!isAuthenticated) return;
     setIsEditingMainTitle(true);
   };
 
@@ -56,7 +60,21 @@ const Dashboard = ({ containers, globalStats, loading, onContainerUpdate }) => {
     }
 
     try {
-      await exportDashboardToPDF(dashboardRef.current, statisticsData, 1);
+      // Загружаем задачи для экспорта
+      let tasks = [];
+      try {
+        tasks = await fetchTasks();
+      } catch (error) {
+        console.warn('Could not load tasks for PDF export:', error);
+      }
+      
+      await exportDashboardToPDF(
+        dashboardRef.current, 
+        statisticsData, 
+        containers,
+        globalStats,
+        tasks
+      );
     } catch (error) {
       console.error('Error exporting PDF:', error);
       alert('Ошибка при экспорте в PDF: ' + error.message);
@@ -76,7 +94,12 @@ const Dashboard = ({ containers, globalStats, loading, onContainerUpdate }) => {
       <div className="container">
         <div className="header">
           <div className="logo">
-            <div className="logo-icon">
+            <div 
+              className="logo-icon" 
+              onClick={() => setAuthModalOpen(true)}
+              style={{ cursor: 'pointer' }}
+              title="Нажмите для входа администратора"
+            >
               <img src="/favicon.png" alt="Logo" className="logo-image" />
             </div>
             <div className="logo-text">
@@ -120,9 +143,10 @@ const Dashboard = ({ containers, globalStats, loading, onContainerUpdate }) => {
               />
             ) : (
               <div
-                className="section-title main-title-editable"
+                className={`section-title ${isAuthenticated ? 'main-title-editable' : ''}`}
                 onDoubleClick={handleMainTitleDoubleClick}
-                title="Двойной клик для переименования"
+                title={isAuthenticated ? 'Двойной клик для переименования' : ''}
+                style={{ cursor: isAuthenticated ? 'pointer' : 'default' }}
               >
                 <i className="fas fa-list-alt"></i> {mainTitle} ({containers.length})
               </div>
@@ -134,12 +158,31 @@ const Dashboard = ({ containers, globalStats, loading, onContainerUpdate }) => {
                 key={container.id}
                 container={container}
                 onUpdate={onContainerUpdate}
+                isAuthenticated={isAuthenticated}
               />
             ))}
           </div>
         </div>
 
-        <DevelopmentTasks />
+        <DevelopmentTasks isAuthenticated={isAuthenticated} />
+
+        {isAuthenticated && (
+          <div style={{ textAlign: 'center', marginTop: '20px' }}>
+            <button 
+              className="btn" 
+              onClick={onLogout}
+              style={{ backgroundColor: '#95a5a6', color: 'white' }}
+            >
+              <i className="fas fa-sign-out-alt"></i> Выйти
+            </button>
+          </div>
+        )}
+
+        <AuthModal
+          isOpen={authModalOpen}
+          onClose={() => setAuthModalOpen(false)}
+          onLogin={onLogin}
+        />
 
         <div className="footer">
           Дашборд обновлен: {new Date().toLocaleString('ru-RU')} | Praktis ID Пилот v1.0

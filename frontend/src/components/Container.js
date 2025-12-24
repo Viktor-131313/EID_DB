@@ -13,7 +13,7 @@ import {
   deleteContainer
 } from '../services/api-containers';
 
-const Container = ({ container, onUpdate }) => {
+const Container = ({ container, onUpdate, isAuthenticated = false }) => {
   const [objects, setObjects] = useState([]);
   const [stats, setStats] = useState({
     totalObjects: 0,
@@ -114,6 +114,7 @@ const Container = ({ container, onUpdate }) => {
   };
 
   const handleDoubleClickName = () => {
+    if (!isAuthenticated) return;
     setIsEditingName(true);
   };
 
@@ -160,6 +161,7 @@ const Container = ({ container, onUpdate }) => {
   };
 
   const handleKeyDown = async (e) => {
+    if (!isAuthenticated) return;
     if (e.key === 'Delete' && isSelected && !e.ctrlKey && !e.altKey && !e.shiftKey) {
       // Проверяем, не в поле ввода ли мы
       if (e.target.tagName === 'INPUT' || e.target.tagName === 'SELECT' || e.target.tagName === 'TEXTAREA') {
@@ -222,16 +224,19 @@ const Container = ({ container, onUpdate }) => {
           />
         ) : (
           <h2
-            className="container-title"
+            className={isAuthenticated ? "container-title" : "container-title"}
             onDoubleClick={handleDoubleClickName}
-            title="Двойной клик для переименования"
+            title={isAuthenticated ? "Двойной клик для переименования" : ""}
+            style={{ cursor: isAuthenticated ? 'pointer' : 'default' }}
           >
             {container.name} ({objects.length})
           </h2>
         )}
-        <button className="btn" onClick={handleAddObject}>
-          <i className="fas fa-plus"></i> Добавить объект
-        </button>
+        {isAuthenticated && (
+          <button className="btn" onClick={handleAddObject}>
+            <i className="fas fa-plus"></i> Добавить объект
+          </button>
+        )}
       </div>
 
       {statsExpanded && (
@@ -262,6 +267,7 @@ const Container = ({ container, onUpdate }) => {
           onSave={handleSaveObject}
           onDelete={editingObject && editingObject.id ? handleDeleteObject : null}
           onClose={handleCloseModal}
+          isAuthenticated={isAuthenticated}
         />
       )}
     </div>

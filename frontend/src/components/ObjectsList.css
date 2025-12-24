@@ -148,6 +148,10 @@
   background-color: #e74c3c;
 }
 
+.progress-signed {
+  background-color: #3498db;
+}
+
 .stats-row {
   display: grid;
   grid-template-columns: repeat(2, 1fr);

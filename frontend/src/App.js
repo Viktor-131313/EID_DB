@@ -14,13 +14,18 @@ function App() {
     rejectedActs: 0
   });
   const [loading, setLoading] = useState(true);
+  const [isAuthenticated, setIsAuthenticated] = useState(() => {
+    // Проверяем, была ли авторизация ранее (хранится в sessionStorage)
+    return sessionStorage.getItem('isAuthenticated') === 'true';
+  });
 
   useEffect(() => {
     loadData();
     
-    // Обработка клавиши Insert для создания нового контейнера
+    // Обработка клавиши Insert для создания нового контейнера (только для авторизованных)
     const handleKeyPress = (e) => {
-      if (e.key === 'Insert' || (e.key === 'Insert' && !e.shiftKey && !e.ctrlKey && !e.altKey)) {
+      const isAuth = sessionStorage.getItem('isAuthenticated') === 'true';
+      if (isAuth && (e.key === 'Insert' || (e.key === 'Insert' && !e.shiftKey && !e.ctrlKey && !e.altKey))) {
         e.preventDefault();
         handleCreateContainer();
       }
@@ -61,6 +66,16 @@ function App() {
     loadData();
   }, []);
 
+  const handleLogin = () => {
+    setIsAuthenticated(true);
+    sessionStorage.setItem('isAuthenticated', 'true');
+  };
+
+  const handleLogout = () => {
+    setIsAuthenticated(false);
+    sessionStorage.removeItem('isAuthenticated');
+  };
+
   return (
     <div className="App">
       <Dashboard
@@ -68,6 +83,9 @@ function App() {
         globalStats={globalStats}
         loading={loading}
         onContainerUpdate={handleContainerUpdate}
+        isAuthenticated={isAuthenticated}
+        onLogin={handleLogin}
+        onLogout={handleLogout}
       />
     </div>
   );

@@ -1,6 +1,8 @@
 import axios from 'axios';
 
-const API_BASE_URL = process.env.REACT_APP_API_URL || 'http://localhost:3001/api';
+// В production (Render) используем относительный путь, т.к. фронтенд и бэкенд на одном домене
+// В development можно использовать прокси из package.json или установить REACT_APP_API_URL
+const API_BASE_URL = process.env.REACT_APP_API_URL || '/api';
 
 const api = axios.create({
   baseURL: API_BASE_URL,

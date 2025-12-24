@@ -1,0 +1,24 @@
+.auth-modal-content {
+  max-width: 400px;
+  width: 90%;
+}
+
+.auth-error {
+  background-color: #fdedec;
+  color: #e74c3c;
+  padding: 12px;
+  border-radius: 6px;
+  margin-bottom: 20px;
+  font-size: 14px;
+  border: 1px solid #e74c3c;
+}
+
+.btn-primary {
+  background-color: #2c5aa0;
+  color: white;
+}
+
+.btn-primary:hover {
+  background-color: #1f4784;
+}
+
