@@ -6,52 +6,17 @@
       "objects": [
         {
           "id": 1,
-          "name": "vbbbn",
-          "description": "vbn",
-          "status": "vbn",
-          "generatedActs": [
-            {
-              "id": 1,
-              "name": "сапава",
-              "count": 3,
-              "total": 4
-            }
-          ],
-          "sentForApproval": [
-            {
-              "id": 1,
-              "name": "сапава",
-              "count": 0,
-              "total": 0
-            }
-          ],
-          "approvedActs": [
-            {
-              "id": 1,
-              "name": "сапава",
-              "count": 0,
-              "total": 0
-            }
-          ],
-          "rejectedActs": [
-            {
-              "id": 1,
-              "name": "сапава",
-              "count": 0,
-              "total": 0
-            }
-          ],
-          "signedActs": [
-            {
-              "id": 1,
-              "name": "сапава",
-              "count": 0,
-              "total": 0
-            }
-          ],
+          "name": "Парадный ансамбль",
+          "description": "8.1, СК-Монолит",
+          "status": "",
+          "generatedActs": [],
+          "sentForApproval": [],
+          "approvedActs": [],
+          "rejectedActs": [],
+          "signedActs": [],
           "blockingFactors": [],
-          "createdAt": "2025-12-24T05:48:15.333Z",
-          "updatedAt": "2025-12-24T07:05:47.122Z"
+          "createdAt": "2025-12-24T09:00:34.467Z",
+          "updatedAt": "2025-12-24T09:00:34.467Z"
         }
       ]
     },
