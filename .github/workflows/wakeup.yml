@@ -1,0 +1,15 @@
+name: Wake Up Render
+on:
+  schedule:
+    - cron: '*/13 * * * *'  # каждые 13 минут
+  workflow_dispatch:  # для ручного запуска
+
+jobs:
+  ping:
+    runs-on: ubuntu-latest
+    steps:
+      - name: Ping Render App
+        run: |
+          curl -s -o /dev/null -w "Status: %{http_code}" \
+          https://eid-praktis-id.onrender.com/
+          echo " - Pinged at $(date)"
