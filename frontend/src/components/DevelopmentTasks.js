@@ -123,6 +123,16 @@ const DevelopmentTasks = ({ isAuthenticated = false }) => {
       }
     }
     return true;
+  }).sort((a, b) => {
+    // Сортировка по критичности: critical (1), non-critical (2), user-request (3)
+    const priorityOrder = {
+      'critical': 1,
+      'non-critical': 2,
+      'user-request': 3
+    };
+    const priorityA = priorityOrder[a.priority || 'non-critical'] || 2;
+    const priorityB = priorityOrder[b.priority || 'non-critical'] || 2;
+    return priorityA - priorityB;
   });
 
   // Получаем уникальные месяцы из задач для фильтра
@@ -185,6 +195,7 @@ const DevelopmentTasks = ({ isAuthenticated = false }) => {
               <th>Дата обнаружения</th>
               <th>Статус</th>
               <th>Планируется устранить</th>
+              <th>Критичность</th>
               <th>Действия</th>
             </tr>
           </thead>
@@ -296,6 +307,30 @@ const DevelopmentTasks = ({ isAuthenticated = false }) => {
                   )}
                 </td>
                 <td>
+                  <div className="task-priority">
+                    {task.priority === 'critical' && (
+                      <span className="priority-icon priority-critical" title="Критично">
+                        <i className="fas fa-exclamation-circle"></i>
+                      </span>
+                    )}
+                    {task.priority === 'non-critical' && (
+                      <span className="priority-icon priority-non-critical" title="Некритично">
+                        <i className="fas fa-exclamation-triangle"></i>
+                      </span>
+                    )}
+                    {task.priority === 'user-request' && (
+                      <span className="priority-icon priority-user-request" title="Пожелания от пользователей">
+                        <i className="fas fa-lightbulb"></i>
+                      </span>
+                    )}
+                    {!task.priority && (
+                      <span className="priority-icon priority-non-critical" title="Некритично">
+                        <i className="fas fa-exclamation-triangle"></i>
+                      </span>
+                    )}
+                  </div>
+                </td>
+                <td>
                   {isAuthenticated && (
                     <>
                       <button 
@@ -319,7 +354,7 @@ const DevelopmentTasks = ({ isAuthenticated = false }) => {
             ))}
             {filteredTasks.length === 0 && (
               <tr>
-                <td colSpan="6" className="empty-tasks">
+                <td colSpan="7" className="empty-tasks">
                   Нет задач для отображения
                 </td>
               </tr>
@@ -360,7 +395,8 @@ const TaskModal = ({ task, onSave, onClose }) => {
     discoveryDate: task?.discoveryDate ? new Date(task.discoveryDate).toISOString().split('T')[0] : new Date().toISOString().split('T')[0],
     status: task?.status || 'To Do',
     plannedFixMonth: task?.plannedFixMonth || '',
-    plannedFixYear: task?.plannedFixYear || ''
+    plannedFixYear: task?.plannedFixYear || '',
+    priority: task?.priority || 'non-critical'
   });
 
   const handleChange = (e) => {
@@ -494,6 +530,22 @@ const TaskModal = ({ task, onSave, onClose }) => {
                 ))}
               </select>
             </div>
+          </div>
+
+          <div className="form-group">
+            <label className="form-label" htmlFor="priority">Критичность</label>
+            <select
+              className="form-input"
+              id="priority"
+              name="priority"
+              value={formData.priority}
+              onChange={handleChange}
+              required
+            >
+              <option value="critical">Критично</option>
+              <option value="non-critical">Некритично</option>
+              <option value="user-request">Пожелания от пользователей</option>
+            </select>
           </div>
 
           <div className="actions-row">
