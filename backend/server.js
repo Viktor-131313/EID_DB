@@ -861,6 +861,7 @@ app.post('/api/tasks', (req, res) => {
             status: req.body.status || 'To Do',
             plannedFixMonth: req.body.plannedFixMonth || null,
             plannedFixYear: req.body.plannedFixYear || null,
+            priority: req.body.priority || 'non-critical',
             createdAt: new Date().toISOString(),
             updatedAt: new Date().toISOString()
         };
@@ -894,6 +895,7 @@ app.put('/api/tasks/:taskId', (req, res) => {
             status: req.body.status !== undefined ? req.body.status : tasks[index].status,
             plannedFixMonth: req.body.plannedFixMonth !== undefined ? req.body.plannedFixMonth : tasks[index].plannedFixMonth,
             plannedFixYear: req.body.plannedFixYear !== undefined ? req.body.plannedFixYear : tasks[index].plannedFixYear,
+            priority: req.body.priority !== undefined ? req.body.priority : (tasks[index].priority || 'non-critical'),
             updatedAt: new Date().toISOString()
         };
 

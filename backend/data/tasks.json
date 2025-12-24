@@ -5,9 +5,46 @@
     "description": "Нет этажа. Из айконы при создании не добавили",
     "discoveryDate": "2025-11-26",
     "status": "In Progress",
-    "plannedFixMonth": "12",
+    "plannedFixMonth": "11",
     "plannedFixYear": 2025,
     "createdAt": "2025-12-23T13:38:33.324Z",
-    "updatedAt": "2025-12-23T13:39:00.746Z"
+    "updatedAt": "2025-12-24T07:47:52.267Z",
+    "priority": "critical"
+  },
+  {
+    "id": 2,
+    "taskNumber": 11,
+    "description": "фыв",
+    "discoveryDate": "2025-12-24",
+    "status": "To Do",
+    "plannedFixMonth": null,
+    "plannedFixYear": null,
+    "priority": "user-request",
+    "createdAt": "2025-12-24T07:48:06.878Z",
+    "updatedAt": "2025-12-24T07:48:06.878Z"
+  },
+  {
+    "id": 3,
+    "taskNumber": 12,
+    "description": "ффы",
+    "discoveryDate": "2025-12-24",
+    "status": "To Do",
+    "plannedFixMonth": null,
+    "plannedFixYear": null,
+    "priority": "non-critical",
+    "createdAt": "2025-12-24T07:48:16.149Z",
+    "updatedAt": "2025-12-24T07:48:16.149Z"
+  },
+  {
+    "id": 4,
+    "taskNumber": 123,
+    "description": "йц",
+    "discoveryDate": "2025-12-24",
+    "status": "To Do",
+    "plannedFixMonth": null,
+    "plannedFixYear": null,
+    "priority": "non-critical",
+    "createdAt": "2025-12-24T07:48:23.242Z",
+    "updatedAt": "2025-12-24T07:48:23.242Z"
   }
 ]
