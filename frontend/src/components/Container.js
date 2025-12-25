@@ -232,11 +232,23 @@ const Container = ({ container, onUpdate, isAuthenticated = false }) => {
             {container.name} ({objects.length})
           </h2>
         )}
-        {isAuthenticated && (
-          <button className="btn" onClick={handleAddObject}>
-            <i className="fas fa-plus"></i> Добавить объект
+        <div style={{ display: 'flex', gap: '10px', alignItems: 'center' }}>
+          <button
+            className="btn-toggle-stats"
+            onClick={(e) => {
+              e.stopPropagation();
+              setStatsExpanded(!statsExpanded);
+            }}
+          >
+            <i className={`fas fa-chevron-${statsExpanded ? 'up' : 'down'}`}></i>
+            {statsExpanded ? 'Скрыть статистику' : 'Показать статистику'}
           </button>
-        )}
+          {isAuthenticated && (
+            <button className="btn" onClick={handleAddObject}>
+              <i className="fas fa-plus"></i> Добавить объект
+            </button>
+          )}
+        </div>
       </div>
 
       {statsExpanded && (
@@ -250,16 +262,6 @@ const Container = ({ container, onUpdate, isAuthenticated = false }) => {
       ) : (
         <ObjectsList objects={objects} onEditObject={handleEditObject} />
       )}
-
-      <div className="container-footer">
-        <button
-          className="btn-toggle-stats"
-          onClick={() => setStatsExpanded(!statsExpanded)}
-        >
-          <i className={`fas fa-chevron-${statsExpanded ? 'up' : 'down'}`}></i>
-          {statsExpanded ? 'Скрыть статистику' : 'Показать статистику'}
-        </button>
-      </div>
 
       {modalOpen && (
         <ObjectModal

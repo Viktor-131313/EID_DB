@@ -8,7 +8,7 @@ import {
   deleteSnapshot
 } from '../services/api-containers';
 
-const StatisticsWidget = ({ expanded, onToggle, onDataChange }) => {
+const StatisticsWidget = ({ expanded, onToggle, onDataChange, isAuthenticated = false }) => {
   const [snapshots, setSnapshots] = useState([]);
   const [comparison, setComparison] = useState(null);
   const [loading, setLoading] = useState(false);
@@ -173,13 +173,15 @@ const StatisticsWidget = ({ expanded, onToggle, onDataChange }) => {
           </select>
         </div>
 
-        <button 
-          className="btn-create-snapshot" 
-          onClick={handleCreateSnapshot}
-          disabled={loading}
-        >
-          <i className="fas fa-camera"></i> Сохранить снимок для планерки
-        </button>
+        {isAuthenticated && (
+          <button 
+            className="btn-create-snapshot" 
+            onClick={handleCreateSnapshot}
+            disabled={loading}
+          >
+            <i className="fas fa-camera"></i> Сохранить снимок для планерки
+          </button>
+        )}
       </div>
 
       {snapshots.length > 0 && (
@@ -197,14 +199,16 @@ const StatisticsWidget = ({ expanded, onToggle, onDataChange }) => {
                     minute: '2-digit'
                   })}
                 </span>
-                <button
-                  className="btn-delete-snapshot"
-                  onClick={(e) => handleDeleteSnapshot(snapshot.id, e)}
-                  disabled={loading}
-                  title="Удалить снимок"
-                >
-                  <i className="fas fa-times"></i>
-                </button>
+                {isAuthenticated && (
+                  <button
+                    className="btn-delete-snapshot"
+                    onClick={(e) => handleDeleteSnapshot(snapshot.id, e)}
+                    disabled={loading}
+                    title="Удалить снимок"
+                  >
+                    <i className="fas fa-times"></i>
+                  </button>
+                )}
               </div>
             ))}
           </div>
@@ -318,47 +322,84 @@ const ChangesTable = ({ changes }) => {
 
   return (
     <div className="changes-table">
-      {Object.values(groupedByContainer).map(group => (
-        <div key={group.containerName} className="container-group">
-          <h5 className="container-group-title">{group.containerName}</h5>
-          <table>
-            <thead>
-              <tr>
-                <th>Объект</th>
-                <th>СМР</th>
-                <th>Согласовано</th>
-                <th>Отклонено</th>
-                <th>Подписано</th>
-                <th>Отправлено</th>
-                <th>Сгенерировано</th>
-              </tr>
-            </thead>
-            <tbody>
-              {group.changes.map((change, index) => (
-                <tr key={`${change.objectId}-${change.smrId}-${index}`}>
-                  <td>{change.objectName}</td>
-                  <td>{change.smrName}</td>
-                  <td className={change.deltas.approvedActs > 0 ? 'positive' : change.deltas.approvedActs < 0 ? 'negative' : ''}>
-                    {change.deltas.approvedActs > 0 ? '+' : ''}{change.deltas.approvedActs}
+      {Object.values(groupedByContainer).map(group => {
+        // Вычисляем итоги по каждому столбцу для группы
+        const totals = group.changes.reduce((acc, change) => {
+          acc.approvedActs += change.deltas.approvedActs || 0;
+          acc.rejectedActs += change.deltas.rejectedActs || 0;
+          acc.signedActs += change.deltas.signedActs || 0;
+          acc.sentForApproval += change.deltas.sentForApproval || 0;
+          acc.generatedActs += change.deltas.generatedActs || 0;
+          return acc;
+        }, {
+          approvedActs: 0,
+          rejectedActs: 0,
+          signedActs: 0,
+          sentForApproval: 0,
+          generatedActs: 0
+        });
+
+        return (
+          <div key={group.containerName} className="container-group">
+            <h5 className="container-group-title">{group.containerName}</h5>
+            <table>
+              <thead>
+                <tr>
+                  <th>Объект</th>
+                  <th>СМР</th>
+                  <th>Согласовано</th>
+                  <th>Отклонено</th>
+                  <th>Подписано</th>
+                  <th>Отправлено</th>
+                  <th>Сгенерировано</th>
+                </tr>
+              </thead>
+              <tbody>
+                {group.changes.map((change, index) => (
+                  <tr key={`${change.objectId}-${change.smrId}-${index}`}>
+                    <td>{change.objectName}</td>
+                    <td>{change.smrName}</td>
+                    <td className={change.deltas.approvedActs > 0 ? 'positive' : change.deltas.approvedActs < 0 ? 'negative' : ''}>
+                      {change.deltas.approvedActs > 0 ? '+' : ''}{change.deltas.approvedActs}
+                    </td>
+                    <td className={change.deltas.rejectedActs > 0 ? 'positive' : change.deltas.rejectedActs < 0 ? 'negative' : ''}>
+                      {change.deltas.rejectedActs > 0 ? '+' : ''}{change.deltas.rejectedActs}
+                    </td>
+                    <td className={change.deltas.signedActs > 0 ? 'positive' : change.deltas.signedActs < 0 ? 'negative' : ''}>
+                      {change.deltas.signedActs > 0 ? '+' : ''}{change.deltas.signedActs}
+                    </td>
+                    <td className={change.deltas.sentForApproval > 0 ? 'positive' : change.deltas.sentForApproval < 0 ? 'negative' : ''}>
+                      {change.deltas.sentForApproval > 0 ? '+' : ''}{change.deltas.sentForApproval}
+                    </td>
+                    <td className={change.deltas.generatedActs > 0 ? 'positive' : change.deltas.generatedActs < 0 ? 'negative' : ''}>
+                      {change.deltas.generatedActs > 0 ? '+' : ''}{change.deltas.generatedActs}
+                    </td>
+                  </tr>
+                ))}
+                {/* Строка итогов */}
+                <tr className="totals-row">
+                  <td colSpan="2" style={{ fontWeight: 'bold', textAlign: 'right', paddingRight: '10px' }}>Итого:</td>
+                  <td className={totals.approvedActs > 0 ? 'positive' : totals.approvedActs < 0 ? 'negative' : ''} style={{ fontWeight: 'bold' }}>
+                    {totals.approvedActs > 0 ? '+' : ''}{totals.approvedActs}
                   </td>
-                  <td className={change.deltas.rejectedActs > 0 ? 'positive' : change.deltas.rejectedActs < 0 ? 'negative' : ''}>
-                    {change.deltas.rejectedActs > 0 ? '+' : ''}{change.deltas.rejectedActs}
+                  <td className={totals.rejectedActs > 0 ? 'positive' : totals.rejectedActs < 0 ? 'negative' : ''} style={{ fontWeight: 'bold' }}>
+                    {totals.rejectedActs > 0 ? '+' : ''}{totals.rejectedActs}
                   </td>
-                  <td className={change.deltas.signedActs > 0 ? 'positive' : change.deltas.signedActs < 0 ? 'negative' : ''}>
-                    {change.deltas.signedActs > 0 ? '+' : ''}{change.deltas.signedActs}
+                  <td className={totals.signedActs > 0 ? 'positive' : totals.signedActs < 0 ? 'negative' : ''} style={{ fontWeight: 'bold' }}>
+                    {totals.signedActs > 0 ? '+' : ''}{totals.signedActs}
                   </td>
-                  <td className={change.deltas.sentForApproval > 0 ? 'positive' : change.deltas.sentForApproval < 0 ? 'negative' : ''}>
-                    {change.deltas.sentForApproval > 0 ? '+' : ''}{change.deltas.sentForApproval}
+                  <td className={totals.sentForApproval > 0 ? 'positive' : totals.sentForApproval < 0 ? 'negative' : ''} style={{ fontWeight: 'bold' }}>
+                    {totals.sentForApproval > 0 ? '+' : ''}{totals.sentForApproval}
                   </td>
-                  <td className={change.deltas.generatedActs > 0 ? 'positive' : change.deltas.generatedActs < 0 ? 'negative' : ''}>
-                    {change.deltas.generatedActs > 0 ? '+' : ''}{change.deltas.generatedActs}
+                  <td className={totals.generatedActs > 0 ? 'positive' : totals.generatedActs < 0 ? 'negative' : ''} style={{ fontWeight: 'bold' }}>
+                    {totals.generatedActs > 0 ? '+' : ''}{totals.generatedActs}
                   </td>
                 </tr>
-              ))}
-            </tbody>
-          </table>
-        </div>
-      ))}
+              </tbody>
+            </table>
+          </div>
+        );
+      })}
     </div>
   );
 };
@@ -437,7 +478,7 @@ const ComparisonChart = ({ comparison, selectedMetrics }) => {
                 >
                   <span className="bar-value">
                     {metric.new} {metric.delta !== 0 && (
-                      <span style={{ color: metric.delta > 0 ? '#27ae60' : '#e74c3c' }}>
+                      <span style={{ color: '#000000' }}>
                         ({metric.delta > 0 ? '+' : ''}{metric.delta})
                       </span>
                     )}

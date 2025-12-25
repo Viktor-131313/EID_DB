@@ -521,7 +521,7 @@ const createPDFChart = (comparison) => {
     oldBar.style.display = 'flex';
     oldBar.style.alignItems = 'center';
     oldBar.style.justifyContent = 'center';
-    oldBar.style.color = 'white';
+    oldBar.style.color = '#000000';
     oldBar.style.fontWeight = 'bold';
     oldBar.style.fontSize = '14px';
     oldBar.textContent = metric.old;
@@ -544,7 +544,7 @@ const createPDFChart = (comparison) => {
     newBar.style.display = 'flex';
     newBar.style.alignItems = 'center';
     newBar.style.justifyContent = 'center';
-    newBar.style.color = 'white';
+    newBar.style.color = '#000000';
     newBar.style.fontWeight = 'bold';
     newBar.style.fontSize = '14px';
     const deltaText = metric.delta !== 0 ? ` (${metric.delta > 0 ? '+' : ''}${metric.delta})` : '';
@@ -685,6 +685,22 @@ const createPDFChangesTable = (changes) => {
     thead.appendChild(headerRow);
     table.appendChild(thead);
 
+    // Вычисляем итоги по каждому столбцу для группы
+    const totals = group.changes.reduce((acc, change) => {
+      acc.approvedActs += change.deltas.approvedActs || 0;
+      acc.rejectedActs += change.deltas.rejectedActs || 0;
+      acc.signedActs += change.deltas.signedActs || 0;
+      acc.sentForApproval += change.deltas.sentForApproval || 0;
+      acc.generatedActs += change.deltas.generatedActs || 0;
+      return acc;
+    }, {
+      approvedActs: 0,
+      rejectedActs: 0,
+      signedActs: 0,
+      sentForApproval: 0,
+      generatedActs: 0
+    });
+
     // Тело таблицы
     const tbody = document.createElement('tbody');
     group.changes.forEach((change, index) => {
@@ -720,6 +736,44 @@ const createPDFChangesTable = (changes) => {
 
       tbody.appendChild(row);
     });
+
+    // Строка итогов
+    const totalsRow = document.createElement('tr');
+    totalsRow.style.borderTop = '2px solid #2c5aa0';
+    totalsRow.style.backgroundColor = '#f0f4f8';
+    totalsRow.style.fontWeight = 'bold';
+
+    const totalsCells = [
+      'Итого:',
+      '',
+      formatDelta(totals.approvedActs),
+      formatDelta(totals.rejectedActs),
+      formatDelta(totals.signedActs),
+      formatDelta(totals.sentForApproval),
+      formatDelta(totals.generatedActs)
+    ];
+
+    totalsCells.forEach((text, i) => {
+      const td = document.createElement('td');
+      td.textContent = text;
+      td.style.padding = '8px';
+      td.style.fontWeight = 'bold';
+      td.style.color = '#2c3e50';
+      if (i === 0) {
+        td.style.textAlign = 'right';
+        td.style.paddingRight = '10px';
+      }
+      if (i > 1) {
+        if (text.startsWith('+')) {
+          td.style.color = '#27ae60';
+        } else if (text.startsWith('-')) {
+          td.style.color = '#e74c3c';
+        }
+      }
+      totalsRow.appendChild(td);
+    });
+
+    tbody.appendChild(totalsRow);
     table.appendChild(tbody);
     tableDiv.appendChild(table);
   });
@@ -891,7 +945,14 @@ const createSingleTasksPage = (tasks, showTitle = true) => {
       headerCell.style.minWidth = `${columnWidths[index]}px`;
       headerCell.style.maxWidth = `${columnWidths[index]}px`;
       headerCell.style.padding = '10px';
-      headerCell.style.textAlign = index === 5 ? 'center' : 'left';
+      // Выравнивание: индекс 5 (Критичность) - center, индексы 2,3,4 (Дата обнаружения, Статус, Планируется устранить) - right, остальные - left
+      if (index === 5) {
+        headerCell.style.textAlign = 'center';
+      } else if (index >= 2 && index <= 4) {
+        headerCell.style.textAlign = 'right';
+      } else {
+        headerCell.style.textAlign = 'left';
+      }
       headerCell.style.fontWeight = '600';
       headerCell.style.verticalAlign = 'middle';
       headerCell.style.boxSizing = 'border-box';
@@ -964,6 +1025,7 @@ const createSingleTasksPage = (tasks, showTitle = true) => {
         : '';
       dateCell.style.width = `${columnWidths[2]}px`;
       dateCell.style.padding = '10px';
+      dateCell.style.textAlign = 'right';
       dateCell.style.verticalAlign = 'middle';
       dateCell.style.wordWrap = 'break-word';
       dateCell.style.boxSizing = 'border-box';
@@ -976,6 +1038,7 @@ const createSingleTasksPage = (tasks, showTitle = true) => {
       statusCell.textContent = task.status || '';
       statusCell.style.width = `${columnWidths[3]}px`;
       statusCell.style.padding = '10px';
+      statusCell.style.textAlign = 'right';
       statusCell.style.verticalAlign = 'middle';
       statusCell.style.wordWrap = 'break-word';
       statusCell.style.boxSizing = 'border-box';
@@ -995,6 +1058,7 @@ const createSingleTasksPage = (tasks, showTitle = true) => {
       }
       plannedCell.style.width = `${columnWidths[4]}px`;
       plannedCell.style.padding = '10px';
+      plannedCell.style.textAlign = 'right';
       plannedCell.style.verticalAlign = 'middle';
       plannedCell.style.wordWrap = 'break-word';
       plannedCell.style.boxSizing = 'border-box';

@@ -138,6 +138,7 @@ const Dashboard = ({ containers, globalStats, loading, onContainerUpdate, isAuth
           expanded={statisticsExpanded}
           onToggle={() => setStatisticsExpanded(!statisticsExpanded)}
           onDataChange={setStatisticsData}
+          isAuthenticated={isAuthenticated}
         />
 
         <div className="dashboard-section">
