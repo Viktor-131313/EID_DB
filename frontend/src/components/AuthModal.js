@@ -86,3 +86,4 @@ const AuthModal = ({ isOpen, onClose, onLogin }) => {
 
 export default AuthModal;
 
+

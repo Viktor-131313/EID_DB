@@ -216,11 +216,13 @@
             padding: 20px;
             border: 1px solid #e1e5eb;
             transition: all 0.3s;
+            cursor: pointer;
         }
 
         .object-card:hover {
             border-color: #3498db;
             box-shadow: 0 5px 15px rgba(52, 152, 219, 0.1);
+            transform: translateY(-2px);
         }
 
         .object-header {
@@ -483,9 +485,44 @@
 
         .actions-row {
             display: flex;
-            justify-content: flex-end;
+            justify-content: space-between;
             gap: 10px;
             margin-top: 25px;
+        }
+
+        .btn-danger {
+            background-color: #e74c3c;
+            color: white;
+        }
+
+        .btn-danger:hover {
+            background-color: #c0392b;
+        }
+
+        .percent-display {
+            font-size: 12px;
+            color: #7f8c8d;
+            margin-top: 5px;
+        }
+
+        .object-description {
+            color: #7f8c8d;
+            font-size: 14px;
+            margin-bottom: 15px;
+        }
+
+        .stats-row {
+            display: grid;
+            grid-template-columns: repeat(2, 1fr);
+            gap: 8px;
+            margin-top: 10px;
+            font-size: 13px;
+        }
+
+        .stat-item {
+            font-size: 13px;
+            color: #555;
+            padding: 5px 0;
         }
 
         @media (max-width: 768px) {
@@ -511,13 +548,13 @@
             <div class="logo">
                 <div class="logo-icon">ЭИД</div>
                 <div class="logo-text">
-                    <h1>Пилотные объекты</h1>
-                    <p>Мониторинг согласования актов исполнительной документации</p>
+                    <h1>Praktis ID - Пилотные объекты</h1>
+                    <p>Мониторинг внедрения электронной исполнительной документации</p>
                 </div>
             </div>
             <div class="date-filter">
-                <div class="date-display">
-                    <i class="far fa-calendar-alt"></i> 25 декабря 2025
+                <div class="date-display" id="currentDate">
+                    <i class="far fa-calendar-alt"></i> <span id="dateText"></span>
                 </div>
                 <button class="btn" onclick="openAddObjectModal()">
                     <i class="fas fa-plus"></i> Добавить объект
@@ -539,27 +576,27 @@
                 <div class="card-title">
                     <i class="fas fa-check-circle"></i> Согласовано
                 </div>
-                <div class="card-value">14/24</div>
-                <div class="card-trend trend-up">
-                    <i class="fas fa-arrow-up"></i> +3 за неделю
+                <div class="card-value">0/0</div>
+                <div class="card-trend">
+                    <i class="fas fa-info-circle"></i> От отправленных
                 </div>
             </div>
             <div class="card card-inwork">
                 <div class="card-title">
-                    <i class="fas fa-tasks"></i> В работе
+                    <i class="fas fa-file-alt"></i> Сгенерировано
                 </div>
-                <div class="card-value">8</div>
-                <div class="card-trend trend-down">
-                    <i class="fas fa-arrow-down"></i> -2
+                <div class="card-value">0</div>
+                <div class="card-trend">
+                    <i class="fas fa-info-circle"></i> Всего актов
                 </div>
             </div>
             <div class="card card-overdue">
                 <div class="card-title">
-                    <i class="fas fa-exclamation-triangle"></i> Просрочено
+                    <i class="fas fa-times-circle"></i> Отклонено
                 </div>
-                <div class="card-value">2</div>
-                <div class="card-trend trend-neutral">
-                    <i class="fas fa-plus"></i> +1
+                <div class="card-value">0</div>
+                <div class="card-trend">
+                    <i class="fas fa-info-circle"></i> От отправленных
                 </div>
             </div>
         </div>
@@ -580,75 +617,21 @@
             </div>
         </div>
 
-        <div class="dashboard-section">
-            <div class="section-header">
-                <div class="section-title">
-                    <i class="fas fa-exclamation-circle"></i> Проблемные объекты
-                </div>
-            </div>
-            <div class="problems-list" id="problemsContainer">
-                <!-- Проблемы будут добавляться сюда динамически -->
-            </div>
-        </div>
-
-        <div class="dashboard-section">
-            <div class="section-header">
-                <div class="section-title">
-                    <i class="fas fa-chart-line"></i> Динамика за 4 недели
-                </div>
-            </div>
-            <div class="chart-container" id="trendChart">
-                <!-- График будет здесь -->
-            </div>
-            <div class="chart-labels">
-                <span>Нед. 1</span>
-                <span>Нед. 2</span>
-                <span>Нед. 3</span>
-                <span>Текущая</span>
-            </div>
-        </div>
-
-        <div class="dashboard-section">
-            <div class="section-header">
-                <div class="section-title">
-                    <i class="fas fa-bullseye"></i> Фокус на следующую планерку
-                </div>
-            </div>
-            <div class="focus-items">
-                <div class="focus-item">
-                    <div class="focus-title">
-                        <i class="fas fa-file-signature"></i> Подпись ЭЦП
-                    </div>
-                    <div>По Вент-узлу 7 (ждем Гранее Н.А.)</div>
-                </div>
-                <div class="focus-item">
-                    <div class="focus-title">
-                        <i class="fas fa-tachometer-alt"></i> Ускорить ОВР
-                    </div>
-                    <div>По ПА8 и Блоку А</div>
-                </div>
-                <div class="focus-item">
-                    <div class="focus-title">
-                        <i class="fas fa-clock"></i> Контроль просрочки
-                    </div>
-                    <div>> 5 дней → эскалация</div>
-                </div>
-            </div>
-        </div>
 
         <div class="footer">
-            Дашборд обновлен: 25.12.2025 14:30 | ЭИД Пилот v2.1
+            Дашборд обновлен: <span id="updateTime"></span> | Praktis ID Пилот v1.0
         </div>
     </div>
 
-    <!-- Модальное окно добавления объекта -->
-    <div class="modal" id="addObjectModal">
+    <!-- Модальное окно добавления/редактирования объекта -->
+    <div class="modal" id="objectModal">
         <div class="modal-content">
             <div class="modal-header">
-                <div class="modal-title">Добавить новый объект</div>
-                <button class="close-modal" onclick="closeAddObjectModal()">&times;</button>
+                <div class="modal-title" id="modalTitle">Добавить новый объект</div>
+                <button class="close-modal" onclick="closeObjectModal()">&times;</button>
             </div>
-            <form id="addObjectForm">
+            <form id="objectForm">
+                <input type="hidden" id="objectId" value="">
                 <div class="form-group">
                     <label class="form-label" for="objectName">Название объекта</label>
                     <input type="text" class="form-input" id="objectName" placeholder="Например: ПА8-кладка2" required>
@@ -658,62 +641,107 @@
                     <input type="text" class="form-input" id="objectDescription" placeholder="Корпус, секция, подрядчик">
                 </div>
                 <div class="form-group">
-                    <label class="form-label" for="totalActs">Всего актов</label>
-                    <input type="number" class="form-input" id="totalActs" min="1" max="50" value="5" required>
+                    <label class="form-label" for="totalActs">Всего актов (базовое количество)</label>
+                    <input type="number" class="form-input" id="totalActs" min="1" value="0" required>
+                    <div class="percent-display">Базовое количество актов для расчета процентов</div>
                 </div>
                 <div class="form-group">
-                    <label class="form-label" for="approvedActs">Согласовано актов</label>
-                    <input type="number" class="form-input" id="approvedActs" min="0" max="50" value="0" required>
+                    <label class="form-label" for="generatedActs">Всего актов сгенерировано</label>
+                    <input type="number" class="form-input" id="generatedActs" min="0" value="0" required>
+                    <div class="percent-display" id="generatedPercent">0% от всего актов</div>
                 </div>
                 <div class="form-group">
-                    <label class="form-label" for="objectStatus">Статус объекта</label>
-                    <select class="form-select" id="objectStatus">
-                        <option value="good">Нет проблем</option>
-                        <option value="warning">Есть замечания</option>
-                        <option value="critical">Критические просрочки</option>
-                    </select>
+                    <label class="form-label" for="sentForApproval">Всего актов отправлено на согласование</label>
+                    <input type="number" class="form-input" id="sentForApproval" min="0" value="0" required>
+                    <div class="percent-display" id="sentPercent">0% от сгенерированных</div>
+                </div>
+                <div class="form-group">
+                    <label class="form-label" for="approvedActs">Всего актов согласовано</label>
+                    <input type="number" class="form-input" id="approvedActs" min="0" value="0" required>
+                    <div class="percent-display" id="approvedPercent">0% от отправленных</div>
+                </div>
+                <div class="form-group">
+                    <label class="form-label" for="rejectedActs">Всего актов отклонено</label>
+                    <input type="number" class="form-input" id="rejectedActs" min="0" value="0" required>
+                    <div class="percent-display" id="rejectedPercent">0% от отправленных</div>
                 </div>
                 <div class="actions-row">
-                    <button type="button" class="btn-secondary" onclick="closeAddObjectModal()">Отмена</button>
-                    <button type="submit" class="btn">Добавить объект</button>
+                    <div>
+                        <button type="button" class="btn-danger" id="deleteBtn" style="display: none;" onclick="deleteObject()">
+                            <i class="fas fa-trash"></i> Удалить объект
+                        </button>
+                    </div>
+                    <div style="display: flex; gap: 10px;">
+                        <button type="button" class="btn-secondary" onclick="closeObjectModal()">Отмена</button>
+                        <button type="submit" class="btn" id="submitBtn">Добавить объект</button>
+                    </div>
                 </div>
             </form>
         </div>
     </div>
 
     <script>
-        // Начальные данные
-        const initialObjects = [
-            { id: 1, name: "ПА8-кладка2", description: "Корпус 8, ООО «Компонент»", total: 4, approved: 2, status: "warning" },
-            { id: 2, name: "Корпус 12", description: "Блок Б, ООО «СтройМастер»", total: 5, approved: 5, status: "good" },
-            { id: 3, name: "Блок А", description: "Секция 1.2-1.5, ЗАО «ТехСтрой»", total: 4, approved: 1, status: "critical" },
-            { id: 4, name: "Склад №3", description: "Корпус 15, ООО «Логистик»", total: 5, approved: 3, status: "warning" },
-            { id: 5, name: "ТП-4", description: "Трансформаторная подстанция", total: 5, approved: 4, status: "good" },
-            { id: 6, name: "Вент-узел 7", description: "Вентиляционная система", total: 6, approved: 2, status: "critical" }
-        ];
-
-        const initialProblems = [
-            { object: "Блок А", description: "3 акта просрочены > 7 дней", responsible: "Иванов И.И.", priority: "critical" },
-            { object: "Вент-узел 7", description: "Нет подписей ЭЦП, ждем Гранее Н.А.", responsible: "Петров П.П.", priority: "critical" },
-            { object: "ПА8-кладка2", description: "Затянуто согласование ОВР", responsible: "Сидоров С.С.", priority: "warning" }
-        ];
+        // Начальные данные - пустой массив, пользователь добавит свои объекты
+        const initialObjects = [];
 
         // Загрузка данных при старте
         document.addEventListener('DOMContentLoaded', function() {
+            updateDateTime();
             renderObjects();
-            renderProblems();
-            renderTrendChart();
+            updatePercentages();
+            setupEventListeners();
         });
+
+        // Обновление времени в футере и даты в хедере
+        function updateDateTime() {
+            const now = new Date();
+            const dateOptions = { day: 'numeric', month: 'long', year: 'numeric' };
+            const timeOptions = { day: '2-digit', month: '2-digit', year: 'numeric', hour: '2-digit', minute: '2-digit' };
+            document.getElementById('dateText').textContent = now.toLocaleDateString('ru-RU', dateOptions);
+            document.getElementById('updateTime').textContent = now.toLocaleDateString('ru-RU', timeOptions);
+        }
+
+        // Настройка обработчиков событий для расчета процентов
+        function setupEventListeners() {
+            const totalActs = document.getElementById('totalActs');
+            const generatedActs = document.getElementById('generatedActs');
+            const sentForApproval = document.getElementById('sentForApproval');
+            const approvedActs = document.getElementById('approvedActs');
+            const rejectedActs = document.getElementById('rejectedActs');
+
+            [totalActs, generatedActs, sentForApproval, approvedActs, rejectedActs].forEach(input => {
+                input.addEventListener('input', updatePercentages);
+            });
+        }
+
+        // Обновление процентов в форме
+        function updatePercentages() {
+            const total = parseInt(document.getElementById('totalActs').value) || 0;
+            const generated = parseInt(document.getElementById('generatedActs').value) || 0;
+            const sent = parseInt(document.getElementById('sentForApproval').value) || 0;
+            const approved = parseInt(document.getElementById('approvedActs').value) || 0;
+            const rejected = parseInt(document.getElementById('rejectedActs').value) || 0;
+
+            const generatedPercent = total > 0 ? Math.round((generated / total) * 100) : 0;
+            const sentPercent = generated > 0 ? Math.round((sent / generated) * 100) : 0;
+            const approvedPercent = sent > 0 ? Math.round((approved / sent) * 100) : 0;
+            const rejectedPercent = sent > 0 ? Math.round((rejected / sent) * 100) : 0;
+
+            document.getElementById('generatedPercent').textContent = `${generatedPercent}% от всего актов`;
+            document.getElementById('sentPercent').textContent = `${sentPercent}% от сгенерированных`;
+            document.getElementById('approvedPercent').textContent = `${approvedPercent}% от отправленных`;
+            document.getElementById('rejectedPercent').textContent = `${rejectedPercent}% от отправленных`;
+        }
 
         // Функция для отрисовки объектов
         function renderObjects() {
             const container = document.getElementById('objectsContainer');
             container.innerHTML = '';
             
-            // Получаем объекты из localStorage или используем начальные
+            // Получаем объекты из localStorage
             let objects = JSON.parse(localStorage.getItem('eidObjects'));
-            if (!objects || objects.length === 0) {
-                objects = initialObjects;
+            if (!objects) {
+                objects = [];
                 localStorage.setItem('eidObjects', JSON.stringify(objects));
             }
             
@@ -722,61 +750,72 @@
             
             // Подсчитываем общие метрики
             let totalActs = 0;
+            let generatedActs = 0;
+            let sentActs = 0;
             let approvedActs = 0;
-            let inWork = 0;
-            let overdue = 0;
+            let rejectedActs = 0;
             
             objects.forEach(obj => {
-                totalActs += obj.total;
-                approvedActs += obj.approved;
-                inWork += (obj.total - obj.approved);
+                const total = obj.totalActs || 0;
+                const generated = obj.generatedActs || 0;
+                const sent = obj.sentForApproval || 0;
+                const approved = obj.approvedActs || 0;
+                const rejected = obj.rejectedActs || 0;
                 
-                // Простая логика для определения просрочки (если согласовано меньше 50%)
-                if (obj.approved / obj.total < 0.5) {
-                    overdue++;
-                }
+                totalActs += total;
+                generatedActs += generated;
+                sentActs += sent;
+                approvedActs += approved;
+                rejectedActs += rejected;
                 
-                const percentage = Math.round((obj.approved / obj.total) * 100);
-                
+                // Определяем статус на основе процента согласования
+                const approvedPercent = sent > 0 ? (approved / sent) * 100 : 0;
                 let statusClass = '';
                 let statusText = '';
                 let progressClass = '';
                 
-                if (obj.status === 'good') {
+                if (approvedPercent >= 80) {
                     statusClass = 'status-good';
-                    statusText = 'Нет проблем';
+                    statusText = 'Хорошо';
                     progressClass = 'progress-good';
-                } else if (obj.status === 'warning') {
+                } else if (approvedPercent >= 50) {
                     statusClass = 'status-warning';
-                    statusText = 'Есть замечания';
+                    statusText = 'В работе';
                     progressClass = 'progress-warning';
                 } else {
                     statusClass = 'status-critical';
-                    statusText = 'Критические';
+                    statusText = 'Требует внимания';
                     progressClass = 'progress-critical';
                 }
                 
+                const generatedPercent = total > 0 ? Math.round((generated / total) * 100) : 0;
+                const sentPercent = generated > 0 ? Math.round((sent / generated) * 100) : 0;
+                const approvedPercentDisplay = sent > 0 ? Math.round((approved / sent) * 100) : 0;
+                
                 const objectHTML = `
-                    <div class="object-card" data-id="${obj.id}">
+                    <div class="object-card" data-id="${obj.id}" onclick="editObject(${obj.id})">
                         <div class="object-header">
-                            <div class="object-name">${obj.name}</div>
+                            <div class="object-name">${obj.name || 'Без названия'}</div>
                             <div class="object-status ${statusClass}">${statusText}</div>
                         </div>
-                        <div class="object-description">${obj.description}</div>
+                        ${obj.description ? `<div class="object-description">${obj.description}</div>` : ''}
                         
                         <div class="progress-container">
                             <div class="progress-label">
-                                <span>Прогресс согласования</span>
-                                <span>${percentage}%</span>
+                                <span>Согласовано</span>
+                                <span>${approvedPercentDisplay}%</span>
                             </div>
                             <div class="progress-bar">
-                                <div class="progress-fill ${progressClass}" style="width: ${percentage}%"></div>
+                                <div class="progress-fill ${progressClass}" style="width: ${approvedPercentDisplay}%"></div>
                             </div>
                         </div>
                         
-                        <div class="object-details">
-                            <div>Актов: ${obj.approved}/${obj.total}</div>
-                            <div>Осталось: ${obj.total - obj.approved}</div>
+                        <div class="stats-row">
+                            <div class="stat-item">Всего: ${total}</div>
+                            <div class="stat-item">Сгенерировано: ${generated} (${generatedPercent}%)</div>
+                            <div class="stat-item">Отправлено: ${sent} (${sentPercent}%)</div>
+                            <div class="stat-item">Согласовано: ${approved} (${approvedPercentDisplay}%)</div>
+                            <div class="stat-item">Отклонено: ${rejected}</div>
                         </div>
                     </div>
                 `;
@@ -785,134 +824,145 @@
             });
             
             // Обновляем метрики в карточках
-            document.querySelector('.card-approved .card-value').textContent = `${approvedActs}/${totalActs}`;
-            document.querySelector('.card-inwork .card-value').textContent = inWork;
-            document.querySelector('.card-overdue .card-value').textContent = overdue;
+            const approvedPercent = sentActs > 0 ? Math.round((approvedActs / sentActs) * 100) : 0;
+            document.querySelector('.card-approved .card-value').textContent = `${approvedActs}/${sentActs}`;
+            document.querySelector('.card-inwork .card-value').textContent = generatedActs;
+            document.querySelector('.card-overdue .card-value').textContent = rejectedActs;
             
             // Обновляем заголовок раздела
-            document.querySelector('.section-title i.fa-list-alt').parentNode.innerHTML = 
-                `<i class="fas fa-list-alt"></i> Объекты (${objects.length})`;
-        }
-
-        // Функция для отрисовки проблем
-        function renderProblems() {
-            const container = document.getElementById('problemsContainer');
-            container.innerHTML = '';
-            
-            let problems = JSON.parse(localStorage.getItem('eidProblems'));
-            if (!problems || problems.length === 0) {
-                problems = initialProblems;
-                localStorage.setItem('eidProblems', JSON.stringify(problems));
-            }
-            
-            problems.forEach(problem => {
-                const priorityClass = problem.priority === 'critical' ? 'problem-critical' : 'problem-warning';
-                const priorityBadge = problem.priority === 'critical' ? '<span class="priority-badge">ВЫСОКИЙ ПРИОРИТЕТ</span>' : '';
-                
-                const problemHTML = `
-                    <div class="problem-item ${priorityClass}">
-                        <div class="problem-info">
-                            <div class="problem-object">${problem.object} ${priorityBadge}</div>
-                            <div class="problem-desc">${problem.description}</div>
-                            <div class="problem-responsible">Ответственный: ${problem.responsible}</div>
-                        </div>
-                    </div>
-                `;
-                
-                container.innerHTML += problemHTML;
-            });
-        }
-
-        // Функция для отрисовки графика трендов
-        function renderTrendChart() {
-            const container = document.getElementById('trendChart');
-            container.innerHTML = '';
-            
-            // Данные для графика (можно менять)
-            const weekData = [8, 10, 11, 14];
-            const maxValue = Math.max(...weekData);
-            
-            // Создаем столбцы графика
-            for (let i = 0; i < weekData.length; i++) {
-                const barHeight = (weekData[i] / maxValue) * 180;
-                const leftPosition = 25 + i * 25;
-                
-                const bar = document.createElement('div');
-                bar.className = 'chart-bar';
-                bar.style.left = `${leftPosition}%`;
-                bar.style.height = `${barHeight}px`;
-                
-                // Небольшая задержка для анимации
-                setTimeout(() => {
-                    bar.style.height = `${barHeight}px`;
-                }, 100 * i);
-                
-                container.appendChild(bar);
+            const sectionTitle = document.querySelector('.section-title i.fa-list-alt')?.parentNode;
+            if (sectionTitle) {
+                sectionTitle.innerHTML = `<i class="fas fa-list-alt"></i> Объекты (${objects.length})`;
             }
         }
 
         // Функции для работы с модальным окном
         function openAddObjectModal() {
-            document.getElementById('addObjectModal').style.display = 'flex';
+            document.getElementById('objectId').value = '';
+            document.getElementById('modalTitle').textContent = 'Добавить новый объект';
+            document.getElementById('submitBtn').textContent = 'Добавить объект';
+            document.getElementById('deleteBtn').style.display = 'none';
+            document.getElementById('objectForm').reset();
+            updatePercentages();
+            document.getElementById('objectModal').style.display = 'flex';
         }
 
-        function closeAddObjectModal() {
-            document.getElementById('addObjectModal').style.display = 'none';
-            document.getElementById('addObjectForm').reset();
+        function closeObjectModal() {
+            document.getElementById('objectModal').style.display = 'none';
+            document.getElementById('objectForm').reset();
         }
 
-        // Обработка формы добавления объекта
-        document.getElementById('addObjectForm').addEventListener('submit', function(e) {
-            e.preventDefault();
+        function editObject(id) {
+            const objects = JSON.parse(localStorage.getItem('eidObjects')) || [];
+            const obj = objects.find(o => o.id === id);
             
-            const name = document.getElementById('objectName').value;
-            const description = document.getElementById('objectDescription').value;
-            const total = parseInt(document.getElementById('totalActs').value);
-            const approved = parseInt(document.getElementById('approvedActs').value);
-            const status = document.getElementById('objectStatus').value;
+            if (!obj) return;
             
-            // Получаем текущие объекты
-            let objects = JSON.parse(localStorage.getItem('eidObjects')) || initialObjects;
+            document.getElementById('objectId').value = obj.id;
+            document.getElementById('objectName').value = obj.name || '';
+            document.getElementById('objectDescription').value = obj.description || '';
+            document.getElementById('totalActs').value = obj.totalActs || 0;
+            document.getElementById('generatedActs').value = obj.generatedActs || 0;
+            document.getElementById('sentForApproval').value = obj.sentForApproval || 0;
+            document.getElementById('approvedActs').value = obj.approvedActs || 0;
+            document.getElementById('rejectedActs').value = obj.rejectedActs || 0;
             
-            // Создаем новый объект
-            const newId = objects.length > 0 ? Math.max(...objects.map(o => o.id)) + 1 : 1;
-            const newObject = {
-                id: newId,
-                name: name,
-                description: description,
-                total: total,
-                approved: approved,
-                status: status
-            };
+            document.getElementById('modalTitle').textContent = 'Редактировать объект';
+            document.getElementById('submitBtn').textContent = 'Сохранить изменения';
+            document.getElementById('deleteBtn').style.display = 'inline-flex';
+            updatePercentages();
+            document.getElementById('objectModal').style.display = 'flex';
+        }
+
+        function deleteObject() {
+            const id = parseInt(document.getElementById('objectId').value);
+            if (!id) return;
             
-            // Добавляем объект
-            objects.push(newObject);
+            if (!confirm('Вы уверены, что хотите удалить этот объект?')) {
+                return;
+            }
+            
+            let objects = JSON.parse(localStorage.getItem('eidObjects')) || [];
+            objects = objects.filter(o => o.id !== id);
             localStorage.setItem('eidObjects', JSON.stringify(objects));
             
-            // Закрываем модальное окно и обновляем интерфейс
-            closeAddObjectModal();
+            closeObjectModal();
             renderObjects();
+        }
+
+        // Обработка формы добавления/редактирования объекта
+        document.getElementById('objectForm').addEventListener('submit', function(e) {
+            e.preventDefault();
             
-            // Показываем уведомление
-            alert(`Объект "${name}" успешно добавлен!`);
+            const id = document.getElementById('objectId').value;
+            const name = document.getElementById('objectName').value;
+            const description = document.getElementById('objectDescription').value;
+            const totalActs = parseInt(document.getElementById('totalActs').value) || 0;
+            const generatedActs = parseInt(document.getElementById('generatedActs').value) || 0;
+            const sentForApproval = parseInt(document.getElementById('sentForApproval').value) || 0;
+            const approvedActs = parseInt(document.getElementById('approvedActs').value) || 0;
+            const rejectedActs = parseInt(document.getElementById('rejectedActs').value) || 0;
+            
+            // Валидация: проверяем логику
+            if (generatedActs > totalActs) {
+                alert('Сгенерированных актов не может быть больше общего количества актов!');
+                return;
+            }
+            
+            if (sentForApproval > generatedActs) {
+                alert('Отправленных на согласование актов не может быть больше сгенерированных!');
+                return;
+            }
+            
+            if (approvedActs + rejectedActs > sentForApproval) {
+                alert('Сумма согласованных и отклоненных актов не может быть больше отправленных на согласование!');
+                return;
+            }
+            
+            let objects = JSON.parse(localStorage.getItem('eidObjects')) || [];
+            
+            if (id) {
+                // Редактирование существующего объекта
+                const index = objects.findIndex(o => o.id === parseInt(id));
+                if (index !== -1) {
+                    objects[index] = {
+                        id: parseInt(id),
+                        name: name,
+                        description: description,
+                        totalActs: totalActs,
+                        generatedActs: generatedActs,
+                        sentForApproval: sentForApproval,
+                        approvedActs: approvedActs,
+                        rejectedActs: rejectedActs
+                    };
+                }
+            } else {
+                // Добавление нового объекта
+                const newId = objects.length > 0 ? Math.max(...objects.map(o => o.id)) + 1 : 1;
+                objects.push({
+                    id: newId,
+                    name: name,
+                    description: description,
+                    totalActs: totalActs,
+                    generatedActs: generatedActs,
+                    sentForApproval: sentForApproval,
+                    approvedActs: approvedActs,
+                    rejectedActs: rejectedActs
+                });
+            }
+            
+            localStorage.setItem('eidObjects', JSON.stringify(objects));
+            closeObjectModal();
+            renderObjects();
         });
 
         // Закрытие модального окна при клике вне его
         window.addEventListener('click', function(e) {
-            const modal = document.getElementById('addObjectModal');
+            const modal = document.getElementById('objectModal');
             if (e.target === modal) {
-                closeAddObjectModal();
+                closeObjectModal();
             }
         });
-
-        // Функция для сброса данных (для тестирования)
-        function resetData() {
-            localStorage.removeItem('eidObjects');
-            localStorage.removeItem('eidProblems');
-            renderObjects();
-            renderProblems();
-            alert('Данные сброшены к начальным значениям!');
-        }
     </script>
 </body>
 </html>

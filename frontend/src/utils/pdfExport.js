@@ -68,26 +68,33 @@ export const exportDashboardToPDF = async (
         innerHTML: secondPage.innerHTML.substring(0, 200)
       });
 
-      // 3. Лист с объектами (контейнеры) - с НОВОГО ЛИСТА
+      // 3. Листы с объектами - каждый контейнер на отдельной странице
       if (containers && containers.length > 0) {
-        const objectsPage = await createObjectsPage(containers);
-        if (objectsPage) {
-          objectsPage.style.pageBreakBefore = 'always';
-          allPagesContainer.appendChild(objectsPage);
-          console.log('Objects page created');
-        } else {
-          console.warn('Objects page is null');
-        }
+        const objectsPages = await createObjectsPages(containers);
+        objectsPages.forEach((page, index) => {
+          if (page) {
+            page.style.pageBreakBefore = 'always';
+            allPagesContainer.appendChild(page);
+            console.log(`Objects page ${index + 1} created for container: ${containers[index]?.name}`);
+          }
+        });
       } else {
         console.warn('No containers to export');
       }
 
       // 4. Лист с задачами для разработки - с НОВОГО ЛИСТА
+      // Задачи могут быть разбиты на несколько страниц
       if (tasks && tasks.length > 0) {
-        const tasksPage = createTasksPage(tasks);
-        tasksPage.style.pageBreakBefore = 'always';
-        allPagesContainer.appendChild(tasksPage);
-        console.log('Tasks page created');
+        const tasksPages = createTasksPages(tasks);
+        tasksPages.forEach((tasksPage, index) => {
+          if (index === 0) {
+            tasksPage.style.pageBreakBefore = 'always';
+          } else {
+            tasksPage.style.pageBreakBefore = 'always';
+          }
+          allPagesContainer.appendChild(tasksPage);
+        });
+        console.log(`Tasks pages created: ${tasksPages.length}`);
       } else {
         console.warn('No tasks to export');
       }
@@ -720,126 +727,264 @@ const createPDFChangesTable = (changes) => {
   return tableDiv;
 };
 
-// Создание страницы с объектами (контейнеры)
-const createObjectsPage = async (containers) => {
+// Создание страниц с объектами - каждый контейнер на отдельной странице
+const createObjectsPages = async (containers) => {
+  const pages = [];
+  
   // Используем существующий DOM для клонирования контейнеров
   const dashboardContainer = document.querySelector('.containers-list');
   if (!dashboardContainer) {
-    return null;
+    return [];
   }
 
-  const page = document.createElement('div');
-  page.style.width = '1400px';
-  page.style.padding = '40px';
-  page.style.backgroundColor = '#fff';
-  page.style.fontFamily = 'Arial, sans-serif';
-  page.style.minHeight = '990px'; // A3 landscape height
+  // Создаем страницу для каждого контейнера
+  for (const container of containers) {
+    const page = document.createElement('div');
+    page.style.width = '1400px';
+    page.style.padding = '40px';
+    page.style.backgroundColor = '#fff';
+    page.style.fontFamily = 'Arial, sans-serif';
+    page.style.minHeight = '990px'; // A3 landscape height
 
-  const clone = dashboardContainer.cloneNode(true);
-  
-  // Скрываем кнопки и интерактивные элементы
-  const elementsToHide = clone.querySelectorAll('button, .modal, .close-modal, .btn-toggle-stats, input, .container-footer, .container-header button');
-  elementsToHide.forEach(el => {
-    el.style.display = 'none';
-  });
+    // Находим контейнер в DOM
+    const containerElement = Array.from(dashboardContainer.children).find(
+      el => {
+        const title = el.querySelector('.container-title');
+        return title && title.textContent.includes(container.name);
+      }
+    );
 
-  // Показываем статистику контейнеров, если она есть
-  const statsSections = clone.querySelectorAll('.container-stats');
-  statsSections.forEach(stats => {
-    stats.style.display = 'block';
-  });
+    if (containerElement) {
+      const clone = containerElement.cloneNode(true);
+      
+      // Скрываем кнопки и интерактивные элементы
+      const elementsToHide = clone.querySelectorAll('button, .modal, .close-modal, .btn-toggle-stats, input, .container-footer, .container-header button');
+      elementsToHide.forEach(el => {
+        el.style.display = 'none';
+      });
 
-  // Скрываем заголовок секции "Объекты", оставляем только контейнеры
-  clone.style.width = '100%';
-  page.appendChild(clone);
+      // Показываем статистику контейнера, если она есть
+      const statsSection = clone.querySelector('.container-stats');
+      if (statsSection) {
+        statsSection.style.display = 'block';
+      }
 
-  return page;
+      // Устанавливаем одинаковую сетку для всех контейнеров (всегда 3 колонки)
+      const objectsGrid = clone.querySelector('.objects-grid');
+      if (objectsGrid) {
+        // Уменьшенные колонки: 360px для лучшего размещения информации
+        objectsGrid.style.gridTemplateColumns = '360px 360px 360px';
+        objectsGrid.style.gap = '20px';
+        objectsGrid.style.width = '100%';
+        objectsGrid.style.maxWidth = '1120px'; // 360*3 + 20*2 = 1120px
+        objectsGrid.style.display = 'grid';
+        objectsGrid.style.justifyContent = 'flex-start';
+      }
+
+      // Устанавливаем одинаковый размер для всех плиток объектов
+      const objectCards = clone.querySelectorAll('.object-card');
+      // Увеличенная высота для отображения всей информации
+      const cardWidth = '360px';
+      const cardHeight = '550px'; // Увеличено для видимости всей информации
+      
+      objectCards.forEach(card => {
+        card.style.width = cardWidth;
+        card.style.minWidth = cardWidth;
+        card.style.maxWidth = cardWidth;
+        card.style.height = cardHeight;
+        card.style.minHeight = cardHeight;
+        card.style.maxHeight = cardHeight;
+        card.style.boxSizing = 'border-box';
+        card.style.overflow = 'visible'; // Изменено с 'hidden' на 'visible' для видимости всей информации
+        card.style.flexShrink = '0';
+        card.style.display = 'inline-block';
+      });
+
+      clone.style.width = '100%';
+      page.appendChild(clone);
+      pages.push(page);
+    }
+  }
+
+  return pages;
 };
 
-// Создание страницы с задачами для разработки
-const createTasksPage = (tasks) => {
+// Создание страниц с задачами для разработки
+// Разбиваем задачи на страницы по 20 строк каждая
+const createTasksPages = (tasks) => {
+  if (!tasks || tasks.length === 0) {
+    return [];
+  }
+
+  const pages = [];
+  const rowsPerPage = 16;
+  const totalPages = Math.ceil(tasks.length / rowsPerPage);
+
+  for (let pageIndex = 0; pageIndex < totalPages; pageIndex++) {
+    const startIndex = pageIndex * rowsPerPage;
+    const endIndex = Math.min(startIndex + rowsPerPage, tasks.length);
+    const pageTasks = tasks.slice(startIndex, endIndex);
+    
+    const page = createSingleTasksPage(pageTasks, pageIndex === 0);
+    pages.push(page);
+  }
+
+  return pages;
+};
+
+// Создание страницы с задачами
+// showTitle - показывать ли заголовок (только на первой странице)
+const createSingleTasksPage = (tasks, showTitle = true) => {
   const page = document.createElement('div');
   page.style.width = '1400px';
-  page.style.padding = '40px';
+  page.style.padding = '20px 10px 40px 10px'; // Минимальные боковые отступы
   page.style.backgroundColor = '#fff';
   page.style.fontFamily = 'Arial, sans-serif';
   page.style.minHeight = '990px'; // A3 landscape height
+  page.style.boxSizing = 'border-box';
+  page.style.overflow = 'visible';
+  page.style.display = 'flex';
+  page.style.flexDirection = 'column';
 
-  // Заголовок
-  const title = document.createElement('h1');
-  title.textContent = 'Задачи для разработки';
-  title.style.fontSize = '32px';
-  title.style.fontWeight = '700';
-  title.style.color = '#2c5aa0';
-  title.style.marginBottom = '30px';
-  page.appendChild(title);
+  // Заголовок (только на первой странице)
+  if (showTitle) {
+    const title = document.createElement('h1');
+    title.textContent = 'Задачи для разработки';
+    title.style.fontSize = '32px';
+    title.style.fontWeight = '700';
+    title.style.color = '#2c5aa0';
+    title.style.marginBottom = '30px';
+    title.style.pageBreakAfter = 'avoid';
+    title.style.breakAfter = 'avoid';
+    page.appendChild(title);
+  }
 
   // Таблица задач
   if (tasks && tasks.length > 0) {
+    // Контейнер для заголовков и таблицы
+    const tableWrapper = document.createElement('div');
+    tableWrapper.style.width = '100%';
+    tableWrapper.style.margin = '0';
+    tableWrapper.style.padding = '0';
+    tableWrapper.style.boxSizing = 'border-box';
+    
+    // Ширины колонок (одинаковые для заголовков и ячеек) - уменьшены для лучшей посадки на странице
+    const columnWidths = [120, 500, 160, 160, 220, 130];
+    const headerTexts = ['ID', 'Описание', 'Дата обнаружения', 'Статус', 'Планируется устранить', 'Критичность'];
+    
+    // Отдельный контейнер для заголовков (flexbox)
+    const headerContainer = document.createElement('div');
+    headerContainer.style.display = 'flex';
+    headerContainer.style.width = '100%';
+    headerContainer.style.backgroundColor = '#2c5aa0';
+    headerContainer.style.color = 'white';
+    headerContainer.style.margin = '0';
+    headerContainer.style.padding = '0';
+    headerContainer.style.boxSizing = 'border-box';
+    headerContainer.style.pageBreakAfter = 'avoid';
+    headerContainer.style.breakAfter = 'avoid';
+    
+    headerTexts.forEach((text, index) => {
+      const headerCell = document.createElement('div');
+      headerCell.textContent = text;
+      headerCell.style.width = `${columnWidths[index]}px`;
+      headerCell.style.minWidth = `${columnWidths[index]}px`;
+      headerCell.style.maxWidth = `${columnWidths[index]}px`;
+      headerCell.style.padding = '10px';
+      headerCell.style.textAlign = index === 5 ? 'center' : 'left';
+      headerCell.style.fontWeight = '600';
+      headerCell.style.verticalAlign = 'middle';
+      headerCell.style.boxSizing = 'border-box';
+      headerCell.style.margin = '0';
+      headerCell.style.flexShrink = '0';
+      headerCell.style.flexGrow = '0';
+      headerContainer.appendChild(headerCell);
+    });
+    
+    tableWrapper.appendChild(headerContainer);
+
+    // Основная таблица (без заголовков, только данные)
     const table = document.createElement('table');
+    table.setAttribute('width', '100%');
     table.style.width = '100%';
+    table.style.maxWidth = '100%';
     table.style.borderCollapse = 'collapse';
     table.style.fontSize = '12px';
-
-    // Заголовок таблицы
-    const thead = document.createElement('thead');
-    const headerRow = document.createElement('tr');
-    headerRow.style.backgroundColor = '#2c5aa0';
-    headerRow.style.color = 'white';
-    
-    ['ID', 'Описание', 'Дата обнаружения', 'Статус', 'Планируется устранить', 'Критичность'].forEach((text, index) => {
-      const th = document.createElement('th');
-      th.textContent = text;
-      th.style.padding = '12px';
-      th.style.textAlign = index === 5 ? 'center' : 'left'; // Критичность по центру
-      th.style.fontWeight = '600';
-      th.style.verticalAlign = 'middle'; // Выравнивание по вертикали
-      headerRow.appendChild(th);
-    });
-    thead.appendChild(headerRow);
-    table.appendChild(thead);
+    table.style.tableLayout = 'fixed';
+    table.style.margin = '0';
+    table.style.padding = '0';
+    table.style.display = 'table';
+    table.style.boxSizing = 'border-box';
+    table.style.borderSpacing = '0';
+    table.style.border = 'none';
 
     // Тело таблицы
     const tbody = document.createElement('tbody');
     tasks.forEach((task, index) => {
       const row = document.createElement('tr');
       row.style.borderBottom = '1px solid #ddd';
+      row.style.pageBreakInside = 'avoid'; // Не разрывать строку внутри страницы
+      row.style.breakInside = 'avoid';
+      row.style.pageBreakAfter = 'auto'; // Автоматический разрыв после строки
+      row.style.breakAfter = 'auto';
       if (index % 2 === 0) {
         row.style.backgroundColor = '#f8f9fa';
       }
 
       // ID
       const idCell = document.createElement('td');
+      idCell.setAttribute('width', columnWidths[0].toString());
       idCell.textContent = `DEV-${task.taskNumber || task.id}`;
+      idCell.style.width = `${columnWidths[0]}px`;
       idCell.style.padding = '10px';
       idCell.style.verticalAlign = 'middle';
+      idCell.style.wordWrap = 'break-word';
+      idCell.style.boxSizing = 'border-box';
+      idCell.style.margin = '0';
       row.appendChild(idCell);
 
       // Описание
       const descCell = document.createElement('td');
+      descCell.setAttribute('width', columnWidths[1].toString());
       descCell.textContent = task.description || '';
+      descCell.style.width = `${columnWidths[1]}px`;
       descCell.style.padding = '10px';
       descCell.style.verticalAlign = 'middle';
+      descCell.style.wordWrap = 'break-word';
+      descCell.style.wordBreak = 'break-word';
+      descCell.style.boxSizing = 'border-box';
+      descCell.style.margin = '0';
       row.appendChild(descCell);
 
       // Дата обнаружения
       const dateCell = document.createElement('td');
+      dateCell.setAttribute('width', columnWidths[2].toString());
       dateCell.textContent = task.discoveryDate 
         ? new Date(task.discoveryDate).toLocaleDateString('ru-RU')
         : '';
+      dateCell.style.width = `${columnWidths[2]}px`;
       dateCell.style.padding = '10px';
       dateCell.style.verticalAlign = 'middle';
+      dateCell.style.wordWrap = 'break-word';
+      dateCell.style.boxSizing = 'border-box';
+      dateCell.style.margin = '0';
       row.appendChild(dateCell);
 
       // Статус
       const statusCell = document.createElement('td');
+      statusCell.setAttribute('width', columnWidths[3].toString());
       statusCell.textContent = task.status || '';
+      statusCell.style.width = `${columnWidths[3]}px`;
       statusCell.style.padding = '10px';
       statusCell.style.verticalAlign = 'middle';
+      statusCell.style.wordWrap = 'break-word';
+      statusCell.style.boxSizing = 'border-box';
+      statusCell.style.margin = '0';
       row.appendChild(statusCell);
 
       // Планируется устранить
       const plannedCell = document.createElement('td');
+      plannedCell.setAttribute('width', columnWidths[4].toString());
       if (task.plannedFixMonth && task.plannedFixYear) {
         const monthNames = ['Январь', 'Февраль', 'Март', 'Апрель', 'Май', 'Июнь',
           'Июль', 'Август', 'Сентябрь', 'Октябрь', 'Ноябрь', 'Декабрь'];
@@ -848,15 +993,24 @@ const createTasksPage = (tasks) => {
       } else {
         plannedCell.textContent = '-';
       }
+      plannedCell.style.width = `${columnWidths[4]}px`;
       plannedCell.style.padding = '10px';
       plannedCell.style.verticalAlign = 'middle';
+      plannedCell.style.wordWrap = 'break-word';
+      plannedCell.style.boxSizing = 'border-box';
+      plannedCell.style.margin = '0';
       row.appendChild(plannedCell);
 
       // Критичность
       const priorityCell = document.createElement('td');
+      priorityCell.setAttribute('width', columnWidths[5].toString());
+      priorityCell.style.width = `${columnWidths[5]}px`;
       priorityCell.style.padding = '10px';
+      priorityCell.style.boxSizing = 'border-box';
+      priorityCell.style.margin = '0';
       priorityCell.style.textAlign = 'center';
-      priorityCell.style.verticalAlign = 'middle'; // Выравнивание по вертикали
+      priorityCell.style.verticalAlign = 'middle';
+      priorityCell.style.wordWrap = 'break-word';
       
       const priority = task.priority || 'non-critical';
       let prioritySymbol = '';
@@ -910,7 +1064,8 @@ const createTasksPage = (tasks) => {
       tbody.appendChild(row);
     });
     table.appendChild(tbody);
-    page.appendChild(table);
+    tableWrapper.appendChild(table);
+    page.appendChild(tableWrapper);
   } else {
     const noData = document.createElement('p');
     noData.textContent = 'Нет задач для отображения';

@@ -6,6 +6,7 @@ const ObjectModal = ({ object, onSave, onDelete, onClose, isAuthenticated = fals
     name: '',
     description: '',
     status: '',
+    photo: null, // URL или base64 строка для фото
     generatedActs: [],
     sentForApproval: [],
     approvedActs: [],
@@ -93,6 +94,7 @@ const ObjectModal = ({ object, onSave, onDelete, onClose, isAuthenticated = fals
           name: object.name || '',
           description: object.description || '',
           status: object.status || '',
+          photo: object.photo || null,
           generatedActs,
           sentForApproval,
           approvedActs,
@@ -512,7 +514,7 @@ const ObjectModal = ({ object, onSave, onDelete, onClose, isAuthenticated = fals
 
   return (
     <div className="modal" onClick={handleBackdropClick}>
-      <div className="modal-content object-modal-content">
+      <div className="modal-content object-modal-content" onClick={(e) => e.stopPropagation()}>
           <div className="modal-header">
           <div className="modal-title">
             {isAuthenticated ? (object ? 'Редактировать объект' : 'Добавить новый объект') : 'Просмотр объекта'}
@@ -520,6 +522,54 @@ const ObjectModal = ({ object, onSave, onDelete, onClose, isAuthenticated = fals
           <button className="close-modal" onClick={onClose}>&times;</button>
         </div>
         <form onSubmit={handleSubmit}>
+          {/* Фото объекта - отображается всегда, загрузка только для авторизованных */}
+          <div className="form-group">
+            {formData.photo ? (
+              <div className="photo-preview-container">
+                <img src={formData.photo} alt="Фото объекта" className="photo-preview" />
+                {isAuthenticated && (
+                  <button
+                    type="button"
+                    className="btn-remove-photo"
+                    onClick={() => setFormData({ ...formData, photo: null })}
+                    title="Удалить фото"
+                  >
+                    <i className="fas fa-times"></i>
+                  </button>
+                )}
+              </div>
+            ) : (
+              <>
+                <label className="form-label">Фото объекта (JPEG/PNG)</label>
+                <div className="photo-upload-container">
+                  <label className={`photo-upload-label ${!isAuthenticated ? 'photo-upload-disabled' : ''}`}>
+                    <input
+                      type="file"
+                      accept="image/jpeg,image/jpg,image/png"
+                      onChange={(e) => {
+                        if (!isAuthenticated) return;
+                        const file = e.target.files[0];
+                        if (file) {
+                          const reader = new FileReader();
+                          reader.onloadend = () => {
+                            setFormData({ ...formData, photo: reader.result });
+                          };
+                          reader.readAsDataURL(file);
+                        }
+                      }}
+                      disabled={!isAuthenticated}
+                      style={{ display: 'none' }}
+                    />
+                    <div className="photo-upload-placeholder">
+                      <i className="fas fa-camera"></i>
+                      <span>{isAuthenticated ? 'Нажмите для загрузки фото' : 'Войдите для загрузки фото'}</span>
+                    </div>
+                  </label>
+                </div>
+              </>
+            )}
+          </div>
+
           <div className="form-group">
             <label className="form-label" htmlFor="objectName">Название объекта</label>
             <input

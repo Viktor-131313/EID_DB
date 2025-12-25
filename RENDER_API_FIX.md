@@ -45,3 +45,4 @@ REACT_APP_API_URL=http://localhost:3001/api
 - **Production (Render.com):** Используется `/api` (относительный путь)
 - **Development (локально):** Используется прокси из `package.json` или `.env` файл
 
+

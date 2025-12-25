@@ -43,3 +43,4 @@ git status --short
 Если видите `node_modules` в выводе - что-то не так с `.gitignore`.
 Но если `node_modules` НЕ видно - все отлично, можно коммитить! ✅
 
+

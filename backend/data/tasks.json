@@ -2,13 +2,13 @@
   {
     "id": 1,
     "taskNumber": 2862,
-    "description": "Нет этажа. Из айконы при создании не добавили",
+    "description": "Нет этажа. В Icona при создании не добавили, подтянули в практис, теперь добавили",
     "discoveryDate": "2025-11-26",
     "status": "In Progress",
     "plannedFixMonth": "11",
     "plannedFixYear": 2025,
     "createdAt": "2025-12-23T13:38:33.324Z",
-    "updatedAt": "2025-12-24T07:47:52.267Z",
+    "updatedAt": "2025-12-25T05:23:16.359Z",
     "priority": "critical"
   },
   {

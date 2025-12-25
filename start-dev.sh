@@ -30,3 +30,4 @@ echo -e "\nPress Ctrl+C to stop both servers"
 # Ожидание завершения
 wait $BACKEND_PID $FRONTEND_PID
 
+

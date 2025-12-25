@@ -1,113 +1,32 @@
 const express = require('express');
 const cors = require('cors');
-const fs = require('fs');
 const path = require('path');
 
 const app = express();
-const PORT = 3001;
+const PORT = process.env.PORT || 3001;
 
 // Middleware
 app.use(cors());
-app.use(express.json());
-app.use(express.urlencoded({ extended: true }));
+// Увеличиваем лимит размера тела запроса для поддержки фото в base64 (50MB)
+app.use(express.json({ limit: '50mb' }));
+app.use(express.urlencoded({ extended: true, limit: '50mb' }));
 
-// Путь к файлу данных
-const DATA_FILE = path.join(__dirname, 'data', 'objects.json');
-const SNAPSHOTS_FILE = path.join(__dirname, 'data', 'snapshots.json');
-const TASKS_FILE = path.join(__dirname, 'data', 'tasks.json');
+// Используем адаптер для работы с данными (PostgreSQL или JSON файлы)
+const dataAdapter = require('./database/adapter');
 
-// Создаем директорию для данных, если её нет
-const dataDir = path.dirname(DATA_FILE);
-if (!fs.existsSync(dataDir)) {
-    fs.mkdirSync(dataDir, { recursive: true });
-}
-
-// Инициализация файла данных, если его нет
-if (!fs.existsSync(DATA_FILE)) {
-    const defaultData = {
-        containers: [{
-            id: 1,
-            name: 'Объекты',
-            objects: []
-        }]
-    };
-    fs.writeFileSync(DATA_FILE, JSON.stringify(defaultData, null, 2));
-}
-
-// Инициализация файла снимков, если его нет
-if (!fs.existsSync(SNAPSHOTS_FILE)) {
-    fs.writeFileSync(SNAPSHOTS_FILE, JSON.stringify([], null, 2));
-}
-
-// Инициализация файла задач, если его нет
-if (!fs.existsSync(TASKS_FILE)) {
-    fs.writeFileSync(TASKS_FILE, JSON.stringify([], null, 2));
-}
-
-// Вспомогательная функция для чтения данных
-function readData() {
+// Инициализация данных при старте сервера
+(async () => {
     try {
-        const data = fs.readFileSync(DATA_FILE, 'utf8');
-        const parsed = JSON.parse(data);
-        // Миграция старых данных
-        if (Array.isArray(parsed)) {
-            return {
-                containers: [{
-                    id: 1,
-                    name: 'Объекты',
-                    objects: parsed
-                }]
-            };
-        }
-        if (!parsed.containers || !Array.isArray(parsed.containers)) {
-            return { containers: [{ id: 1, name: 'Объекты', objects: [] }] };
-        }
-        return parsed;
+        await dataAdapter.initialize();
+        console.log('✅ Данные инициализированы');
     } catch (error) {
-        console.error('Error reading data:', error);
-        return { containers: [{ id: 1, name: 'Объекты', objects: [] }] };
+        console.error('❌ Ошибка инициализации данных:', error);
     }
-}
-
-// Вспомогательная функция для записи данных
-function writeData(data) {
-    try {
-        fs.writeFileSync(DATA_FILE, JSON.stringify(data, null, 2));
-        return true;
-    } catch (error) {
-        console.error('Error writing data:', error);
-        return false;
-    }
-}
-
-// Вспомогательная функция для чтения снимков
-function readSnapshots() {
-    try {
-        if (!fs.existsSync(SNAPSHOTS_FILE)) {
-            return [];
-        }
-        const data = fs.readFileSync(SNAPSHOTS_FILE, 'utf8');
-        return JSON.parse(data);
-    } catch (error) {
-        console.error('Error reading snapshots:', error);
-        return [];
-    }
-}
-
-// Вспомогательная функция для записи снимков
-function writeSnapshots(snapshots) {
-    try {
-        fs.writeFileSync(SNAPSHOTS_FILE, JSON.stringify(snapshots, null, 2));
-        return true;
-    } catch (error) {
-        console.error('Error writing snapshots:', error);
-        return false;
-    }
-}
+})();
 
 // Функция для создания снимка текущего состояния
-function createSnapshot() {
-    const data = readData();
+async function createSnapshot() {
+    const data = await dataAdapter.readData();
     const snapshot = {
         id: Date.now(),
         date: new Date().toISOString(),
@@ -339,39 +258,41 @@ function compareSnapshots(oldSnapshot, newSnapshot) {
 // API Routes
 
 // GET /api/containers - получить все контейнеры
-app.get('/api/containers', (req, res) => {
+app.get('/api/containers', async (req, res) => {
     try {
-        const data = readData();
+        const data = await dataAdapter.readData();
         res.json(data.containers || []);
     } catch (error) {
+        console.error('Error getting containers:', error);
         res.status(500).json({ error: 'Failed to read containers' });
     }
 });
 
 // POST /api/containers - создать новый контейнер
-app.post('/api/containers', (req, res) => {
+app.post('/api/containers', async (req, res) => {
     try {
-        const data = readData();
+        const data = await dataAdapter.readData();
         const newContainer = {
             id: data.containers.length > 0 ? Math.max(...data.containers.map(c => c.id)) + 1 : 1,
             name: req.body.name || 'Объекты',
             objects: []
         };
         data.containers.push(newContainer);
-        if (writeData(data)) {
+        if (await dataAdapter.writeData(data)) {
             res.status(201).json(newContainer);
         } else {
             res.status(500).json({ error: 'Failed to save container' });
         }
     } catch (error) {
+        console.error('Error creating container:', error);
         res.status(500).json({ error: 'Failed to create container' });
     }
 });
 
 // PUT /api/containers/:containerId - обновить контейнер
-app.put('/api/containers/:containerId', (req, res) => {
+app.put('/api/containers/:containerId', async (req, res) => {
     try {
-        const data = readData();
+        const data = await dataAdapter.readData();
         const index = data.containers.findIndex(c => c.id === parseInt(req.params.containerId));
         if (index === -1) {
             return res.status(404).json({ error: 'Container not found' });
@@ -379,39 +300,41 @@ app.put('/api/containers/:containerId', (req, res) => {
         if (req.body.name !== undefined) {
             data.containers[index].name = req.body.name;
         }
-        if (writeData(data)) {
+        if (await dataAdapter.writeData(data)) {
             res.json(data.containers[index]);
         } else {
             res.status(500).json({ error: 'Failed to update container' });
         }
     } catch (error) {
+        console.error('Error updating container:', error);
         res.status(500).json({ error: 'Failed to update container' });
     }
 });
 
 // DELETE /api/containers/:containerId - удалить контейнер
-app.delete('/api/containers/:containerId', (req, res) => {
+app.delete('/api/containers/:containerId', async (req, res) => {
     try {
-        const data = readData();
+        const data = await dataAdapter.readData();
         const filteredContainers = data.containers.filter(c => c.id !== parseInt(req.params.containerId));
         if (filteredContainers.length === data.containers.length) {
             return res.status(404).json({ error: 'Container not found' });
         }
         data.containers = filteredContainers;
-        if (writeData(data)) {
+        if (await dataAdapter.writeData(data)) {
             res.json({ message: 'Container deleted successfully' });
         } else {
             res.status(500).json({ error: 'Failed to delete container' });
         }
     } catch (error) {
+        console.error('Error deleting container:', error);
         res.status(500).json({ error: 'Failed to delete container' });
     }
 });
 
 // GET /api/containers/:containerId/objects - получить объекты контейнера
-app.get('/api/containers/:containerId/objects', (req, res) => {
+app.get('/api/containers/:containerId/objects', async (req, res) => {
     try {
-        const data = readData();
+        const data = await dataAdapter.readData();
         const container = data.containers.find(c => c.id === parseInt(req.params.containerId));
         if (!container) {
             return res.status(404).json({ error: 'Container not found' });
@@ -423,10 +346,10 @@ app.get('/api/containers/:containerId/objects', (req, res) => {
 });
 
 // POST /api/containers/:containerId/objects - создать объект в контейнере
-app.post('/api/containers/:containerId/objects', (req, res) => {
+app.post('/api/containers/:containerId/objects', async (req, res) => {
     try {
         console.log('POST /api/containers/:containerId/objects - Request body:', JSON.stringify(req.body, null, 2));
-        const data = readData();
+        const data = await dataAdapter.readData();
         const container = data.containers.find(c => c.id === parseInt(req.params.containerId));
         if (!container) {
             console.log('Container not found:', req.params.containerId);
@@ -438,6 +361,7 @@ app.post('/api/containers/:containerId/objects', (req, res) => {
             name: req.body.name || '',
             description: req.body.description || '',
             status: req.body.status || '',
+            photo: req.body.photo || null,
             generatedActs: Array.isArray(req.body.generatedActs) ? req.body.generatedActs : [],
             sentForApproval: Array.isArray(req.body.sentForApproval) ? req.body.sentForApproval : [],
             approvedActs: Array.isArray(req.body.approvedActs) ? req.body.approvedActs : [],
@@ -473,7 +397,7 @@ app.post('/api/containers/:containerId/objects', (req, res) => {
         }
 
         container.objects.push(newObject);
-        if (writeData(data)) {
+        if (await dataAdapter.writeData(data)) {
             console.log('Object created successfully');
             res.status(201).json(newObject);
         } else {
@@ -487,10 +411,10 @@ app.post('/api/containers/:containerId/objects', (req, res) => {
 });
 
 // PUT /api/containers/:containerId/objects/:objectId - обновить объект
-app.put('/api/containers/:containerId/objects/:objectId', (req, res) => {
+app.put('/api/containers/:containerId/objects/:objectId', async (req, res) => {
     try {
         console.log('PUT /api/containers/:containerId/objects/:objectId - Request body:', JSON.stringify(req.body, null, 2));
-        const data = readData();
+        const data = await dataAdapter.readData();
         const container = data.containers.find(c => c.id === parseInt(req.params.containerId));
         if (!container) {
             console.log('Container not found:', req.params.containerId);
@@ -508,6 +432,7 @@ app.put('/api/containers/:containerId/objects/:objectId', (req, res) => {
             name: req.body.name !== undefined ? req.body.name : container.objects[objectIndex].name,
             description: req.body.description !== undefined ? req.body.description : container.objects[objectIndex].description,
             status: req.body.status !== undefined ? req.body.status : container.objects[objectIndex].status || '',
+            photo: req.body.photo !== undefined ? req.body.photo : container.objects[objectIndex].photo || null,
             generatedActs: Array.isArray(req.body.generatedActs) ? req.body.generatedActs : container.objects[objectIndex].generatedActs || [],
             sentForApproval: Array.isArray(req.body.sentForApproval) ? req.body.sentForApproval : container.objects[objectIndex].sentForApproval || [],
             approvedActs: Array.isArray(req.body.approvedActs) ? req.body.approvedActs : (container.objects[objectIndex].approvedActs || []),
@@ -542,7 +467,7 @@ app.put('/api/containers/:containerId/objects/:objectId', (req, res) => {
         }
 
         container.objects[objectIndex] = updatedObject;
-        if (writeData(data)) {
+        if (await dataAdapter.writeData(data)) {
             console.log('Object updated successfully');
             res.json(updatedObject);
         } else {
@@ -556,9 +481,9 @@ app.put('/api/containers/:containerId/objects/:objectId', (req, res) => {
 });
 
 // DELETE /api/containers/:containerId/objects/:objectId - удалить объект
-app.delete('/api/containers/:containerId/objects/:objectId', (req, res) => {
+app.delete('/api/containers/:containerId/objects/:objectId', async (req, res) => {
     try {
-        const data = readData();
+        const data = await dataAdapter.readData();
         const container = data.containers.find(c => c.id === parseInt(req.params.containerId));
         if (!container) {
             return res.status(404).json({ error: 'Container not found' });
@@ -570,20 +495,21 @@ app.delete('/api/containers/:containerId/objects/:objectId', (req, res) => {
         }
 
         container.objects = filteredObjects;
-        if (writeData(data)) {
+        if (await dataAdapter.writeData(data)) {
             res.json({ message: 'Object deleted successfully' });
         } else {
             res.status(500).json({ error: 'Failed to delete object' });
         }
     } catch (error) {
+        console.error('Error deleting object:', error);
         res.status(500).json({ error: 'Failed to delete object' });
     }
 });
 
 // GET /api/stats - получить общую статистику по всем контейнерам
-app.get('/api/stats', (req, res) => {
+app.get('/api/stats', async (req, res) => {
     try {
-        const data = readData();
+        const data = await dataAdapter.readData();
         let totalObjects = 0;
         let generatedActs = 0;
         let sentActs = 0;
@@ -647,9 +573,9 @@ app.get('/api/stats', (req, res) => {
 });
 
 // GET /api/containers/:containerId/stats - получить статистику контейнера
-app.get('/api/containers/:containerId/stats', (req, res) => {
+app.get('/api/containers/:containerId/stats', async (req, res) => {
     try {
-        const data = readData();
+        const data = await dataAdapter.readData();
         const container = data.containers.find(c => c.id === parseInt(req.params.containerId));
         if (!container) {
             return res.status(404).json({ error: 'Container not found' });
@@ -708,9 +634,9 @@ app.get('/api/containers/:containerId/stats', (req, res) => {
 // API Routes for Snapshots
 
 // GET /api/snapshots - получить все снимки
-app.get('/api/snapshots', (req, res) => {
+app.get('/api/snapshots', async (req, res) => {
     try {
-        const snapshots = readSnapshots();
+        const snapshots = await dataAdapter.readSnapshots();
         res.json(snapshots);
     } catch (error) {
         res.status(500).json({ error: 'Failed to read snapshots' });
@@ -718,16 +644,22 @@ app.get('/api/snapshots', (req, res) => {
 });
 
 // POST /api/snapshots - создать новый снимок
-app.post('/api/snapshots', (req, res) => {
+app.post('/api/snapshots', async (req, res) => {
     try {
-        const snapshots = readSnapshots();
-        const newSnapshot = createSnapshot();
-        snapshots.push(newSnapshot);
+        const newSnapshot = await createSnapshot();
         
-        if (writeSnapshots(snapshots)) {
+        // Используем addSnapshot для базы данных или writeSnapshots для файлов
+        if (dataAdapter.useDatabase) {
+            await dataAdapter.addSnapshot(newSnapshot);
             res.status(201).json(newSnapshot);
         } else {
-            res.status(500).json({ error: 'Failed to save snapshot' });
+            const snapshots = await dataAdapter.readSnapshots();
+            snapshots.push(newSnapshot);
+            if (await dataAdapter.writeSnapshots(snapshots)) {
+                res.status(201).json(newSnapshot);
+            } else {
+                res.status(500).json({ error: 'Failed to save snapshot' });
+            }
         }
     } catch (error) {
         console.error('Error creating snapshot:', error);
@@ -736,17 +668,22 @@ app.post('/api/snapshots', (req, res) => {
 });
 
 // DELETE /api/snapshots/:snapshotId - удалить снимок
-app.delete('/api/snapshots/:snapshotId', (req, res) => {
+app.delete('/api/snapshots/:snapshotId', async (req, res) => {
     try {
-        const snapshots = readSnapshots();
-        const filteredSnapshots = snapshots.filter(s => s.id !== parseInt(req.params.snapshotId));
-        if (filteredSnapshots.length === snapshots.length) {
-            return res.status(404).json({ error: 'Snapshot not found' });
-        }
-        if (writeSnapshots(filteredSnapshots)) {
+        if (dataAdapter.useDatabase) {
+            await dataAdapter.deleteSnapshot(parseInt(req.params.snapshotId));
             res.json({ message: 'Snapshot deleted successfully' });
         } else {
-            res.status(500).json({ error: 'Failed to delete snapshot' });
+            const snapshots = await dataAdapter.readSnapshots();
+            const filteredSnapshots = snapshots.filter(s => s.id !== parseInt(req.params.snapshotId));
+            if (filteredSnapshots.length === snapshots.length) {
+                return res.status(404).json({ error: 'Snapshot not found' });
+            }
+            if (await dataAdapter.writeSnapshots(filteredSnapshots)) {
+                res.json({ message: 'Snapshot deleted successfully' });
+            } else {
+                res.status(500).json({ error: 'Failed to delete snapshot' });
+            }
         }
     } catch (error) {
         console.error('Error deleting snapshot:', error);
@@ -755,9 +692,9 @@ app.delete('/api/snapshots/:snapshotId', (req, res) => {
 });
 
 // GET /api/snapshots/latest/compare - сравнить текущее состояние с последним снимком
-app.get('/api/snapshots/latest/compare', (req, res) => {
+app.get('/api/snapshots/latest/compare', async (req, res) => {
     try {
-        const snapshots = readSnapshots();
+        const snapshots = await dataAdapter.readSnapshots();
         if (snapshots.length === 0) {
             return res.json({
                 hasPreviousSnapshot: false,
@@ -766,7 +703,7 @@ app.get('/api/snapshots/latest/compare', (req, res) => {
         }
         
         const latestSnapshot = snapshots[snapshots.length - 1];
-        const currentSnapshot = createSnapshot();
+        const currentSnapshot = await createSnapshot();
         const comparison = compareSnapshots(latestSnapshot, currentSnapshot);
         
         res.json({
@@ -785,16 +722,16 @@ app.get('/api/snapshots/latest/compare', (req, res) => {
 });
 
 // GET /api/snapshots/compare/:snapshotId - сравнить текущее состояние с указанным снимком
-app.get('/api/snapshots/compare/:snapshotId', (req, res) => {
+app.get('/api/snapshots/compare/:snapshotId', async (req, res) => {
     try {
-        const snapshots = readSnapshots();
+        const snapshots = await dataAdapter.readSnapshots();
         const snapshot = snapshots.find(s => s.id === parseInt(req.params.snapshotId));
         
         if (!snapshot) {
             return res.status(404).json({ error: 'Snapshot not found' });
         }
         
-        const currentSnapshot = createSnapshot();
+        const currentSnapshot = await createSnapshot();
         const comparison = compareSnapshots(snapshot, currentSnapshot);
         
         // Унифицируем структуру ответа с /api/snapshots/latest/compare
@@ -813,36 +750,12 @@ app.get('/api/snapshots/compare/:snapshotId', (req, res) => {
     }
 });
 
-// Вспомогательные функции для работы с задачами
-function readTasks() {
-    try {
-        if (!fs.existsSync(TASKS_FILE)) {
-            return [];
-        }
-        const data = fs.readFileSync(TASKS_FILE, 'utf8');
-        return JSON.parse(data);
-    } catch (error) {
-        console.error('Error reading tasks:', error);
-        return [];
-    }
-}
-
-function writeTasks(tasks) {
-    try {
-        fs.writeFileSync(TASKS_FILE, JSON.stringify(tasks, null, 2));
-        return true;
-    } catch (error) {
-        console.error('Error writing tasks:', error);
-        return false;
-    }
-}
-
 // API Routes for Tasks
 
 // GET /api/tasks - получить все задачи
-app.get('/api/tasks', (req, res) => {
+app.get('/api/tasks', async (req, res) => {
     try {
-        const tasks = readTasks();
+        const tasks = await dataAdapter.readTasks();
         res.json(tasks);
     } catch (error) {
         res.status(500).json({ error: 'Failed to read tasks' });
@@ -850,9 +763,9 @@ app.get('/api/tasks', (req, res) => {
 });
 
 // POST /api/tasks - создать новую задачу
-app.post('/api/tasks', (req, res) => {
+app.post('/api/tasks', async (req, res) => {
     try {
-        const tasks = readTasks();
+        const tasks = await dataAdapter.readTasks();
         const newTask = {
             id: tasks.length > 0 ? Math.max(...tasks.map(t => t.id)) + 1 : 1,
             taskNumber: req.body.taskNumber || null,
@@ -867,7 +780,7 @@ app.post('/api/tasks', (req, res) => {
         };
 
         tasks.push(newTask);
-        if (writeTasks(tasks)) {
+        if (await dataAdapter.writeTasks(tasks)) {
             res.status(201).json(newTask);
         } else {
             res.status(500).json({ error: 'Failed to save task' });
@@ -879,9 +792,9 @@ app.post('/api/tasks', (req, res) => {
 });
 
 // PUT /api/tasks/:taskId - обновить задачу
-app.put('/api/tasks/:taskId', (req, res) => {
+app.put('/api/tasks/:taskId', async (req, res) => {
     try {
-        const tasks = readTasks();
+        const tasks = await dataAdapter.readTasks();
         const index = tasks.findIndex(t => t.id === parseInt(req.params.taskId));
         if (index === -1) {
             return res.status(404).json({ error: 'Task not found' });
@@ -900,7 +813,7 @@ app.put('/api/tasks/:taskId', (req, res) => {
         };
 
         tasks[index] = updatedTask;
-        if (writeTasks(tasks)) {
+        if (await dataAdapter.writeTasks(tasks)) {
             res.json(updatedTask);
         } else {
             res.status(500).json({ error: 'Failed to update task' });
@@ -912,15 +825,15 @@ app.put('/api/tasks/:taskId', (req, res) => {
 });
 
 // DELETE /api/tasks/:taskId - удалить задачу
-app.delete('/api/tasks/:taskId', (req, res) => {
+app.delete('/api/tasks/:taskId', async (req, res) => {
     try {
-        const tasks = readTasks();
+        const tasks = await dataAdapter.readTasks();
         const filteredTasks = tasks.filter(t => t.id !== parseInt(req.params.taskId));
         if (filteredTasks.length === tasks.length) {
             return res.status(404).json({ error: 'Task not found' });
         }
 
-        if (writeTasks(filteredTasks)) {
+        if (await dataAdapter.writeTasks(filteredTasks)) {
             res.json({ message: 'Task deleted successfully' });
         } else {
             res.status(500).json({ error: 'Failed to delete task' });

@@ -93,6 +93,11 @@ const ObjectsList = ({ objects, onEditObject }) => {
             className="object-card"
             onClick={() => onEditObject(obj)}
           >
+            {obj.photo && (
+              <div className="object-photo-container">
+                <img src={obj.photo} alt={obj.name} className="object-photo" />
+              </div>
+            )}
             <div className="object-header">
               <div className="object-name">{obj.name || 'Без названия'}</div>
               <div className={`object-status ${status.class}`}>{status.text}</div>
@@ -101,8 +106,11 @@ const ObjectsList = ({ objects, onEditObject }) => {
               <div className="object-description">{obj.description}</div>
             )}
             {obj.status && (
-              <div className="object-status-text" title={obj.status}>
-                {obj.status}
+              <div className="object-status-container">
+                <div className="object-status-label">Статус:</div>
+                <div className="object-status-text" title={obj.status}>
+                  {obj.status}
+                </div>
               </div>
             )}
             

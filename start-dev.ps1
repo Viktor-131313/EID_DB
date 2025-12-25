@@ -18,3 +18,4 @@ Write-Host "Frontend will run on http://localhost:3000" -ForegroundColor Cyan
 Write-Host "`nPress any key to exit..." -ForegroundColor Gray
 $null = $Host.UI.RawUI.ReadKey("NoEcho,IncludeKeyDown")
 
+
