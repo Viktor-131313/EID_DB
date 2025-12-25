@@ -334,5 +334,53 @@
     "priority": "user-request",
     "createdAt": "2025-12-24T09:25:43.836Z",
     "updatedAt": "2025-12-24T09:25:43.836Z"
+  },
+  {
+    "id": 29,
+    "taskNumber": 3022,
+    "description": "Смена генподряда",
+    "discoveryDate": "2025-12-25",
+    "status": "To Do",
+    "plannedFixMonth": null,
+    "plannedFixYear": null,
+    "priority": "critical",
+    "createdAt": "2025-12-25T13:18:50.705Z",
+    "updatedAt": "2025-12-25T13:18:50.705Z"
+  },
+  {
+    "id": 30,
+    "taskNumber": 3023,
+    "description": "Удалить варнинг из объектов, график работ, вкладка план работ",
+    "discoveryDate": "2025-12-25",
+    "status": "To Do",
+    "plannedFixMonth": null,
+    "plannedFixYear": null,
+    "priority": "user-request",
+    "createdAt": "2025-12-25T13:38:49.227Z",
+    "updatedAt": "2025-12-25T13:38:49.227Z"
+  },
+  {
+    "id": 31,
+    "taskNumber": 3024,
+    "description": "Проставление факта выполненных работ на уровне объекта",
+    "discoveryDate": "2025-12-25",
+    "status": "To Do",
+    "plannedFixMonth": null,
+    "plannedFixYear": null,
+    "priority": "user-request",
+    "createdAt": "2025-12-25T13:39:04.267Z",
+    "updatedAt": "2025-12-25T13:39:04.267Z"
+  },
+  {
+    "id": 32,
+    "taskNumber": 3024,
+    "description": "Проставление факта выполненных работ на уровне объекта",
+    "discoveryDate": "2025-12-25",
+    "status": "To Do",
+    "plannedFixMonth": null,
+    "plannedFixYear": null,
+    "priority": "user-request",
+    "createdAt": "2025-12-25T13:39:04.342Z",
+    "updatedAt": "2025-12-25T13:39:04.342Z"
   }
 ]
