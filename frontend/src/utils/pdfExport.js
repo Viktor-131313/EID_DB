@@ -1,5 +1,78 @@
 import html2pdf from 'html2pdf.js';
 
+// Функция создания индикатора прогресса
+const createProgressIndicator = () => {
+  const overlay = document.createElement('div');
+  overlay.id = 'pdf-export-progress';
+  overlay.style.position = 'fixed';
+  overlay.style.top = '0';
+  overlay.style.left = '0';
+  overlay.style.width = '100%';
+  overlay.style.height = '100%';
+  overlay.style.backgroundColor = 'rgba(0, 0, 0, 0.7)';
+  overlay.style.display = 'flex';
+  overlay.style.alignItems = 'center';
+  overlay.style.justifyContent = 'center';
+  overlay.style.zIndex = '999999';
+  overlay.style.fontFamily = 'Arial, sans-serif';
+
+  const content = document.createElement('div');
+  content.style.backgroundColor = 'white';
+  content.style.padding = '30px 50px';
+  content.style.borderRadius = '10px';
+  content.style.boxShadow = '0 4px 20px rgba(0, 0, 0, 0.3)';
+  content.style.textAlign = 'center';
+
+  const title = document.createElement('div');
+  title.style.fontSize = '24px';
+  title.style.fontWeight = '600';
+  title.style.color = '#2c5aa0';
+  title.style.marginBottom = '20px';
+  title.textContent = 'Идет генерация PDF';
+
+  const progress = document.createElement('div');
+  progress.id = 'pdf-progress-text';
+  progress.style.fontSize = '18px';
+  progress.style.color = '#333';
+  progress.style.marginBottom = '15px';
+
+  const dots = document.createElement('div');
+  dots.id = 'pdf-progress-dots';
+  dots.style.fontSize = '24px';
+  dots.style.color = '#2c5aa0';
+  dots.textContent = '.';
+
+  content.appendChild(title);
+  content.appendChild(progress);
+  content.appendChild(dots);
+  overlay.appendChild(content);
+  document.body.appendChild(overlay);
+
+  // Анимация точек
+  let dotCount = 1;
+  const dotsInterval = setInterval(() => {
+    dotCount = (dotCount % 3) + 1;
+    dots.textContent = '.'.repeat(dotCount);
+  }, 500);
+
+  // Функция обновления прогресса
+  const updateProgress = async (current, total) => {
+    progress.textContent = `${current} из ${total}`;
+    // Даем браузеру время отрисовать изменения
+    await new Promise(resolve => requestAnimationFrame(resolve));
+  };
+
+  // Функция удаления индикатора
+  const remove = () => {
+    clearInterval(dotsInterval);
+    if (document.body.contains(overlay)) {
+      document.body.removeChild(overlay);
+    }
+  };
+
+  return { updateProgress, remove };
+};
+
 export const exportDashboardToPDF = async (
   dashboardElement, 
   statisticsData = null, 
@@ -7,6 +80,8 @@ export const exportDashboardToPDF = async (
   globalStats = null,
   tasks = []
 ) => {
+  const progressIndicator = createProgressIndicator();
+  
   try {
     const opt = {
       margin: 0.3,
@@ -33,19 +108,27 @@ export const exportDashboardToPDF = async (
       pagebreak: { mode: ['avoid-all', 'css', 'legacy'] }
     };
 
+    // Подсчитываем общее количество страниц заранее
+    const totalPages = 1 + // Титульный лист
+                      1 + // Второй лист (статистика)
+                      (containers?.length || 0) + // Листы объектов (по одному на контейнер)
+                      (tasks && tasks.length > 0 ? Math.ceil(tasks.length / 16) : 0); // Листы задач (16 строк на страницу)
+
     // Создаём контейнер для всех страниц
     // html2canvas требует, чтобы элементы были видимыми, но мы можем разместить их вне экрана
     const allPagesContainer = document.createElement('div');
     allPagesContainer.style.width = '1400px';
     allPagesContainer.style.backgroundColor = '#fff';
-    allPagesContainer.style.position = 'absolute';
+    allPagesContainer.style.position = 'fixed';
     allPagesContainer.style.top = '0';
-    allPagesContainer.style.left = '0';
+    allPagesContainer.style.left = '-9999px';
     allPagesContainer.style.zIndex = '-1';
     allPagesContainer.style.opacity = '0';
     allPagesContainer.style.pointerEvents = 'none';
     allPagesContainer.style.overflow = 'visible';
     document.body.appendChild(allPagesContainer);
+
+    let currentPage = 0;
 
     try {
       console.log('Starting PDF export...', { containers: containers?.length, tasks: tasks?.length, globalStats, statisticsData });
@@ -53,6 +136,8 @@ export const exportDashboardToPDF = async (
       // 1. Титульный лист
       const titlePage = await createTitlePage();
       allPagesContainer.appendChild(titlePage);
+      currentPage = 1;
+      await progressIndicator.updateProgress(currentPage, totalPages);
       console.log('Title page created', {
         hasContent: titlePage.children.length > 0,
         innerHTML: titlePage.innerHTML.substring(0, 200)
@@ -63,6 +148,8 @@ export const exportDashboardToPDF = async (
       // Добавляем разрыв страницы перед вторым листом
       secondPage.style.pageBreakBefore = 'always';
       allPagesContainer.appendChild(secondPage);
+      currentPage = 2;
+      await progressIndicator.updateProgress(currentPage, totalPages);
       console.log('Second page created', {
         hasContent: secondPage.children.length > 0,
         innerHTML: secondPage.innerHTML.substring(0, 200)
@@ -70,14 +157,20 @@ export const exportDashboardToPDF = async (
 
       // 3. Листы с объектами - каждый контейнер на отдельной странице
       if (containers && containers.length > 0) {
-        const objectsPages = await createObjectsPages(containers);
-        objectsPages.forEach((page, index) => {
+        // Создаем страницы последовательно, по одной
+        for (let i = 0; i < containers.length; i++) {
+          const container = containers[i];
+          const page = await createSingleObjectPage(container);
           if (page) {
             page.style.pageBreakBefore = 'always';
             allPagesContainer.appendChild(page);
-            console.log(`Objects page ${index + 1} created for container: ${containers[index]?.name}`);
+            currentPage++;
+            await progressIndicator.updateProgress(currentPage, totalPages);
+            // Небольшая задержка для отрисовки UI
+            await new Promise(resolve => setTimeout(resolve, 100));
+            console.log(`Objects page ${i + 1} created for container: ${container.name}`);
           }
-        });
+        }
       } else {
         console.warn('No containers to export');
       }
@@ -85,16 +178,21 @@ export const exportDashboardToPDF = async (
       // 4. Лист с задачами для разработки - с НОВОГО ЛИСТА
       // Задачи могут быть разбиты на несколько страниц
       if (tasks && tasks.length > 0) {
-        const tasksPages = createTasksPages(tasks);
-        tasksPages.forEach((tasksPage, index) => {
-          if (index === 0) {
-            tasksPage.style.pageBreakBefore = 'always';
-          } else {
-            tasksPage.style.pageBreakBefore = 'always';
-          }
+        const rowsPerPage = 16;
+        const totalTasksPages = Math.ceil(tasks.length / rowsPerPage);
+        for (let pageIndex = 0; pageIndex < totalTasksPages; pageIndex++) {
+          const startIndex = pageIndex * rowsPerPage;
+          const endIndex = Math.min(startIndex + rowsPerPage, tasks.length);
+          const pageTasks = tasks.slice(startIndex, endIndex);
+          const tasksPage = createSingleTasksPage(pageTasks, pageIndex === 0);
+          tasksPage.style.pageBreakBefore = 'always';
           allPagesContainer.appendChild(tasksPage);
-        });
-        console.log(`Tasks pages created: ${tasksPages.length}`);
+          currentPage++;
+          await progressIndicator.updateProgress(currentPage, totalPages);
+          // Небольшая задержка для отрисовки UI
+          await new Promise(resolve => setTimeout(resolve, 100));
+        }
+        console.log(`Tasks pages created: ${totalTasksPages}`);
       } else {
         console.warn('No tasks to export');
       }
@@ -143,14 +241,14 @@ export const exportDashboardToPDF = async (
         });
       });
       
-      // Временно делаем контейнер видимым для html2canvas
+      // Временно делаем контейнер видимым для html2canvas, но оставляем вне экрана
       allPagesContainer.style.opacity = '1';
       allPagesContainer.style.position = 'fixed';
       allPagesContainer.style.top = '0';
-      allPagesContainer.style.left = '0';
+      allPagesContainer.style.left = '-9999px'; // Оставляем вне видимости
       allPagesContainer.style.width = '1400px';
       allPagesContainer.style.height = 'auto';
-      allPagesContainer.style.zIndex = '999999';
+      allPagesContainer.style.zIndex = '-1'; // Низкий z-index, чтобы не перекрывал прогресс
       
       // Дополнительная задержка для рендеринга
       await new Promise(resolve => setTimeout(resolve, 500));
@@ -245,10 +343,13 @@ export const exportDashboardToPDF = async (
       if (document.body.contains(allPagesContainer)) {
         document.body.removeChild(allPagesContainer);
       }
+      // Удаляем индикатор прогресса
+      progressIndicator.remove();
     }
 
   } catch (error) {
     console.error('Error exporting to PDF:', error);
+    progressIndicator.remove();
     alert('Ошибка при экспорте в PDF: ' + error.message);
   }
 };
@@ -781,86 +882,81 @@ const createPDFChangesTable = (changes) => {
   return tableDiv;
 };
 
-// Создание страниц с объектами - каждый контейнер на отдельной странице
-const createObjectsPages = async (containers) => {
-  const pages = [];
-  
+// Создание одной страницы с объектами для контейнера
+const createSingleObjectPage = async (container) => {
   // Используем существующий DOM для клонирования контейнеров
   const dashboardContainer = document.querySelector('.containers-list');
   if (!dashboardContainer) {
-    return [];
+    return null;
   }
 
-  // Создаем страницу для каждого контейнера
-  for (const container of containers) {
-    const page = document.createElement('div');
-    page.style.width = '1400px';
-    page.style.padding = '40px';
-    page.style.backgroundColor = '#fff';
-    page.style.fontFamily = 'Arial, sans-serif';
-    page.style.minHeight = '990px'; // A3 landscape height
+  const page = document.createElement('div');
+  page.style.width = '1400px';
+  page.style.padding = '40px';
+  page.style.backgroundColor = '#fff';
+  page.style.fontFamily = 'Arial, sans-serif';
+  page.style.minHeight = '990px'; // A3 landscape height
 
-    // Находим контейнер в DOM
-    const containerElement = Array.from(dashboardContainer.children).find(
-      el => {
-        const title = el.querySelector('.container-title');
-        return title && title.textContent.includes(container.name);
-      }
-    );
-
-    if (containerElement) {
-      const clone = containerElement.cloneNode(true);
-      
-      // Скрываем кнопки и интерактивные элементы
-      const elementsToHide = clone.querySelectorAll('button, .modal, .close-modal, .btn-toggle-stats, input, .container-footer, .container-header button');
-      elementsToHide.forEach(el => {
-        el.style.display = 'none';
-      });
-
-      // Показываем статистику контейнера, если она есть
-      const statsSection = clone.querySelector('.container-stats');
-      if (statsSection) {
-        statsSection.style.display = 'block';
-      }
-
-      // Устанавливаем одинаковую сетку для всех контейнеров (всегда 3 колонки)
-      const objectsGrid = clone.querySelector('.objects-grid');
-      if (objectsGrid) {
-        // Уменьшенные колонки: 360px для лучшего размещения информации
-        objectsGrid.style.gridTemplateColumns = '360px 360px 360px';
-        objectsGrid.style.gap = '20px';
-        objectsGrid.style.width = '100%';
-        objectsGrid.style.maxWidth = '1120px'; // 360*3 + 20*2 = 1120px
-        objectsGrid.style.display = 'grid';
-        objectsGrid.style.justifyContent = 'flex-start';
-      }
-
-      // Устанавливаем одинаковый размер для всех плиток объектов
-      const objectCards = clone.querySelectorAll('.object-card');
-      // Увеличенная высота для отображения всей информации
-      const cardWidth = '360px';
-      const cardHeight = '550px'; // Увеличено для видимости всей информации
-      
-      objectCards.forEach(card => {
-        card.style.width = cardWidth;
-        card.style.minWidth = cardWidth;
-        card.style.maxWidth = cardWidth;
-        card.style.height = cardHeight;
-        card.style.minHeight = cardHeight;
-        card.style.maxHeight = cardHeight;
-        card.style.boxSizing = 'border-box';
-        card.style.overflow = 'visible'; // Изменено с 'hidden' на 'visible' для видимости всей информации
-        card.style.flexShrink = '0';
-        card.style.display = 'inline-block';
-      });
-
-      clone.style.width = '100%';
-      page.appendChild(clone);
-      pages.push(page);
+  // Находим контейнер в DOM
+  const containerElement = Array.from(dashboardContainer.children).find(
+    el => {
+      const title = el.querySelector('.container-title');
+      return title && title.textContent.includes(container.name);
     }
+  );
+
+  if (containerElement) {
+    const clone = containerElement.cloneNode(true);
+    
+    // Скрываем кнопки и интерактивные элементы
+    const elementsToHide = clone.querySelectorAll('button, .modal, .close-modal, .btn-toggle-stats, input, .container-footer, .container-header button');
+    elementsToHide.forEach(el => {
+      el.style.display = 'none';
+    });
+
+    // Показываем статистику контейнера, если она есть
+    const statsSection = clone.querySelector('.container-stats');
+    if (statsSection) {
+      statsSection.style.display = 'block';
+    }
+
+    // Устанавливаем одинаковую сетку для всех контейнеров (всегда 3 колонки)
+    const objectsGrid = clone.querySelector('.objects-grid');
+    if (objectsGrid) {
+      // Уменьшенные колонки: 360px для лучшего размещения информации
+      objectsGrid.style.gridTemplateColumns = '360px 360px 360px';
+      objectsGrid.style.gap = '20px';
+      objectsGrid.style.width = '100%';
+      objectsGrid.style.maxWidth = '1120px'; // 360*3 + 20*2 = 1120px
+      objectsGrid.style.display = 'grid';
+      objectsGrid.style.justifyContent = 'flex-start';
+    }
+
+    // Устанавливаем одинаковый размер для всех плиток объектов
+    const objectCards = clone.querySelectorAll('.object-card');
+    // Увеличенная высота для отображения всей информации
+    const cardWidth = '360px';
+    const cardHeight = '550px'; // Увеличено для видимости всей информации
+    
+    objectCards.forEach(card => {
+      card.style.width = cardWidth;
+      card.style.minWidth = cardWidth;
+      card.style.maxWidth = cardWidth;
+      card.style.height = cardHeight;
+      card.style.minHeight = cardHeight;
+      card.style.maxHeight = cardHeight;
+      card.style.boxSizing = 'border-box';
+      card.style.overflow = 'visible'; // Изменено с 'hidden' на 'visible' для видимости всей информации
+      card.style.flexShrink = '0';
+      card.style.display = 'inline-block';
+    });
+
+    clone.style.width = '100%';
+    page.appendChild(clone);
+    return page;
   }
 
-  return pages;
+  return null;
 };
 
 // Создание страниц с задачами для разработки
