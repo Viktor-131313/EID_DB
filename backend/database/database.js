@@ -35,6 +35,29 @@ async function initializeDatabase() {
         // Выполняем SQL схему
         await pool.query(schema);
         console.log('✅ База данных инициализирована');
+        
+        // Проверяем и добавляем колонку aikona_object_id, если её нет (миграция)
+        try {
+            await pool.query(`
+                DO $$ 
+                BEGIN
+                    IF NOT EXISTS (
+                        SELECT 1 FROM information_schema.columns 
+                        WHERE table_name = 'objects' 
+                        AND column_name = 'aikona_object_id'
+                    ) THEN
+                        ALTER TABLE objects ADD COLUMN aikona_object_id INTEGER;
+                        RAISE NOTICE 'Column aikona_object_id added to objects table';
+                    END IF;
+                END $$;
+            `);
+            console.log('✅ Миграция aikona_object_id проверена/выполнена');
+        } catch (migrationError) {
+            // Игнорируем ошибку, если колонка уже существует
+            if (!migrationError.message.includes('already exists')) {
+                console.warn('⚠️  Предупреждение при миграции aikona_object_id:', migrationError.message);
+            }
+        }
     } catch (error) {
         console.error('❌ Ошибка инициализации базы данных:', error);
         throw error;
