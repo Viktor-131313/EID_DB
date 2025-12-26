@@ -1,4 +1,18 @@
-const API_URL = process.env.REACT_APP_API_URL || 'http://localhost:3001';
+// В production (Render) используем относительный путь, т.к. фронтенд и бэкенд на одном домене
+// В development можно использовать прокси из package.json или установить REACT_APP_API_URL
+const getApiUrl = () => {
+  if (process.env.REACT_APP_API_URL) {
+    return process.env.REACT_APP_API_URL;
+  }
+  // В production используем относительный путь
+  if (process.env.NODE_ENV === 'production') {
+    return '';
+  }
+  // В development используем localhost или прокси
+  return 'http://localhost:3001';
+};
+
+const API_URL = getApiUrl();
 
 // Получить все контейнеры
 export const fetchContainers = async () => {
