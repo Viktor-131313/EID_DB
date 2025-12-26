@@ -1,5 +1,7 @@
 import React, { useState, useEffect } from 'react';
 import './StatisticsWidget.css';
+import ConfirmModal from './ConfirmModal';
+import ToastNotification from './ToastNotification';
 import { 
   fetchSnapshots, 
   createSnapshot, 
@@ -20,6 +22,9 @@ const StatisticsWidget = ({ expanded, onToggle, onDataChange, isAuthenticated = 
     sentForApproval: false,
     generatedActs: false
   });
+  const [confirmCreateSnapshot, setConfirmCreateSnapshot] = useState(false);
+  const [confirmDeleteSnapshot, setConfirmDeleteSnapshot] = useState(null);
+  const [toast, setToast] = useState(null);
 
   useEffect(() => {
     loadSnapshots();
@@ -55,28 +60,34 @@ const StatisticsWidget = ({ expanded, onToggle, onDataChange, isAuthenticated = 
       }
     } catch (error) {
       console.error('Error loading comparison:', error);
-      alert('Ошибка при загрузке сравнения: ' + (error.response?.data?.error || error.message));
+      setToast({ message: 'Ошибка при загрузке сравнения: ' + (error.response?.data?.error || error.message), type: 'error' });
     } finally {
       setLoading(false);
     }
   };
 
-  const handleCreateSnapshot = async () => {
-    if (!window.confirm('Создать снимок текущего состояния для планерки?')) {
-      return;
-    }
+  const handleCreateSnapshotClick = () => {
+    setConfirmCreateSnapshot(true);
+  };
+
+  const handleConfirmCreateSnapshot = async () => {
+    setConfirmCreateSnapshot(false);
     try {
       setLoading(true);
       await createSnapshot();
       await loadSnapshots();
       await loadComparison(selectedSnapshotId);
-      alert('Снимок успешно создан!');
+      setToast({ message: 'Снимок успешно создан!', type: 'success' });
     } catch (error) {
       console.error('Error creating snapshot:', error);
-      alert('Ошибка при создании снимка');
+      setToast({ message: 'Ошибка при создании снимка', type: 'error' });
     } finally {
       setLoading(false);
     }
+  };
+
+  const handleCancelCreateSnapshot = () => {
+    setConfirmCreateSnapshot(false);
   };
 
   const handleSnapshotChange = (e) => {
@@ -84,21 +95,15 @@ const StatisticsWidget = ({ expanded, onToggle, onDataChange, isAuthenticated = 
     loadComparison(snapshotId);
   };
 
-  const handleDeleteSnapshot = async (snapshotId, e) => {
+  const handleDeleteSnapshotClick = (snapshotId, e) => {
     e.stopPropagation(); // Предотвращаем всплытие события
-    const snapshot = snapshots.find(s => s.id === snapshotId);
-    const snapshotDate = snapshot ? new Date(snapshot.date).toLocaleString('ru-RU', {
-      day: '2-digit',
-      month: '2-digit',
-      year: 'numeric',
-      hour: '2-digit',
-      minute: '2-digit'
-    }) : '';
+    setConfirmDeleteSnapshot(snapshotId);
+  };
 
-    if (!window.confirm(`Вы уверены, что хотите удалить снимок от ${snapshotDate}? Это действие нельзя отменить.`)) {
-      return;
-    }
-
+  const handleConfirmDeleteSnapshot = async () => {
+    const snapshotId = confirmDeleteSnapshot;
+    setConfirmDeleteSnapshot(null);
+    
     try {
       setLoading(true);
       await deleteSnapshot(snapshotId);
@@ -112,13 +117,17 @@ const StatisticsWidget = ({ expanded, onToggle, onDataChange, isAuthenticated = 
       }
       
       await loadSnapshots();
-      alert('Снимок успешно удален');
+      setToast({ message: 'Снимок успешно удален', type: 'success' });
     } catch (error) {
       console.error('Error deleting snapshot:', error);
-      alert('Ошибка при удалении снимка: ' + (error.response?.data?.error || error.message));
+      setToast({ message: 'Ошибка при удалении снимка: ' + (error.response?.data?.error || error.message), type: 'error' });
     } finally {
       setLoading(false);
     }
+  };
+
+  const handleCancelDeleteSnapshot = () => {
+    setConfirmDeleteSnapshot(null);
   };
 
   const toggleMetric = (metric) => {
@@ -176,7 +185,7 @@ const StatisticsWidget = ({ expanded, onToggle, onDataChange, isAuthenticated = 
         {isAuthenticated && (
           <button 
             className="btn-create-snapshot" 
-            onClick={handleCreateSnapshot}
+            onClick={handleCreateSnapshotClick}
             disabled={loading}
           >
             <i className="fas fa-camera"></i> Сохранить снимок для планерки
@@ -202,7 +211,7 @@ const StatisticsWidget = ({ expanded, onToggle, onDataChange, isAuthenticated = 
                 {isAuthenticated && (
                   <button
                     className="btn-delete-snapshot"
-                    onClick={(e) => handleDeleteSnapshot(snapshot.id, e)}
+                    onClick={(e) => handleDeleteSnapshotClick(snapshot.id, e)}
                     disabled={loading}
                     title="Удалить снимок"
                   >
@@ -297,6 +306,52 @@ const StatisticsWidget = ({ expanded, onToggle, onDataChange, isAuthenticated = 
             </>
           )}
         </>
+      )}
+
+      {/* Модальное окно подтверждения создания снимка */}
+      <ConfirmModal
+        isOpen={confirmCreateSnapshot}
+        title="Создание снимка"
+        message="Создать снимок текущего состояния для планерки?"
+        onConfirm={handleConfirmCreateSnapshot}
+        onCancel={handleCancelCreateSnapshot}
+        confirmText="Создать"
+        cancelText="Отмена"
+        type="info"
+      />
+
+      {/* Модальное окно подтверждения удаления снимка */}
+      {confirmDeleteSnapshot && (() => {
+        const snapshot = snapshots.find(s => s.id === confirmDeleteSnapshot);
+        if (!snapshot) return null;
+        const snapshotDate = new Date(snapshot.date).toLocaleString('ru-RU', {
+          day: '2-digit',
+          month: '2-digit',
+          year: 'numeric',
+          hour: '2-digit',
+          minute: '2-digit'
+        });
+        return (
+          <ConfirmModal
+            isOpen={true}
+            title="Удаление снимка"
+            message={`Вы уверены, что хотите удалить снимок от ${snapshotDate}? Это действие нельзя отменить.`}
+            onConfirm={handleConfirmDeleteSnapshot}
+            onCancel={handleCancelDeleteSnapshot}
+            confirmText="Удалить"
+            cancelText="Отмена"
+            type="danger"
+          />
+        );
+      })()}
+
+      {/* Уведомления */}
+      {toast && (
+        <ToastNotification
+          message={toast.message}
+          type={toast.type}
+          onClose={() => setToast(null)}
+        />
       )}
     </div>
   );
