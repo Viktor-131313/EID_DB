@@ -397,13 +397,22 @@ app.post('/api/containers/:containerId/objects', async (req, res) => {
             return res.status(404).json({ error: 'Container not found' });
         }
 
+        // Обработка aikonaObjectId: если передано пустое значение или null, сохраняем null
+        let aikonaObjectIdValue = null;
+        if (req.body.aikonaObjectId !== undefined && req.body.aikonaObjectId !== null && req.body.aikonaObjectId !== '') {
+            const parsed = parseInt(req.body.aikonaObjectId);
+            aikonaObjectIdValue = isNaN(parsed) ? null : parsed;
+        }
+
+        // НЕ устанавливаем id вручную - для базы данных ID генерируется автоматически через SERIAL
+        // Для файловой системы ID будет установлен в функции createObject
         const newObject = {
-            id: container.objects.length > 0 ? Math.max(...container.objects.map(o => o.id)) + 1 : 1,
+            // id не устанавливаем - будет сгенерирован автоматически
             name: req.body.name || '',
             description: req.body.description || '',
             status: req.body.status || '',
             photo: req.body.photo || null,
-            aikonaObjectId: req.body.aikonaObjectId || null,
+            aikonaObjectId: aikonaObjectIdValue,
             generatedActs: Array.isArray(req.body.generatedActs) ? req.body.generatedActs : [],
             sentForApproval: Array.isArray(req.body.sentForApproval) ? req.body.sentForApproval : [],
             approvedActs: Array.isArray(req.body.approvedActs) ? req.body.approvedActs : [],
@@ -440,9 +449,11 @@ app.post('/api/containers/:containerId/objects', async (req, res) => {
 
         // Используем оптимизированную функцию создания для базы данных
         if (dataAdapter.useDatabase && dataAdapter.createObject) {
+            // Убираем id из объекта - база данных сама сгенерирует уникальный ID
+            const { id, ...objectDataWithoutId } = newObject;
             const createdObject = await dataAdapter.createObject(
                 parseInt(req.params.containerId),
-                newObject
+                objectDataWithoutId
             );
             if (createdObject) {
                 console.log('Object created successfully in database');
