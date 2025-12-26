@@ -149,19 +149,13 @@ async function createObject(containerId, objectData) {
     try {
         await client.query('BEGIN');
         
-        // Получаем следующий ID для объекта
-        const idResult = await client.query(
-            'SELECT COALESCE(MAX(id), 0) + 1 as next_id FROM objects WHERE container_id = $1',
-            [containerId]
-        );
-        const objectId = idResult.rows[0].next_id;
-        
-        // Вставляем объект
-        await client.query(
-            `INSERT INTO objects (id, container_id, name, description, status, photo, aikona_object_id, blocking_factors)
-             VALUES ($1, $2, $3, $4, $5, $6, $7, $8::jsonb)`,
+        // Вставляем объект БЕЗ указания ID - PostgreSQL сам сгенерирует через SERIAL
+        // Затем получаем сгенерированный ID
+        const insertResult = await client.query(
+            `INSERT INTO objects (container_id, name, description, status, photo, aikona_object_id, blocking_factors)
+             VALUES ($1, $2, $3, $4, $5, $6, $7::jsonb)
+             RETURNING id`,
             [
-                objectId,
                 containerId,
                 objectData.name || '',
                 objectData.description || '',
@@ -171,6 +165,7 @@ async function createObject(containerId, objectData) {
                 JSON.stringify(objectData.blockingFactors || [])
             ]
         );
+        const objectId = insertResult.rows[0].id;
         
         // Вставляем акты
         const actsToInsert = [];
@@ -219,17 +214,13 @@ async function createContainer(containerData) {
     try {
         await client.query('BEGIN');
         
-        // Получаем следующий ID для контейнера
-        const idResult = await client.query(
-            'SELECT COALESCE(MAX(id), 0) + 1 as next_id FROM containers'
+        // Вставляем контейнер БЕЗ указания ID - PostgreSQL сам сгенерирует через SERIAL
+        // Затем получаем сгенерированный ID
+        const insertResult = await client.query(
+            'INSERT INTO containers (name) VALUES ($1) RETURNING id',
+            [containerData.name || 'Объекты']
         );
-        const containerId = idResult.rows[0].next_id;
-        
-        // Вставляем контейнер
-        await client.query(
-            'INSERT INTO containers (id, name) VALUES ($1, $2)',
-            [containerId, containerData.name || 'Объекты']
-        );
+        const containerId = insertResult.rows[0].id;
         
         await client.query('COMMIT');
         return { id: containerId, name: containerData.name || 'Объекты', objects: [] };
