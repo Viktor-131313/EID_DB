@@ -13,6 +13,24 @@ app.use(express.urlencoded({ extended: true, limit: '50mb' }));
 
 // Используем адаптер для работы с данными (PostgreSQL или JSON файлы)
 const dataAdapter = require('./database/adapter');
+const { syncObjectFromAikona } = require('./services/aikona-sync');
+const { syncAllObjectsFromAikona, getLastSyncLog } = require('./services/aikona-auto-sync');
+
+// Настройка автоматической синхронизации с Айконой
+const cron = require('node-cron');
+
+// Синхронизация каждый день в 7:00 утра
+// Формат: секунда минута час день месяц день_недели
+// '0 0 7 * * *' = в 7:00:00 каждый день
+cron.schedule('0 0 7 * * *', async () => {
+    console.log('[Cron] Запуск автоматической синхронизации с Айконой в 7:00');
+    await syncAllObjectsFromAikona();
+}, {
+    scheduled: true,
+    timezone: "Europe/Moscow" // Устанавливаем московское время
+});
+
+console.log('[Cron] Автоматическая синхронизация с Айконой настроена на 7:00 каждый день (МСК)');
 
 // Инициализация данных при старте сервера
 (async () => {
@@ -362,6 +380,7 @@ app.post('/api/containers/:containerId/objects', async (req, res) => {
             description: req.body.description || '',
             status: req.body.status || '',
             photo: req.body.photo || null,
+            aikonaObjectId: req.body.aikonaObjectId || null,
             generatedActs: Array.isArray(req.body.generatedActs) ? req.body.generatedActs : [],
             sentForApproval: Array.isArray(req.body.sentForApproval) ? req.body.sentForApproval : [],
             approvedActs: Array.isArray(req.body.approvedActs) ? req.body.approvedActs : [],
@@ -396,13 +415,29 @@ app.post('/api/containers/:containerId/objects', async (req, res) => {
             return res.status(400).json({ error: 'Подписанных актов не может быть больше согласованных' });
         }
 
-        container.objects.push(newObject);
-        if (await dataAdapter.writeData(data)) {
-            console.log('Object created successfully');
-            res.status(201).json(newObject);
+        // Используем оптимизированную функцию создания для базы данных
+        if (dataAdapter.useDatabase && dataAdapter.createObject) {
+            const createdObject = await dataAdapter.createObject(
+                parseInt(req.params.containerId),
+                newObject
+            );
+            if (createdObject) {
+                console.log('Object created successfully in database');
+                res.status(201).json(createdObject);
+            } else {
+                console.log('Failed to create object in database');
+                res.status(500).json({ error: 'Failed to save object' });
+            }
         } else {
-            console.log('Failed to write data');
-            res.status(500).json({ error: 'Failed to save object' });
+            // Для файловой системы используем старый метод
+            container.objects.push(newObject);
+            if (await dataAdapter.writeData(data)) {
+                console.log('Object created successfully');
+                res.status(201).json(newObject);
+            } else {
+                console.log('Failed to write data');
+                res.status(500).json({ error: 'Failed to save object' });
+            }
         }
     } catch (error) {
         console.error('Error creating object:', error);
@@ -427,12 +462,23 @@ app.put('/api/containers/:containerId/objects/:objectId', async (req, res) => {
             return res.status(404).json({ error: 'Object not found' });
         }
 
+        // Обработка aikonaObjectId: если передано пустое значение или null, сохраняем null
+        // Если передано число (даже 0), сохраняем его
+        let aikonaObjectIdValue = null;
+        if (req.body.aikonaObjectId !== undefined && req.body.aikonaObjectId !== null && req.body.aikonaObjectId !== '') {
+            const parsed = parseInt(req.body.aikonaObjectId);
+            aikonaObjectIdValue = isNaN(parsed) ? null : parsed;
+        }
+        
+        console.log(`[PUT /api/containers/:containerId/objects/:objectId] aikonaObjectId from request: ${req.body.aikonaObjectId}, parsed: ${aikonaObjectIdValue}`);
+        
         const updatedObject = {
             ...container.objects[objectIndex],
             name: req.body.name !== undefined ? req.body.name : container.objects[objectIndex].name,
             description: req.body.description !== undefined ? req.body.description : container.objects[objectIndex].description,
             status: req.body.status !== undefined ? req.body.status : container.objects[objectIndex].status || '',
             photo: req.body.photo !== undefined ? req.body.photo : container.objects[objectIndex].photo || null,
+            aikonaObjectId: aikonaObjectIdValue,
             generatedActs: Array.isArray(req.body.generatedActs) ? req.body.generatedActs : container.objects[objectIndex].generatedActs || [],
             sentForApproval: Array.isArray(req.body.sentForApproval) ? req.body.sentForApproval : container.objects[objectIndex].sentForApproval || [],
             approvedActs: Array.isArray(req.body.approvedActs) ? req.body.approvedActs : (container.objects[objectIndex].approvedActs || []),
@@ -466,17 +512,82 @@ app.put('/api/containers/:containerId/objects/:objectId', async (req, res) => {
             return res.status(400).json({ error: 'Подписанных актов не может быть больше согласованных' });
         }
 
-        container.objects[objectIndex] = updatedObject;
-        if (await dataAdapter.writeData(data)) {
-            console.log('Object updated successfully');
-            res.json(updatedObject);
+        // Используем оптимизированную функцию обновления для базы данных
+        if (dataAdapter.useDatabase && dataAdapter.updateObject) {
+            const success = await dataAdapter.updateObject(
+                parseInt(req.params.containerId),
+                parseInt(req.params.objectId),
+                updatedObject
+            );
+            if (success) {
+                console.log('Object updated successfully in database');
+                res.json(updatedObject);
+            } else {
+                console.log('Failed to update object in database');
+                res.status(500).json({ error: 'Failed to update object' });
+            }
         } else {
-            console.log('Failed to write data');
-            res.status(500).json({ error: 'Failed to update object' });
+            // Для файловой системы используем старый метод
+            container.objects[objectIndex] = updatedObject;
+            if (await dataAdapter.writeData(data)) {
+                console.log('Object updated successfully');
+                res.json(updatedObject);
+            } else {
+                console.log('Failed to write data');
+                res.status(500).json({ error: 'Failed to update object' });
+            }
         }
     } catch (error) {
         console.error('Error updating object:', error);
         res.status(500).json({ error: 'Failed to update object', details: error.message });
+    }
+});
+
+// POST /api/containers/:containerId/objects/:objectId/sync-aikona - синхронизировать данные из Айконы
+app.post('/api/containers/:containerId/objects/:objectId/sync-aikona', async (req, res) => {
+    try {
+        const data = await dataAdapter.readData();
+        const container = data.containers.find(c => c.id === parseInt(req.params.containerId));
+        if (!container) {
+            return res.status(404).json({ error: 'Container not found' });
+        }
+
+        const object = container.objects.find(o => o.id === parseInt(req.params.objectId));
+        if (!object) {
+            return res.status(404).json({ error: 'Object not found' });
+        }
+
+        if (!object.aikonaObjectId) {
+            return res.status(400).json({ error: 'AIKONA_ID_NOT_SET' });
+        }
+
+        // Синхронизируем данные из Айконы
+        const updatedObject = await syncObjectFromAikona(object);
+
+        // Обновляем объект в данных
+        const objectIndex = container.objects.findIndex(o => o.id === parseInt(req.params.objectId));
+        container.objects[objectIndex] = {
+            ...updatedObject,
+            updatedAt: new Date().toISOString()
+        };
+
+        if (await dataAdapter.writeData(data)) {
+            res.json(updatedObject);
+        } else {
+            res.status(500).json({ error: 'Failed to save synchronized data' });
+        }
+    } catch (error) {
+        console.error('Error syncing from Aikona:', error);
+        
+        if (error.message === 'OBJECT_NOT_FOUND') {
+            return res.status(404).json({ error: 'OBJECT_NOT_FOUND' });
+        } else if (error.message === 'API_UNAVAILABLE') {
+            return res.status(503).json({ error: 'API_UNAVAILABLE' });
+        } else if (error.message === 'AIKONA_ID_NOT_SET') {
+            return res.status(400).json({ error: 'AIKONA_ID_NOT_SET' });
+        }
+        
+        res.status(500).json({ error: 'Failed to sync from Aikona', details: error.message });
     }
 });
 
@@ -846,6 +957,17 @@ app.delete('/api/tasks/:taskId', async (req, res) => {
 // Health check
 app.get('/api/health', (req, res) => {
     res.json({ status: 'ok', timestamp: new Date().toISOString() });
+});
+
+// GET /api/aikona-sync-log - получить последний лог синхронизации с Айконой
+app.get('/api/aikona-sync-log', (req, res) => {
+    try {
+        const log = getLastSyncLog();
+        res.json(log);
+    } catch (error) {
+        console.error('Error getting sync log:', error);
+        res.status(500).json({ error: 'Failed to get sync log' });
+    }
 });
 
 // Раздача статических файлов React в production (должно быть ПОСЛЕ всех API routes)

@@ -16,6 +16,7 @@ CREATE TABLE IF NOT EXISTS objects (
     description TEXT,
     status TEXT,
     photo TEXT,
+    aikona_object_id INTEGER,
     blocking_factors JSONB DEFAULT '[]'::jsonb,
     created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
     updated_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP

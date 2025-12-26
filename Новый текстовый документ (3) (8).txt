@@ -1,0 +1,361 @@
+[
+  {
+    "ObjectId": 511,
+    "ObjectName": "ЖК \"Парадный Ансамбль\" 8 очередь кад. 21, уч.23",
+    "Milestones": [
+      {
+        "MilestoneId": 10,
+        "MilestoneName": "\"0\" цикл",
+        "WorkPlan": "2025-12-28T00:00:00",
+        "DirectivePlan": "2026-03-09T00:00:00",
+        "ActualCompletionDate": "2025-12-25T00:00:00"
+      },
+      {
+        "MilestoneId": 9,
+        "MilestoneName": "\"Коробка\"",
+        "WorkPlan": "2026-07-03T00:00:00",
+        "DirectivePlan": "2026-09-10T00:00:00",
+        "ActualCompletionDate": null
+      },
+      {
+        "MilestoneId": 11,
+        "MilestoneName": "Ввод в эксплуатацию",
+        "WorkPlan": "2028-02-24T00:00:00",
+        "DirectivePlan": "2028-03-30T00:00:00",
+        "ActualCompletionDate": null
+      },
+      {
+        "MilestoneId": 12,
+        "MilestoneName": "Передано 80% помещений СКС",
+        "WorkPlan": "2028-03-28T00:00:00",
+        "DirectivePlan": "2028-05-02T00:00:00",
+        "ActualCompletionDate": null
+      },
+      {
+        "MilestoneId": 14,
+        "MilestoneName": "Передано 100% помещений СКС",
+        "WorkPlan": "2028-05-30T00:00:00",
+        "DirectivePlan": "2028-05-30T00:00:00",
+        "ActualCompletionDate": null
+      },
+      {
+        "MilestoneId": 15,
+        "MilestoneName": "Объект передан УК",
+        "WorkPlan": "2028-05-30T00:00:00",
+        "DirectivePlan": "2028-05-30T00:00:00",
+        "ActualCompletionDate": null
+      },
+      {
+        "MilestoneId": 13,
+        "MilestoneName": "Передано 80% квартир дольщикам",
+        "WorkPlan": "2028-07-03T00:00:00",
+        "DirectivePlan": "2028-08-07T00:00:00",
+        "ActualCompletionDate": null
+      },
+      {
+        "MilestoneId": 16,
+        "MilestoneName": "Срок передачи квартир по ДДУ",
+        "WorkPlan": "2028-09-30T00:00:00",
+        "DirectivePlan": "2028-09-30T00:00:00",
+        "ActualCompletionDate": null
+      }
+    ],
+    "Contractors": [
+      {
+        "id_sub": 12101,
+        "ContractorId": 531,
+        "ContractId": 6819,
+        "ShortName": "Артель ТПК ООО",
+        "ContractCost": 1161713011,
+        "ContractorINN": "7810351803",
+        "ContractorKPP": "781701001"
+      },
+      {
+        "id_sub": 11587,
+        "ContractorId": 222,
+        "ContractId": 6297,
+        "ShortName": "Строительные и транспортные решения ООО",
+        "ContractCost": 86908952.84,
+        "ContractorINN": "7838505002",
+        "ContractorKPP": "780201001"
+      },
+      {
+        "id_sub": 11800,
+        "ContractorId": 106,
+        "ContractId": 6510,
+        "ShortName": "Атлант ООО 7813543609",
+        "ContractCost": 95917650.28,
+        "ContractorINN": "7813543609",
+        "ContractorKPP": "781301001"
+      },
+      {
+        "id_sub": 11896,
+        "ContractorId": 167,
+        "ContractId": 6607,
+        "ShortName": "САНТЕХ-СТАНДАРТ ООО",
+        "ContractCost": 853495510.22,
+        "ContractorINN": "7810600351",
+        "ContractorKPP": "781001001"
+      },
+      {
+        "id_sub": 12125,
+        "ContractorId": 761,
+        "ContractId": 6846,
+        "ShortName": "КОЗЕРОГ СФ ООО",
+        "ContractCost": 24853291.54,
+        "ContractorINN": "7813253515",
+        "ContractorKPP": "781301001"
+      },
+      {
+        "id_sub": 12014,
+        "ContractorId": 292,
+        "ContractId": 6725,
+        "ShortName": "МОСТ-СПБ ООО",
+        "ContractCost": 36752929.06,
+        "ContractorINN": "7811368045",
+        "ContractorKPP": "781601001"
+      },
+      {
+        "id_sub": 11801,
+        "ContractorId": 389,
+        "ContractId": 6511,
+        "ShortName": "Спецгидроизоляция Монолит ООО НПП",
+        "ContractCost": 48967194,
+        "ContractorINN": "7810656347",
+        "ContractorKPP": "781401001"
+      },
+      {
+        "id_sub": 11686,
+        "ContractorId": 453,
+        "ContractId": 6396,
+        "ShortName": "ГИДРОГАЗСТРОЙ ООО",
+        "ContractCost": 33695308.7,
+        "ContractorINN": "7811446631",
+        "ContractorKPP": "780601001"
+      },
+      {
+        "id_sub": 11578,
+        "ContractorId": 623,
+        "ContractId": 6288,
+        "ShortName": "ЭСТ-Монолит ООО",
+        "ContractCost": 1095097879.48,
+        "ContractorINN": "7814791989",
+        "ContractorKPP": "781401001"
+      },
+      {
+        "id_sub": 11724,
+        "ContractorId": 301,
+        "ContractId": 6434,
+        "ShortName": "Гарант Строй Сервис ООО",
+        "ContractCost": 1065281888.45,
+        "ContractorINN": "7810466811",
+        "ContractorKPP": "781001001"
+      },
+      {
+        "id_sub": 11782,
+        "ContractorId": 67,
+        "ContractId": 6492,
+        "ShortName": "ЭИТ ООО",
+        "ContractCost": 449847320.7,
+        "ContractorINN": "7811466740",
+        "ContractorKPP": "781101001"
+      },
+      {
+        "id_sub": 12098,
+        "ContractorId": 929,
+        "ContractId": 6816,
+        "ShortName": "Прогресс Многопрофильная строительная компания ООО",
+        "ContractCost": 66200040.15,
+        "ContractorINN": "7820328909",
+        "ContractorKPP": "780201001"
+      },
+      {
+        "id_sub": 12243,
+        "ContractorId": 23,
+        "ContractId": 6966,
+        "ShortName": "РА ПРОМЕТЕЙ ООО",
+        "ContractCost": 26284707,
+        "ContractorINN": "7840502545",
+        "ContractorKPP": "780601001"
+      },
+      {
+        "id_sub": 12171,
+        "ContractorId": 382,
+        "ContractId": 6892,
+        "ShortName": "СКС ООО 7813265905",
+        "ContractCost": 19453250,
+        "ContractorINN": "7813265905",
+        "ContractorKPP": "781101001"
+      },
+      {
+        "id_sub": 11885,
+        "ContractorId": 228,
+        "ContractId": 6596,
+        "ShortName": "Сэтл Строй ООО (ГП)",
+        "ContractCost": 9597428958,
+        "ContractorINN": "7810489897",
+        "ContractorKPP": "997450001"
+      },
+      {
+        "id_sub": 12103,
+        "ContractorId": 575,
+        "ContractId": 6821,
+        "ShortName": "СК Арма ООО",
+        "ContractCost": 331464108.57,
+        "ContractorINN": "7806571725",
+        "ContractorKPP": "781401001"
+      },
+      {
+        "id_sub": 11938,
+        "ContractorId": 189,
+        "ContractId": 6649,
+        "ShortName": "НЭСТ ООО",
+        "ContractCost": 134248237.55,
+        "ContractorINN": "7801511899",
+        "ContractorKPP": "780101001"
+      },
+      {
+        "id_sub": 12065,
+        "ContractorId": 556,
+        "ContractId": 6781,
+        "ShortName": "НеваИнвестСтрой ООО",
+        "ContractCost": 67934544.03,
+        "ContractorINN": "7810542170",
+        "ContractorKPP": "781001001"
+      },
+      {
+        "id_sub": 12007,
+        "ContractorId": 502,
+        "ContractId": 6718,
+        "ShortName": "СтройГраунд ООО",
+        "ContractCost": 89012590.5,
+        "ContractorINN": "7804358720",
+        "ContractorKPP": "780401001"
+      },
+      {
+        "id_sub": 11780,
+        "ContractorId": 86,
+        "ContractId": 6490,
+        "ShortName": "СК Монолит ООО 7839411639",
+        "ContractCost": 269802924.86,
+        "ContractorINN": "7839411639",
+        "ContractorKPP": "781101001"
+      },
+      {
+        "id_sub": 11904,
+        "ContractorId": 82,
+        "ContractId": 6615,
+        "ShortName": "СУ Эдельвейс ООО",
+        "ContractCost": 159690370.14,
+        "ContractorINN": "7801289154",
+        "ContractorKPP": "480001001"
+      },
+      {
+        "id_sub": 12115,
+        "ContractorId": 415,
+        "ContractId": 6836,
+        "ShortName": "АНТ-Кровля ООО",
+        "ContractCost": 26697467.3,
+        "ContractorINN": "7811741323",
+        "ContractorKPP": "781001001"
+      },
+      {
+        "id_sub": 11905,
+        "ContractorId": 826,
+        "ContractId": 6616,
+        "ShortName": "ГОРОД ООО 7807115228",
+        "ContractCost": 52734609.93,
+        "ContractorINN": "7807115228",
+        "ContractorKPP": "781001001"
+      },
+      {
+        "id_sub": 11960,
+        "ContractorId": 73,
+        "ContractId": 6671,
+        "ShortName": "Окна Форте ООО",
+        "ContractCost": 146907908.7,
+        "ContractorINN": "7840515752",
+        "ContractorKPP": "781001001"
+      },
+      {
+        "id_sub": 11894,
+        "ContractorId": 910,
+        "ContractId": 6605,
+        "ShortName": "ТИТАНСТРОЙИНВЕСТ ООО",
+        "ContractCost": 54671213.94,
+        "ContractorINN": "6732233639",
+        "ContractorKPP": "780401001"
+      },
+      {
+        "id_sub": 12008,
+        "ContractorId": 744,
+        "ContractId": 6719,
+        "ShortName": "Элемент ООО 7801660026",
+        "ContractCost": 73238965.8,
+        "ContractorINN": "7801660026",
+        "ContractorKPP": "781401001"
+      }
+    ],
+    "STKs": [
+      {
+        "STKId": 138476,
+        "STKGuid": "c13c57d8-b8c4-4ea1-b55c-03560a019fa2",
+        "STKName": "СТК. Отделка насосной",
+        "ClassifierCode": "01.006.030.098.299",
+        "Locations": [
+          {
+            "LocationId": 218856,
+            "AdditionalInfo": null,
+            "LocationArchive": false,
+            "LocationName": "Корпус 8.1_Паркинг 1_Этаж -1",
+            "id_sub": 0,
+            "ContractorId": 0,
+            "ContractId": 0,
+            "WorkStart": null,
+            "WorkEnd": null,
+            "DirectiveStart": "2026-05-11T00:00:00",
+            "DirectiveEnd": "2026-06-10T00:00:00",
+            "SZCompletion": null,
+            "SZStartDate": null,
+            "SZEndDate": null,
+            "LABCompletion": null,
+            "LABStartDate": null,
+            "LABEndDate": null,
+            "TNCompletion": null,
+            "TNFactDate": null,
+            "InOptimizationProtocol": false,
+            "OptimizationDetails": []
+          }
+        ]
+      },
+      {
+        "STKId": 138614,
+        "STKGuid": "ea46b70d-d3d1-4273-97b8-7fc4d8cc3ed0",
+        "STKName": "СТК. Наружный водопровод из ПНД труб",
+        "ClassifierCode": "01.007.034.109.349",
+        "Locations": [
+          {
+            "LocationId": 218840,
+            "AdditionalInfo": null,
+            "LocationArchive": false,
+            "LocationName": "Наружняя территория_В границах красных линий_Наружняя территория",
+            "id_sub": 12007,
+            "ContractorId": 502,
+            "ContractId": 6718,
+            "WorkStart": "2026-01-01T00:00:00",
+            "WorkEnd": "2026-04-12T00:00:00",
+            "DirectiveStart": "2025-12-26T00:00:00",
+            "DirectiveEnd": "2026-04-06T00:00:00",
+            "SZCompletion": null,
+            "SZStartDate": null,
+            "SZEndDate": null,
+            "LABCompletion": null,
+            "LABStartDate": null,
+            "LABEndDate": null,
+            "TNCompletion": null,
+            "TNFactDate": null,
+            "InOptimizationProtocol": false,
+            "OptimizationDetails": []
+          }
+        ]
+      },

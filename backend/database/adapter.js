@@ -103,6 +103,8 @@ async function readData() {
 async function writeData(data) {
     if (useDatabase) {
         try {
+            // Используем saveContainers для полной перезаписи (миграции и т.д.)
+            // Но для обновления отдельных объектов лучше использовать updateObject
             await db.saveContainers(data);
             return true;
         } catch (error) {
@@ -117,6 +119,72 @@ async function writeData(data) {
             console.error('Error writing data:', error);
             return false;
         }
+    }
+}
+
+// Обновить один объект (оптимизированная версия для базы данных)
+async function updateObject(containerId, objectId, objectData) {
+    if (useDatabase) {
+        try {
+            await db.updateObject(containerId, objectId, objectData);
+            return true;
+        } catch (error) {
+            console.error('Error updating object in database:', error);
+            return false;
+        }
+    } else {
+        // Для файловой системы используем обычный writeData
+        const data = await readData();
+        const container = data.containers.find(c => c.id === containerId);
+        if (!container) return false;
+        
+        const objectIndex = container.objects.findIndex(o => o.id === objectId);
+        if (objectIndex === -1) return false;
+        
+        container.objects[objectIndex] = {
+            ...container.objects[objectIndex],
+            ...objectData,
+            id: objectId,
+            updatedAt: new Date().toISOString()
+        };
+        
+        return await writeData(data);
+    }
+}
+
+// Создать новый объект (оптимизированная версия для базы данных)
+async function createObject(containerId, objectData) {
+    if (useDatabase) {
+        try {
+            const newObject = await db.createObject(containerId, objectData);
+            return newObject;
+        } catch (error) {
+            console.error('Error creating object in database:', error);
+            return null;
+        }
+    } else {
+        // Для файловой системы используем обычный writeData
+        const data = await readData();
+        const container = data.containers.find(c => c.id === containerId);
+        if (!container) return null;
+        
+        const newId = container.objects.length > 0 
+            ? Math.max(...container.objects.map(o => o.id)) + 1 
+            : 1;
+        
+        const newObject = {
+            ...objectData,
+            id: newId,
+            createdAt: new Date().toISOString(),
+            updatedAt: new Date().toISOString()
+        };
+        
+        container.objects.push(newObject);
+        
+        if (await writeData(data)) {
+            return newObject;
+        }
+        return null;
     }
 }
 
@@ -250,6 +318,8 @@ module.exports = {
     initialize,
     readData,
     writeData,
+    updateObject,
+    createObject,
     readSnapshots,
     writeSnapshots,
     addSnapshot,

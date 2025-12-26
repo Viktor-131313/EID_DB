@@ -56,7 +56,7 @@ async function getAllContainers() {
         for (const containerRow of containersResult.rows) {
             // Получаем объекты контейнера
             const objectsResult = await pool.query(
-                `SELECT id, name, description, status, photo, blocking_factors, 
+                `SELECT id, name, description, status, photo, aikona_object_id, blocking_factors, 
                         created_at, updated_at 
                  FROM objects 
                  WHERE container_id = $1 
@@ -122,6 +122,7 @@ async function getAllContainers() {
                     description: objectRow.description || '',
                     status: objectRow.status || '',
                     photo: objectRow.photo || null,
+                    aikonaObjectId: objectRow.aikona_object_id || null,
                     generatedActs: actsByType.generatedActs || [],
                     sentForApproval: actsByType.sentForApproval || [],
                     approvedActs: actsByType.approvedActs || [],
@@ -173,8 +174,8 @@ async function saveContainers(containersData) {
             for (const obj of container.objects || []) {
                 // Вставляем объект
                 const objectResult = await client.query(
-                    `INSERT INTO objects (id, container_id, name, description, status, photo, blocking_factors)
-                     VALUES ($1, $2, $3, $4, $5, $6, $7::jsonb)
+                    `INSERT INTO objects (id, container_id, name, description, status, photo, aikona_object_id, blocking_factors)
+                     VALUES ($1, $2, $3, $4, $5, $6, $7, $8::jsonb)
                      RETURNING id`,
                     [
                         obj.id,
@@ -183,6 +184,7 @@ async function saveContainers(containersData) {
                         obj.description || '',
                         obj.status || '',
                         obj.photo || null,
+                        obj.aikonaObjectId || null,
                         JSON.stringify(obj.blockingFactors || [])
                     ]
                 );
@@ -413,6 +415,9 @@ async function deleteSnapshot(snapshotId) {
     }
 }
 
+// Импортируем функции для обновления отдельных объектов
+const { updateObject: updateObjectDirect, createObject: createObjectDirect } = require('./database-update-object');
+
 module.exports = {
     pool,
     initializeDatabase,
@@ -422,5 +427,7 @@ module.exports = {
     saveTasks,
     getAllSnapshots,
     saveSnapshot,
-    deleteSnapshot
+    deleteSnapshot,
+    updateObject: updateObjectDirect,
+    createObject: createObjectDirect
 };
