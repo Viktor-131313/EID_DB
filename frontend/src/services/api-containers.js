@@ -53,6 +53,22 @@ export const updateContainer = async (containerId, name) => {
   return response.json();
 };
 
+// Переместить контейнер вверх или вниз
+export const moveContainer = async (containerId, direction) => {
+  const response = await fetch(`${API_URL}/api/containers/${containerId}/move`, {
+    method: 'POST',
+    headers: {
+      'Content-Type': 'application/json',
+    },
+    body: JSON.stringify({ direction }),
+  });
+  if (!response.ok) {
+    const error = await response.json();
+    throw new Error(error.error || 'Failed to move container');
+  }
+  return response.json();
+};
+
 // Удалить контейнер
 export const deleteContainer = async (containerId) => {
   const response = await fetch(`${API_URL}/api/containers/${containerId}`, {

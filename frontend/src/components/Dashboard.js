@@ -8,7 +8,7 @@ import AuthModal from './AuthModal';
 import ToastNotification from './ToastNotification';
 import ConfirmModal from './ConfirmModal';
 import SyncLogModal from './SyncLogModal';
-import { updateContainer } from '../services/api-containers';
+import { updateContainer, moveContainer } from '../services/api-containers';
 import { exportDashboardToPDF } from '../utils/pdfExport';
 import { fetchTasks } from '../services/api-tasks';
 
@@ -194,14 +194,77 @@ const Dashboard = ({ containers, globalStats, loading, onContainerUpdate, isAuth
               </div>
             )}
           </div>
-          <div className="containers-list">
-            {containers.map(container => (
-              <Container
-                key={container.id}
-                container={container}
-                onUpdate={onContainerUpdate}
-                isAuthenticated={isAuthenticated}
-              />
+          <div className="containers-list" style={{ paddingLeft: isAuthenticated ? '50px' : '0' }}>
+            {containers.map((container, index) => (
+              <div key={container.id} style={{ position: 'relative' }}>
+                {isAuthenticated && (
+                  <div style={{ 
+                    position: 'absolute', 
+                    left: '-45px', 
+                    top: '10px', 
+                    display: 'flex', 
+                    flexDirection: 'column', 
+                    gap: '5px',
+                    zIndex: 10
+                  }}>
+                    <button
+                      className="btn"
+                      onClick={async (e) => {
+                        e.stopPropagation();
+                        try {
+                          await moveContainer(container.id, 'up');
+                          onContainerUpdate(); // Обновляем список контейнеров
+                        } catch (error) {
+                          console.error('Error moving container up:', error);
+                          alert('Ошибка при перемещении контейнера: ' + error.message);
+                        }
+                      }}
+                      disabled={index === 0}
+                      style={{
+                        padding: '5px 10px',
+                        fontSize: '12px',
+                        minWidth: '35px',
+                        opacity: index === 0 ? 0.5 : 1,
+                        cursor: index === 0 ? 'not-allowed' : 'pointer',
+                        backgroundColor: index === 0 ? '#ccc' : '#3498db'
+                      }}
+                      title={index === 0 ? 'Контейнер уже первый' : 'Переместить вверх'}
+                    >
+                      <i className="fas fa-arrow-up"></i>
+                    </button>
+                    <button
+                      className="btn"
+                      onClick={async (e) => {
+                        e.stopPropagation();
+                        try {
+                          await moveContainer(container.id, 'down');
+                          onContainerUpdate(); // Обновляем список контейнеров
+                        } catch (error) {
+                          console.error('Error moving container down:', error);
+                          alert('Ошибка при перемещении контейнера: ' + error.message);
+                        }
+                      }}
+                      disabled={index === containers.length - 1}
+                      style={{
+                        padding: '5px 10px',
+                        fontSize: '12px',
+                        minWidth: '35px',
+                        opacity: index === containers.length - 1 ? 0.5 : 1,
+                        cursor: index === containers.length - 1 ? 'not-allowed' : 'pointer',
+                        backgroundColor: index === containers.length - 1 ? '#ccc' : '#3498db'
+                      }}
+                      title={index === containers.length - 1 ? 'Контейнер уже последний' : 'Переместить вниз'}
+                    >
+                      <i className="fas fa-arrow-down"></i>
+                    </button>
+                  </div>
+                )}
+                <Container
+                  container={container}
+                  onUpdate={onContainerUpdate}
+                  isAuthenticated={isAuthenticated}
+                />
+              </div>
             ))}
           </div>
         </div>

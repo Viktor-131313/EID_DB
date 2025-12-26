@@ -216,9 +216,13 @@ async function createContainer(containerData) {
         
         // Вставляем контейнер БЕЗ указания ID - PostgreSQL сам сгенерирует через SERIAL
         // Затем получаем сгенерированный ID
+        // Получаем максимальный display_order для установки порядка нового контейнера
+        const maxOrderResult = await client.query('SELECT COALESCE(MAX(display_order), 0) as max_order FROM containers');
+        const nextOrder = (maxOrderResult.rows[0].max_order || 0) + 1;
+        
         const insertResult = await client.query(
-            'INSERT INTO containers (name) VALUES ($1) RETURNING id',
-            [containerData.name || 'Объекты']
+            'INSERT INTO containers (name, display_order) VALUES ($1, $2) RETURNING id',
+            [containerData.name || 'Объекты', nextOrder]
         );
         const containerId = insertResult.rows[0].id;
         
@@ -233,9 +237,114 @@ async function createContainer(containerData) {
     }
 }
 
+/**
+ * Переместить контейнер вверх или вниз в списке
+ * @param {number} containerId - ID контейнера для перемещения
+ * @param {string} direction - 'up' или 'down'
+ */
+async function moveContainer(containerId, direction) {
+    const client = await pool.connect();
+    
+    try {
+        await client.query('BEGIN');
+        
+        // Получаем текущий display_order контейнера
+        const currentResult = await client.query(
+            'SELECT COALESCE(display_order, id) as display_order FROM containers WHERE id = $1',
+            [containerId]
+        );
+        
+        if (currentResult.rows.length === 0) {
+            throw new Error('Container not found');
+        }
+        
+        let currentOrder = currentResult.rows[0].display_order;
+        
+        // Если display_order NULL, используем id как порядок
+        if (currentOrder === null || currentOrder === undefined) {
+            currentOrder = containerId;
+            // Обновляем display_order для этого контейнера
+            await client.query('UPDATE containers SET display_order = $1 WHERE id = $2', [currentOrder, containerId]);
+        }
+        
+        // Определяем направление и находим соседний контейнер
+        let swapOrder;
+        let swapContainerId;
+        if (direction === 'up') {
+            // Находим контейнер с максимальным display_order, который меньше текущего
+            // Используем COALESCE для обработки NULL
+            const prevResult = await client.query(
+                `SELECT id, COALESCE(display_order, id) as display_order 
+                 FROM containers 
+                 WHERE COALESCE(display_order, id) < $1 
+                 ORDER BY COALESCE(display_order, id) DESC LIMIT 1`,
+                [currentOrder]
+            );
+            
+            if (prevResult.rows.length === 0) {
+                // Уже первый, ничего не делаем
+                await client.query('COMMIT');
+                return { success: true, message: 'Container is already first' };
+            }
+            
+            swapOrder = prevResult.rows[0].display_order;
+            swapContainerId = prevResult.rows[0].id;
+        } else if (direction === 'down') {
+            // Находим контейнер с минимальным display_order, который больше текущего
+            // Используем COALESCE для обработки NULL
+            const nextResult = await client.query(
+                `SELECT id, COALESCE(display_order, id) as display_order 
+                 FROM containers 
+                 WHERE COALESCE(display_order, id) > $1 
+                 ORDER BY COALESCE(display_order, id) ASC LIMIT 1`,
+                [currentOrder]
+            );
+            
+            if (nextResult.rows.length === 0) {
+                // Уже последний, ничего не делаем
+                await client.query('COMMIT');
+                return { success: true, message: 'Container is already last' };
+            }
+            
+            swapOrder = nextResult.rows[0].display_order;
+            swapContainerId = nextResult.rows[0].id;
+        } else {
+            throw new Error('Invalid direction. Use "up" or "down"');
+        }
+        
+        // Обновляем display_order для соседнего контейнера, если он NULL
+        await client.query(
+            'UPDATE containers SET display_order = COALESCE(display_order, id) WHERE id = $1 AND display_order IS NULL',
+            [swapContainerId]
+        );
+        
+        // Перечитываем display_order соседнего контейнера
+        const swapResult = await client.query(
+            'SELECT COALESCE(display_order, id) as display_order FROM containers WHERE id = $1',
+            [swapContainerId]
+        );
+        swapOrder = swapResult.rows[0].display_order;
+        
+        // Меняем порядок: используем временное значение -1 для избежания конфликтов
+        await client.query('UPDATE containers SET display_order = -1 WHERE id = $1', [containerId]);
+        await client.query('UPDATE containers SET display_order = $1 WHERE display_order = $2', [currentOrder, swapOrder]);
+        await client.query('UPDATE containers SET display_order = $1 WHERE id = $2', [swapOrder, containerId]);
+        
+        await client.query('COMMIT');
+        return { success: true };
+    } catch (error) {
+        await client.query('ROLLBACK');
+        console.error('Ошибка при перемещении контейнера:', error);
+        throw error;
+    } finally {
+        client.release();
+    }
+}
+
 module.exports = {
     updateObject,
     createObject,
-    createContainer
+    createContainer,
+    moveContainer
 };
 

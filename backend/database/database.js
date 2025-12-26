@@ -91,9 +91,32 @@ async function getAllContainers() {
             }
         }
         
-        // Получаем контейнеры
+        // Автоматически добавляем колонку display_order, если её нет (миграция)
+        try {
+            await pool.query(`
+                DO $$ 
+                BEGIN
+                    IF NOT EXISTS (
+                        SELECT 1 FROM information_schema.columns 
+                        WHERE table_name = 'containers' 
+                        AND column_name = 'display_order'
+                    ) THEN
+                        ALTER TABLE containers ADD COLUMN display_order INTEGER DEFAULT 0;
+                        -- Устанавливаем display_order для существующих записей
+                        UPDATE containers SET display_order = id;
+                        RAISE NOTICE 'Column display_order added to containers table';
+                    END IF;
+                END $$;
+            `);
+        } catch (migrationError) {
+            if (!migrationError.message.includes('already exists')) {
+                console.warn('⚠️  Предупреждение при миграции display_order:', migrationError.message);
+            }
+        }
+        
+        // Получаем контейнеры, сортируя по display_order
         const containersResult = await pool.query(
-            'SELECT id, name, created_at, updated_at FROM containers ORDER BY id'
+            'SELECT id, name, display_order, created_at, updated_at FROM containers ORDER BY display_order, id'
         );
         
         const containers = [];
@@ -213,8 +236,8 @@ async function saveContainers(containersData) {
         for (const container of containersData.containers || []) {
             // Вставляем контейнер
             const containerResult = await client.query(
-                'INSERT INTO containers (id, name) VALUES ($1, $2) RETURNING id',
-                [container.id, container.name]
+                'INSERT INTO containers (id, name, display_order) VALUES ($1, $2, $3) RETURNING id',
+                [container.id, container.name, container.display_order || container.id || 0]
             );
             
             const containerId = containerResult.rows[0].id;

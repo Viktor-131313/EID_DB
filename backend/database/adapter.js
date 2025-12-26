@@ -126,7 +126,8 @@ async function writeData(data) {
 async function updateObject(containerId, objectId, objectData) {
     if (useDatabase) {
         try {
-            await db.updateObject(containerId, objectId, objectData);
+            const dbUpdate = require('./database-update-object');
+            await dbUpdate.updateObject(containerId, objectId, objectData);
             return true;
         } catch (error) {
             console.error('Error updating object in database:', error);
@@ -156,7 +157,8 @@ async function updateObject(containerId, objectId, objectData) {
 async function createObject(containerId, objectData) {
     if (useDatabase) {
         try {
-            const newObject = await db.createObject(containerId, objectData);
+            const dbUpdate = require('./database-update-object');
+            const newObject = await dbUpdate.createObject(containerId, objectData);
             return newObject;
         } catch (error) {
             console.error('Error creating object in database:', error);
@@ -192,7 +194,8 @@ async function createObject(containerId, objectData) {
 async function createContainer(containerData) {
     if (useDatabase) {
         try {
-            const newContainer = await db.createContainer(containerData);
+            const dbUpdate = require('./database-update-object');
+            const newContainer = await dbUpdate.createContainer(containerData);
             return newContainer;
         } catch (error) {
             console.error('Error creating container in database:', error);
@@ -218,6 +221,47 @@ async function createContainer(containerData) {
             return newContainer;
         }
         return null;
+    }
+}
+
+// Переместить контейнер вверх или вниз
+async function moveContainer(containerId, direction) {
+    if (useDatabase) {
+        try {
+            const dbUpdate = require('./database-update-object');
+            return await dbUpdate.moveContainer(containerId, direction);
+        } catch (error) {
+            console.error('Error moving container in database:', error);
+            throw error;
+        }
+    } else {
+        // Для файловой системы меняем порядок в массиве
+        try {
+            const data = await readData();
+            const containerIndex = data.containers.findIndex(c => c.id === containerId);
+            
+            if (containerIndex === -1) {
+                throw new Error('Container not found');
+            }
+            
+            const newIndex = direction === 'up' ? containerIndex - 1 : containerIndex + 1;
+            
+            if (newIndex < 0 || newIndex >= data.containers.length) {
+                return { success: true, message: `Container is already ${direction === 'up' ? 'first' : 'last'}` };
+            }
+            
+            // Меняем местами
+            [data.containers[containerIndex], data.containers[newIndex]] = 
+                [data.containers[newIndex], data.containers[containerIndex]];
+            
+            if (await writeData(data)) {
+                return { success: true };
+            }
+            return { success: false };
+        } catch (error) {
+            console.error('Error moving container:', error);
+            throw error;
+        }
     }
 }
 
@@ -354,6 +398,7 @@ module.exports = {
     updateObject,
     createObject,
     createContainer,
+    moveContainer,
     readSnapshots,
     writeSnapshots,
     addSnapshot,

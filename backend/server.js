@@ -352,6 +352,41 @@ app.put('/api/containers/:containerId', async (req, res) => {
     }
 });
 
+// POST /api/containers/:containerId/move - переместить контейнер вверх или вниз
+app.post('/api/containers/:containerId/move', async (req, res) => {
+    try {
+        console.log('[MOVE] Request received:', { containerId: req.params.containerId, direction: req.body.direction });
+        const containerId = parseInt(req.params.containerId);
+        const direction = req.body.direction; // 'up' or 'down'
+        
+        if (!direction || (direction !== 'up' && direction !== 'down')) {
+            console.log('[MOVE] Invalid direction:', direction);
+            return res.status(400).json({ error: 'Invalid direction. Use "up" or "down"' });
+        }
+        
+        console.log('[MOVE] Calling dataAdapter.moveContainer:', { containerId, direction });
+        
+        if (!dataAdapter.moveContainer) {
+            console.error('[MOVE] moveContainer function is not available in dataAdapter');
+            return res.status(500).json({ error: 'Move container function is not available' });
+        }
+        
+        const result = await dataAdapter.moveContainer(containerId, direction);
+        console.log('[MOVE] Result:', result);
+        
+        if (result && result.success) {
+            res.json({ success: true, message: result.message || 'Container moved successfully' });
+        } else {
+            console.log('[MOVE] Result indicates failure:', result);
+            res.status(500).json({ error: 'Failed to move container', result });
+        }
+    } catch (error) {
+        console.error('[MOVE] Error moving container:', error);
+        console.error('[MOVE] Error stack:', error.stack);
+        res.status(500).json({ error: 'Failed to move container', details: error.message, stack: error.stack });
+    }
+});
+
 // DELETE /api/containers/:containerId - удалить контейнер
 app.delete('/api/containers/:containerId', async (req, res) => {
     try {
