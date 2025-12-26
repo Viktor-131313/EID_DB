@@ -282,7 +282,8 @@ app.get('/api/containers', async (req, res) => {
         res.json(data.containers || []);
     } catch (error) {
         console.error('Error getting containers:', error);
-        res.status(500).json({ error: 'Failed to read containers' });
+        console.error('Error stack:', error.stack);
+        res.status(500).json({ error: 'Failed to read containers', details: error.message });
     }
 });
 

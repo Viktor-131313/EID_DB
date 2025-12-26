@@ -144,7 +144,10 @@ async function getAllContainers() {
         return { containers };
     } catch (error) {
         console.error('Ошибка при получении контейнеров:', error);
-        throw error;
+        console.error('Stack trace:', error.stack);
+        // Возвращаем пустую структуру вместо выброса ошибки
+        // Это позволит приложению работать даже если база данных еще не инициализирована
+        return { containers: [] };
     }
 }
 
