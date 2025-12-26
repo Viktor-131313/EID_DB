@@ -188,6 +188,39 @@ async function createObject(containerId, objectData) {
     }
 }
 
+// Создать новый контейнер (оптимизированная версия для базы данных)
+async function createContainer(containerData) {
+    if (useDatabase) {
+        try {
+            const newContainer = await db.createContainer(containerData);
+            return newContainer;
+        } catch (error) {
+            console.error('Error creating container in database:', error);
+            return null;
+        }
+    } else {
+        // Для файловой системы используем обычный writeData
+        const data = await readData();
+        
+        const newId = data.containers.length > 0 
+            ? Math.max(...data.containers.map(c => c.id)) + 1 
+            : 1;
+        
+        const newContainer = {
+            id: newId,
+            name: containerData.name || 'Объекты',
+            objects: []
+        };
+        
+        data.containers.push(newContainer);
+        
+        if (await writeData(data)) {
+            return newContainer;
+        }
+        return null;
+    }
+}
+
 // Чтение снимков
 async function readSnapshots() {
     if (useDatabase) {
@@ -320,6 +353,7 @@ module.exports = {
     writeData,
     updateObject,
     createObject,
+    createContainer,
     readSnapshots,
     writeSnapshots,
     addSnapshot,

@@ -290,21 +290,43 @@ app.get('/api/containers', async (req, res) => {
 // POST /api/containers - создать новый контейнер
 app.post('/api/containers', async (req, res) => {
     try {
-        const data = await dataAdapter.readData();
-        const newContainer = {
-            id: data.containers.length > 0 ? Math.max(...data.containers.map(c => c.id)) + 1 : 1,
-            name: req.body.name || 'Объекты',
-            objects: []
+        console.log('POST /api/containers - Request body:', JSON.stringify(req.body, null, 2));
+        
+        const containerData = {
+            name: req.body.name || 'Объекты'
         };
-        data.containers.push(newContainer);
-        if (await dataAdapter.writeData(data)) {
-            res.status(201).json(newContainer);
+        
+        // Используем оптимизированную функцию создания для базы данных
+        if (dataAdapter.useDatabase && dataAdapter.createContainer) {
+            const createdContainer = await dataAdapter.createContainer(containerData);
+            if (createdContainer) {
+                console.log('Container created successfully in database');
+                res.status(201).json(createdContainer);
+            } else {
+                console.log('Failed to create container in database');
+                res.status(500).json({ error: 'Failed to save container' });
+            }
         } else {
-            res.status(500).json({ error: 'Failed to save container' });
+            // Для файловой системы используем старый метод
+            const data = await dataAdapter.readData();
+            const newContainer = {
+                id: data.containers.length > 0 ? Math.max(...data.containers.map(c => c.id)) + 1 : 1,
+                name: req.body.name || 'Объекты',
+                objects: []
+            };
+            data.containers.push(newContainer);
+            if (await dataAdapter.writeData(data)) {
+                console.log('Container created successfully');
+                res.status(201).json(newContainer);
+            } else {
+                console.log('Failed to write data');
+                res.status(500).json({ error: 'Failed to save container' });
+            }
         }
     } catch (error) {
         console.error('Error creating container:', error);
-        res.status(500).json({ error: 'Failed to create container' });
+        console.error('Error stack:', error.stack);
+        res.status(500).json({ error: 'Failed to create container', details: error.message });
     }
 });
 

@@ -210,8 +210,41 @@ async function createObject(containerId, objectData) {
     }
 }
 
+/**
+ * Создать новый контейнер в базе данных
+ */
+async function createContainer(containerData) {
+    const client = await pool.connect();
+    
+    try {
+        await client.query('BEGIN');
+        
+        // Получаем следующий ID для контейнера
+        const idResult = await client.query(
+            'SELECT COALESCE(MAX(id), 0) + 1 as next_id FROM containers'
+        );
+        const containerId = idResult.rows[0].next_id;
+        
+        // Вставляем контейнер
+        await client.query(
+            'INSERT INTO containers (id, name) VALUES ($1, $2)',
+            [containerId, containerData.name || 'Объекты']
+        );
+        
+        await client.query('COMMIT');
+        return { id: containerId, name: containerData.name || 'Объекты', objects: [] };
+    } catch (error) {
+        await client.query('ROLLBACK');
+        console.error('Ошибка при создании контейнера:', error);
+        throw error;
+    } finally {
+        client.release();
+    }
+}
+
 module.exports = {
     updateObject,
-    createObject
+    createObject,
+    createContainer
 };
 

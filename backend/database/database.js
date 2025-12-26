@@ -419,7 +419,7 @@ async function deleteSnapshot(snapshotId) {
 }
 
 // Импортируем функции для обновления отдельных объектов
-const { updateObject: updateObjectDirect, createObject: createObjectDirect } = require('./database-update-object');
+const { updateObject: updateObjectDirect, createObject: createObjectDirect, createContainer: createContainerDirect } = require('./database-update-object');
 
 module.exports = {
     pool,
@@ -432,5 +432,6 @@ module.exports = {
     saveSnapshot,
     deleteSnapshot,
     updateObject: updateObjectDirect,
-    createObject: createObjectDirect
+    createObject: createObjectDirect,
+    createContainer: createContainerDirect
 };
