@@ -40,6 +40,10 @@ const ObjectModal = ({ object, onSave, onDelete, onClose, isAuthenticated = fals
   // Используем useRef для отслеживания, инициализирован ли formData
   const isInitializedRef = useRef(false);
   const lastObjectIdRef = useRef(null);
+  
+  // Отслеживаем, где начался клик (внутри или снаружи модального окна)
+  const mouseDownInsideRef = useRef(false);
+  const modalContentRef = useRef(null);
 
   useEffect(() => {
     const currentObjectId = object?.id || null;
@@ -583,9 +587,26 @@ const ObjectModal = ({ object, onSave, onDelete, onClose, isAuthenticated = fals
     }
   };
 
+  // Отслеживаем, где начался клик (внутри модального окна или снаружи)
+  const handleModalContentMouseDown = () => {
+    mouseDownInsideRef.current = true;
+  };
+
   const handleBackdropClick = (e) => {
-    if (e.target === e.currentTarget) {
+    // Закрываем окно только если:
+    // 1. Клик был именно на backdrop (а не на его дочерние элементы)
+    // 2. И клик НЕ начался внутри модального окна (т.е. пользователь не выделял текст)
+    if (e.target === e.currentTarget && !mouseDownInsideRef.current) {
       onClose();
+    }
+    // Сбрасываем флаг после обработки клика
+    mouseDownInsideRef.current = false;
+  };
+  
+  const handleBackdropMouseDown = (e) => {
+    // Если mousedown произошел на backdrop (а не на модальном окне), сбрасываем флаг
+    if (e.target === e.currentTarget) {
+      mouseDownInsideRef.current = false;
     }
   };
 
@@ -607,8 +628,13 @@ const ObjectModal = ({ object, onSave, onDelete, onClose, isAuthenticated = fals
   }, [formData.status, object]);
 
   return (
-    <div className="modal" onClick={handleBackdropClick}>
-      <div className="modal-content object-modal-content" onClick={(e) => e.stopPropagation()}>
+    <div className="modal" onClick={handleBackdropClick} onMouseDown={handleBackdropMouseDown}>
+      <div 
+        ref={modalContentRef}
+        className="modal-content object-modal-content" 
+        onClick={(e) => e.stopPropagation()}
+        onMouseDown={handleModalContentMouseDown}
+      >
           <div className="modal-header">
           <div className="modal-title">
             {/* Заголовок убран по требованию */}
