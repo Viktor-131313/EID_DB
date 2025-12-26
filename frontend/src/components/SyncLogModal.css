@@ -1,0 +1,239 @@
+.sync-log-modal-overlay {
+  position: fixed;
+  top: 0;
+  left: 0;
+  width: 100%;
+  height: 100%;
+  background-color: rgba(0, 0, 0, 0.6);
+  display: flex;
+  justify-content: center;
+  align-items: center;
+  z-index: 10002;
+}
+
+.sync-log-modal-content {
+  max-width: 700px;
+  width: 90%;
+  max-height: 90vh;
+  overflow-y: auto;
+  background: white;
+  border-radius: 8px;
+  box-shadow: 0 4px 20px rgba(0, 0, 0, 0.3);
+  padding: 0;
+}
+
+.sync-log-modal-header {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  padding: 20px 25px;
+  border-bottom: 1px solid #e1e5eb;
+  background-color: #f8f9fa;
+  border-radius: 8px 8px 0 0;
+}
+
+.sync-log-modal-header h2 {
+  margin: 0;
+  font-size: 20px;
+  color: #2c3e50;
+  display: flex;
+  align-items: center;
+  gap: 10px;
+}
+
+.sync-log-modal-header h2 i {
+  color: #3498db;
+}
+
+.sync-log-modal-body {
+  padding: 25px;
+}
+
+.sync-log-loading {
+  text-align: center;
+  padding: 40px;
+  color: #7f8c8d;
+}
+
+.sync-log-loading i {
+  font-size: 24px;
+  margin-right: 10px;
+}
+
+.sync-log-status {
+  display: flex;
+  align-items: center;
+  gap: 10px;
+  padding: 15px;
+  border-radius: 6px;
+  margin-bottom: 20px;
+  font-size: 16px;
+  font-weight: 500;
+}
+
+.sync-log-status.success {
+  background-color: #d4edda;
+  color: #155724;
+  border: 1px solid #c3e6cb;
+}
+
+.sync-log-status.error {
+  background-color: #f8d7da;
+  color: #721c24;
+  border: 1px solid #f5c6cb;
+}
+
+.sync-log-status i {
+  font-size: 20px;
+}
+
+.sync-log-timestamp {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  padding: 12px;
+  background-color: #f8f9fa;
+  border-radius: 6px;
+  margin-bottom: 20px;
+  color: #2c3e50;
+}
+
+.sync-log-timestamp i {
+  color: #7f8c8d;
+}
+
+.sync-log-stats {
+  display: flex;
+  gap: 15px;
+  margin-bottom: 20px;
+  flex-wrap: wrap;
+}
+
+.stat-item {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  padding: 10px 15px;
+  border-radius: 6px;
+  font-weight: 500;
+}
+
+.stat-success {
+  background-color: #d4edda;
+  color: #155724;
+}
+
+.stat-error {
+  background-color: #f8d7da;
+  color: #721c24;
+}
+
+.sync-log-objects {
+  margin-top: 20px;
+  padding: 15px;
+  background-color: #f8f9fa;
+  border-radius: 6px;
+}
+
+.sync-log-objects h3 {
+  margin: 0 0 15px 0;
+  font-size: 16px;
+  color: #2c3e50;
+  display: flex;
+  align-items: center;
+  gap: 8px;
+}
+
+.sync-log-objects h3 i {
+  color: #3498db;
+}
+
+.sync-log-objects ul {
+  list-style: none;
+  padding: 0;
+  margin: 0;
+}
+
+.sync-log-objects li {
+  padding: 10px;
+  margin-bottom: 8px;
+  background-color: white;
+  border-radius: 4px;
+  border-left: 3px solid #3498db;
+}
+
+.sync-log-failed li {
+  border-left-color: #dc3545;
+}
+
+.sync-log-objects .container-name {
+  color: #7f8c8d;
+  font-size: 14px;
+}
+
+.sync-log-objects .aikona-id {
+  color: #3498db;
+  font-size: 13px;
+  font-weight: normal;
+}
+
+.error-message {
+  margin-top: 5px;
+  padding: 5px 10px;
+  background-color: #f8d7da;
+  color: #721c24;
+  border-radius: 4px;
+  font-size: 13px;
+  font-style: italic;
+}
+
+.sync-log-empty {
+  text-align: center;
+  padding: 40px;
+  color: #7f8c8d;
+}
+
+.sync-log-empty i {
+  font-size: 48px;
+  margin-bottom: 15px;
+  color: #bdc3c7;
+}
+
+.sync-log-modal-footer {
+  display: flex;
+  justify-content: flex-end;
+  gap: 10px;
+  padding: 20px 25px;
+  border-top: 1px solid #e1e5eb;
+  background-color: #f8f9fa;
+  border-radius: 0 0 8px 8px;
+}
+
+.sync-log-modal-footer .btn {
+  padding: 10px 20px;
+  border-radius: 6px;
+  cursor: pointer;
+  border: none;
+  font-size: 14px;
+  font-weight: 500;
+  transition: all 0.2s;
+}
+
+.sync-log-modal-footer .btn-primary {
+  background-color: #3498db;
+  color: white;
+}
+
+.sync-log-modal-footer .btn-primary:hover {
+  background-color: #2980b9;
+}
+
+.sync-log-modal-footer .btn:not(.btn-primary) {
+  background-color: #95a5a6;
+  color: white;
+}
+
+.sync-log-modal-footer .btn:not(.btn-primary):hover {
+  background-color: #7f8c8d;
+}
+

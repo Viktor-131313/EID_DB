@@ -1,6 +1,7 @@
 import React, { useState, useEffect, useCallback, useRef } from 'react';
 import './ObjectModal.css';
 import ConfirmModal from './ConfirmModal';
+import { syncObjectFromAikona } from '../services/api-containers';
 
 const ObjectModal = ({ object, onSave, onDelete, onClose, isAuthenticated = false }) => {
   const [formData, setFormData] = useState({
@@ -8,6 +9,7 @@ const ObjectModal = ({ object, onSave, onDelete, onClose, isAuthenticated = fals
     description: '',
     status: '',
     photo: null, // URL или base64 строка для фото
+    aikonaObjectId: null,
     generatedActs: [],
     sentForApproval: [],
     approvedActs: [],
@@ -15,6 +17,8 @@ const ObjectModal = ({ object, onSave, onDelete, onClose, isAuthenticated = fals
     signedActs: [],
     blockingFactors: []
   });
+  
+  const [syncingAikona, setSyncingAikona] = useState(false);
 
   const [expandedSections, setExpandedSections] = useState({
     generated: false,
@@ -97,6 +101,7 @@ const ObjectModal = ({ object, onSave, onDelete, onClose, isAuthenticated = fals
           description: object.description || '',
           status: object.status || '',
           photo: object.photo || null,
+          aikonaObjectId: object.aikonaObjectId || null,
           generatedActs,
           sentForApproval,
           approvedActs,
@@ -111,6 +116,8 @@ const ObjectModal = ({ object, onSave, onDelete, onClose, isAuthenticated = fals
           name: '',
           description: '',
           status: '',
+          photo: null,
+          aikonaObjectId: null,
           generatedActs: [],
           sentForApproval: [],
           approvedActs: [],
@@ -469,7 +476,7 @@ const ObjectModal = ({ object, onSave, onDelete, onClose, isAuthenticated = fals
     const { name, value } = e.target;
     setFormData(prev => ({
       ...prev,
-      [name]: value
+      [name]: name === 'aikonaObjectId' ? (value ? parseInt(value) : null) : value
     }));
     
     // Автоматическое изменение высоты textarea
@@ -530,6 +537,50 @@ const ObjectModal = ({ object, onSave, onDelete, onClose, isAuthenticated = fals
 
   const handleCancelDeleteObject = () => {
     setConfirmDeleteObject(false);
+  };
+
+  const handleSyncAikona = async () => {
+    if (!object || !object.containerId || !formData.aikonaObjectId) {
+      alert('Необходимо указать ID объекта в Айконе');
+      return;
+    }
+
+    setSyncingAikona(true);
+    try {
+      // Если ID был изменен в форме, но объект еще не сохранен - сначала сохраняем ID
+      if (object && object.id && (!object.aikonaObjectId || object.aikonaObjectId !== formData.aikonaObjectId)) {
+        // Сохраняем объект с новым aikonaObjectId
+        await onSave({
+          ...formData,
+          aikonaObjectId: formData.aikonaObjectId
+        });
+        // Обновляем локальный объект
+        object.aikonaObjectId = formData.aikonaObjectId;
+      }
+
+      const updatedObject = await syncObjectFromAikona(object.containerId, object.id);
+      
+      // Обновляем форму с новыми данными
+      setFormData(prev => ({
+        ...prev,
+        generatedActs: updatedObject.generatedActs || prev.generatedActs
+      }));
+      
+      alert('Данные успешно синхронизированы из Айконы');
+    } catch (error) {
+      console.error('Error syncing from Aikona:', error);
+      if (error.response?.data?.error === 'OBJECT_NOT_FOUND' || error.message === 'OBJECT_NOT_FOUND') {
+        alert('Объект с таким ID не найден в Айконе');
+      } else if (error.response?.data?.error === 'API_UNAVAILABLE' || error.message === 'API_UNAVAILABLE') {
+        alert('API Айконы недоступно');
+      } else if (error.response?.data?.error === 'AIKONA_ID_NOT_SET' || error.message === 'AIKONA_ID_NOT_SET') {
+        alert('ID объекта в Айконе не сохранен. Пожалуйста, сначала сохраните объект с указанным ID.');
+      } else {
+        alert('Ошибка синхронизации: ' + (error.message || 'Неизвестная ошибка'));
+      }
+    } finally {
+      setSyncingAikona(false);
+    }
   };
 
   const handleBackdropClick = (e) => {
@@ -644,6 +695,53 @@ const ObjectModal = ({ object, onSave, onDelete, onClose, isAuthenticated = fals
             />
           </div>
 
+          {isAuthenticated && (
+            <div className="form-group">
+              <label className="form-label" htmlFor="aikonaObjectId">
+                ID объекта в Айконе
+                <span style={{ marginLeft: '10px', display: 'inline-flex', alignItems: 'center', gap: '8px' }}>
+                  <button
+                    type="button"
+                    className="btn"
+                    onClick={handleSyncAikona}
+                    disabled={syncingAikona || !formData.aikonaObjectId}
+                    style={{
+                      padding: '6px 12px',
+                      fontSize: '14px',
+                      backgroundColor: syncingAikona ? '#95a5a6' : '#3498db',
+                      color: 'white',
+                      border: 'none',
+                      borderRadius: '4px',
+                      cursor: syncingAikona || !formData.aikonaObjectId ? 'not-allowed' : 'pointer'
+                    }}
+                  >
+                    {syncingAikona ? (
+                      <>
+                        <i className="fas fa-spinner fa-spin" style={{ marginRight: '6px' }}></i>
+                        Загрузка...
+                      </>
+                    ) : (
+                      <>
+                        <i className="fas fa-sync-alt" style={{ marginRight: '6px' }}></i>
+                        Забрать данные
+                      </>
+                    )}
+                  </button>
+                </span>
+              </label>
+              <input
+                type="number"
+                className="form-input"
+                id="aikonaObjectId"
+                name="aikonaObjectId"
+                value={formData.aikonaObjectId || ''}
+                onChange={handleChange}
+                placeholder="Например: 401"
+                min="1"
+              />
+            </div>
+          )}
+
           <div className="form-group">
             <label className="form-label" htmlFor="objectStatus">Статус</label>
             <textarea
@@ -676,6 +774,13 @@ const ObjectModal = ({ object, onSave, onDelete, onClose, isAuthenticated = fals
             
             {expandedSections.generated && (
               <div className="form-section-content">
+                {/* Заголовки столбцов */}
+                <div className="smr-columns-header">
+                  <div className="smr-column-header-name">СМР</div>
+                  <div className="smr-column-header-count">Praktis ID</div>
+                  <div className="smr-column-header-separator"></div>
+                  <div className="smr-column-header-total">СЗ Icona</div>
+                </div>
                 {Array.isArray(formData.generatedActs) && formData.generatedActs.map(smr => (
                   <div
                     key={smr.id}

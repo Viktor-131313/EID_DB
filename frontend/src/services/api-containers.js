@@ -1,92 +1,208 @@
-import axios from 'axios';
+const API_URL = process.env.REACT_APP_API_URL || 'http://localhost:3001';
 
-// В production (Render) используем относительный путь, т.к. фронтенд и бэкенд на одном домене
-// В development можно использовать прокси из package.json или установить REACT_APP_API_URL
-const API_BASE_URL = process.env.REACT_APP_API_URL || '/api';
-
-const api = axios.create({
-  baseURL: API_BASE_URL,
-  headers: {
-    'Content-Type': 'application/json'
-  }
-});
-
-// Containers
+// Получить все контейнеры
 export const fetchContainers = async () => {
-  const response = await api.get('/containers');
-  return response.data;
+  const response = await fetch(`${API_URL}/api/containers`);
+  if (!response.ok) {
+    throw new Error('Failed to fetch containers');
+  }
+  return response.json();
 };
 
+// Создать новый контейнер
 export const createContainer = async (name) => {
-  const response = await api.post('/containers', { name });
-  return response.data;
+  const response = await fetch(`${API_URL}/api/containers`, {
+    method: 'POST',
+    headers: {
+      'Content-Type': 'application/json',
+    },
+    body: JSON.stringify({ name }),
+  });
+  if (!response.ok) {
+    throw new Error('Failed to create container');
+  }
+  return response.json();
 };
 
+// Обновить контейнер
 export const updateContainer = async (containerId, name) => {
-  const response = await api.put(`/containers/${containerId}`, { name });
-  return response.data;
+  const response = await fetch(`${API_URL}/api/containers/${containerId}`, {
+    method: 'PUT',
+    headers: {
+      'Content-Type': 'application/json',
+    },
+    body: JSON.stringify({ name }),
+  });
+  if (!response.ok) {
+    throw new Error('Failed to update container');
+  }
+  return response.json();
 };
 
+// Удалить контейнер
 export const deleteContainer = async (containerId) => {
-  const response = await api.delete(`/containers/${containerId}`);
-  return response.data;
+  const response = await fetch(`${API_URL}/api/containers/${containerId}`, {
+    method: 'DELETE',
+  });
+  if (!response.ok) {
+    throw new Error('Failed to delete container');
+  }
+  return response.json();
 };
 
-// Objects in containers
+// Получить объекты контейнера
 export const fetchContainerObjects = async (containerId) => {
-  const response = await api.get(`/containers/${containerId}/objects`);
-  return response.data;
+  const response = await fetch(`${API_URL}/api/containers/${containerId}/objects`);
+  if (!response.ok) {
+    throw new Error('Failed to fetch container objects');
+  }
+  return response.json();
 };
 
+// Создать объект в контейнере
 export const createContainerObject = async (containerId, objectData) => {
-  const response = await api.post(`/containers/${containerId}/objects`, objectData);
-  return response.data;
+  const response = await fetch(`${API_URL}/api/containers/${containerId}/objects`, {
+    method: 'POST',
+    headers: {
+      'Content-Type': 'application/json',
+    },
+    body: JSON.stringify(objectData),
+  });
+  if (!response.ok) {
+    const errorData = await response.json();
+    throw new Error(errorData.error || 'Failed to create object');
+  }
+  return response.json();
 };
 
+// Обновить объект
 export const updateContainerObject = async (containerId, objectId, objectData) => {
-  const response = await api.put(`/containers/${containerId}/objects/${objectId}`, objectData);
-  return response.data;
+  const response = await fetch(`${API_URL}/api/containers/${containerId}/objects/${objectId}`, {
+    method: 'PUT',
+    headers: {
+      'Content-Type': 'application/json',
+    },
+    body: JSON.stringify(objectData),
+  });
+  if (!response.ok) {
+    const errorData = await response.json();
+    throw new Error(errorData.error || 'Failed to update object');
+  }
+  return response.json();
 };
 
+// Удалить объект
 export const deleteContainerObject = async (containerId, objectId) => {
-  const response = await api.delete(`/containers/${containerId}/objects/${objectId}`);
-  return response.data;
+  const response = await fetch(`${API_URL}/api/containers/${containerId}/objects/${objectId}`, {
+    method: 'DELETE',
+  });
+  if (!response.ok) {
+    throw new Error('Failed to delete object');
+  }
+  return response.json();
 };
 
-// Stats
-export const fetchStats = async () => {
-  const response = await api.get('/stats');
-  return response.data;
+// Синхронизировать данные объекта из Айконы
+export const syncObjectFromAikona = async (containerId, objectId) => {
+  try {
+    const response = await fetch(`${API_URL}/api/containers/${containerId}/objects/${objectId}/sync-aikona`, {
+      method: 'POST',
+      headers: {
+        'Content-Type': 'application/json',
+      },
+    });
+    
+    if (!response.ok) {
+      const errorData = await response.json();
+      const error = new Error(errorData.error || 'Failed to sync from Aikona');
+      error.response = { data: errorData };
+      throw error;
+    }
+    
+    return response.json();
+  } catch (error) {
+    // Пробрасываем ошибку дальше с сохранением структуры для обработки
+    if (error.response) {
+      throw error;
+    }
+    // Если это сетевая ошибка или другая - создаем структуру ошибки
+    const networkError = new Error(error.message || 'API_UNAVAILABLE');
+    networkError.response = { data: { error: 'API_UNAVAILABLE' } };
+    throw networkError;
+  }
 };
 
+// Получить статистику контейнера
 export const fetchContainerStats = async (containerId) => {
-  const response = await api.get(`/containers/${containerId}/stats`);
-  return response.data;
+  const response = await fetch(`${API_URL}/api/containers/${containerId}/stats`);
+  if (!response.ok) {
+    throw new Error('Failed to fetch container stats');
+  }
+  return response.json();
+};
+
+// Получить общую статистику
+export const fetchStats = async () => {
+  const response = await fetch(`${API_URL}/api/stats`);
+  if (!response.ok) {
+    throw new Error('Failed to fetch stats');
+  }
+  return response.json();
 };
 
 // Snapshots
 export const fetchSnapshots = async () => {
-  const response = await api.get('/snapshots');
-  return response.data;
+  const response = await fetch(`${API_URL}/api/snapshots`);
+  if (!response.ok) {
+    throw new Error('Failed to fetch snapshots');
+  }
+  return response.json();
 };
 
 export const createSnapshot = async () => {
-  const response = await api.post('/snapshots');
-  return response.data;
+  const response = await fetch(`${API_URL}/api/snapshots`, {
+    method: 'POST',
+    headers: {
+      'Content-Type': 'application/json',
+    },
+  });
+  if (!response.ok) {
+    throw new Error('Failed to create snapshot');
+  }
+  return response.json();
 };
 
 export const compareWithLatestSnapshot = async () => {
-  const response = await api.get('/snapshots/latest/compare');
-  return response.data;
+  const response = await fetch(`${API_URL}/api/snapshots/latest/compare`);
+  if (!response.ok) {
+    throw new Error('Failed to compare with latest snapshot');
+  }
+  return response.json();
 };
 
 export const compareWithSnapshot = async (snapshotId) => {
-  const response = await api.get(`/snapshots/compare/${snapshotId}`);
-  return response.data;
+  const response = await fetch(`${API_URL}/api/snapshots/compare/${snapshotId}`);
+  if (!response.ok) {
+    throw new Error('Failed to compare with snapshot');
+  }
+  return response.json();
 };
 
 export const deleteSnapshot = async (snapshotId) => {
-  const response = await api.delete(`/snapshots/${snapshotId}`);
-  return response.data;
+  const response = await fetch(`${API_URL}/api/snapshots/${snapshotId}`, {
+    method: 'DELETE',
+  });
+  if (!response.ok) {
+    throw new Error('Failed to delete snapshot');
+  }
+  return response.json();
 };
 
+// Получить последний лог синхронизации с Айконой
+export const getAikonaSyncLog = async () => {
+  const response = await fetch(`${API_URL}/api/aikona-sync-log`);
+  if (!response.ok) {
+    throw new Error('Failed to fetch sync log');
+  }
+  return response.json();
+};

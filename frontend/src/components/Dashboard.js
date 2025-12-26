@@ -7,6 +7,7 @@ import DevelopmentTasks from './DevelopmentTasks';
 import AuthModal from './AuthModal';
 import ToastNotification from './ToastNotification';
 import ConfirmModal from './ConfirmModal';
+import SyncLogModal from './SyncLogModal';
 import { updateContainer } from '../services/api-containers';
 import { exportDashboardToPDF } from '../utils/pdfExport';
 import { fetchTasks } from '../services/api-tasks';
@@ -26,6 +27,7 @@ const Dashboard = ({ containers, globalStats, loading, onContainerUpdate, isAuth
   const [authModalOpen, setAuthModalOpen] = useState(false);
   const [toast, setToast] = useState(null);
   const [confirmLogout, setConfirmLogout] = useState(false);
+  const [syncLogModalOpen, setSyncLogModalOpen] = useState(false);
 
   useEffect(() => {
     // Сохраняем заголовок в localStorage
@@ -126,6 +128,30 @@ const Dashboard = ({ containers, globalStats, loading, onContainerUpdate, isAuth
                 <div className="date-display">
                   <i className="far fa-calendar-alt"></i> {currentDate}
                 </div>
+                {isAuthenticated && (
+                  <button 
+                    className="btn btn-sync-log" 
+                    onClick={() => setSyncLogModalOpen(true)}
+                    title="Лог синхронизации с Айконой"
+                    style={{
+                      position: 'relative',
+                      backgroundColor: '#3498db',
+                      color: 'white',
+                      border: 'none',
+                      padding: '10px 15px',
+                      borderRadius: '6px',
+                      cursor: 'pointer',
+                      display: 'flex',
+                      alignItems: 'center',
+                      gap: '8px',
+                      fontSize: '14px',
+                      fontWeight: '500'
+                    }}
+                  >
+                    <i className="fas fa-envelope"></i>
+                    <span>Лог синхронизации</span>
+                  </button>
+                )}
                 <button 
                   className="btn btn-export-pdf" 
                   onClick={handleExportPDF}
@@ -226,6 +252,11 @@ const Dashboard = ({ containers, globalStats, loading, onContainerUpdate, isAuth
             onClose={() => setToast(null)}
           />
         )}
+
+        <SyncLogModal
+          isOpen={syncLogModalOpen}
+          onClose={() => setSyncLogModalOpen(false)}
+        />
 
         <div className="footer">
           Дашборд обновлен: {new Date().toLocaleString('ru-RU')} | Praktis ID Пилот v1.0

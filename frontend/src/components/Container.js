@@ -81,7 +81,7 @@ const Container = ({ container, onUpdate, isAuthenticated = false }) => {
   };
 
   const handleEditObject = (object) => {
-    setEditingObject({ ...object, containerId: container.id });
+    setEditingObject({ ...object, containerId: container.id, id: object.id });
     setModalOpen(true);
   };
 
