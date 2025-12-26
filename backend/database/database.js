@@ -69,6 +69,28 @@ async function initializeDatabase() {
  */
 async function getAllContainers() {
     try {
+        // Автоматически добавляем колонку aikona_object_id, если её нет
+        try {
+            await pool.query(`
+                DO $$ 
+                BEGIN
+                    IF NOT EXISTS (
+                        SELECT 1 FROM information_schema.columns 
+                        WHERE table_name = 'objects' 
+                        AND column_name = 'aikona_object_id'
+                    ) THEN
+                        ALTER TABLE objects ADD COLUMN aikona_object_id INTEGER;
+                        RAISE NOTICE 'Column aikona_object_id added';
+                    END IF;
+                END $$;
+            `);
+        } catch (migrationError) {
+            // Игнорируем ошибки миграции, если колонка уже существует
+            if (!migrationError.message.includes('already exists')) {
+                console.warn('⚠️  Предупреждение при проверке миграции:', migrationError.message);
+            }
+        }
+        
         // Получаем контейнеры
         const containersResult = await pool.query(
             'SELECT id, name, created_at, updated_at FROM containers ORDER BY id'
