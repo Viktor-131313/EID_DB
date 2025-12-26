@@ -1,8 +1,9 @@
-import React, { useState, useEffect } from 'react';
+import React, { useState, useEffect, useCallback } from 'react';
 import './Container.css';
 import ObjectsList from './ObjectsList';
 import ObjectModal from './ObjectModal';
 import SummaryCards from './SummaryCards';
+import ConfirmModal from './ConfirmModal';
 import {
   fetchContainerObjects,
   createContainerObject,
@@ -29,10 +30,34 @@ const Container = ({ container, onUpdate, isAuthenticated = false }) => {
   const [isEditingName, setIsEditingName] = useState(false);
   const [editingName, setEditingName] = useState(container.name);
   const [isSelected, setIsSelected] = useState(false);
+  const [confirmDeleteContainer, setConfirmDeleteContainer] = useState(false);
 
   useEffect(() => {
     loadData();
   }, [container.id]);
+
+  // Обработчик клавиши Delete для удаления контейнера
+  useEffect(() => {
+    const handleKeyDown = async (e) => {
+      if (!isAuthenticated) return;
+      // Если открыто модальное окно объекта - не обрабатываем Delete на уровне контейнера
+      if (modalOpen) return;
+      // Если открыто любое модальное окно подтверждения - не обрабатываем Delete
+      if (confirmDeleteContainer) return;
+      
+      if (e.key === 'Delete' && isSelected && !e.ctrlKey && !e.altKey && !e.shiftKey) {
+        // Проверяем, не в поле ввода ли мы
+        if (e.target.tagName === 'INPUT' || e.target.tagName === 'SELECT' || e.target.tagName === 'TEXTAREA') {
+          return;
+        }
+        e.preventDefault();
+        setConfirmDeleteContainer(true);
+      }
+    };
+
+    window.addEventListener('keydown', handleKeyDown);
+    return () => window.removeEventListener('keydown', handleKeyDown);
+  }, [isAuthenticated, isSelected, modalOpen, confirmDeleteContainer]);
 
   const loadData = async () => {
     try {
@@ -87,17 +112,12 @@ const Container = ({ container, onUpdate, isAuthenticated = false }) => {
     }
   };
 
-  const handleDeleteObject = async () => {
-    if (!editingObject || !editingObject.id) {
+  const handleDeleteObject = async (objectId) => {
+    if (!objectId) {
       return;
     }
-
-    if (!window.confirm('Вы уверены, что хотите удалить этот объект?')) {
-      return;
-    }
-
     try {
-      await deleteContainerObject(container.id, editingObject.id);
+      await deleteContainerObject(container.id, objectId);
       setModalOpen(false);
       setEditingObject(null);
       await loadData();
@@ -160,22 +180,12 @@ const Container = ({ container, onUpdate, isAuthenticated = false }) => {
     setIsSelected(true);
   };
 
-  const handleKeyDown = async (e) => {
-    if (!isAuthenticated) return;
-    if (e.key === 'Delete' && isSelected && !e.ctrlKey && !e.altKey && !e.shiftKey) {
-      // Проверяем, не в поле ввода ли мы
-      if (e.target.tagName === 'INPUT' || e.target.tagName === 'SELECT' || e.target.tagName === 'TEXTAREA') {
-        return;
-      }
-      e.preventDefault();
-      handleDeleteContainer();
-    }
-  };
 
-  const handleDeleteContainer = async () => {
-    if (!window.confirm(`Внимание! Вы уверены, что хотите удалить контейнер "${container.name}"? Все объекты внутри контейнера также будут удалены. Это действие нельзя отменить.`)) {
-      return;
-    }
+  const handleDeleteContainer = useCallback(() => {
+    setConfirmDeleteContainer(true);
+  }, []);
+
+  const handleConfirmDeleteContainer = async () => {
     try {
       const containerId = parseInt(container.id, 10);
       if (isNaN(containerId)) {
@@ -184,6 +194,7 @@ const Container = ({ container, onUpdate, isAuthenticated = false }) => {
       }
       await deleteContainer(containerId);
       setIsSelected(false);
+      setConfirmDeleteContainer(false);
       if (onUpdate) onUpdate();
     } catch (error) {
       console.error('Error deleting container:', error);
@@ -208,7 +219,6 @@ const Container = ({ container, onUpdate, isAuthenticated = false }) => {
     <div 
       className={`container-section ${isSelected ? 'container-selected' : ''}`}
       onClick={handleContainerClick}
-      onKeyDown={handleKeyDown}
       tabIndex={0}
     >
       <div className="container-header">
@@ -267,11 +277,24 @@ const Container = ({ container, onUpdate, isAuthenticated = false }) => {
         <ObjectModal
           object={editingObject}
           onSave={handleSaveObject}
-          onDelete={editingObject && editingObject.id ? handleDeleteObject : null}
+          onDelete={handleDeleteObject}
           onClose={handleCloseModal}
           isAuthenticated={isAuthenticated}
         />
       )}
+
+      {/* Модальное окно подтверждения удаления контейнера */}
+      <ConfirmModal
+        isOpen={confirmDeleteContainer}
+        title="Подтверждение удаления контейнера"
+        message={`Внимание! Вы уверены, что хотите удалить контейнер "${container.name}"? Все объекты внутри контейнера также будут удалены. Это действие нельзя отменить.`}
+        onConfirm={handleConfirmDeleteContainer}
+        onCancel={() => setConfirmDeleteContainer(false)}
+        confirmText="Да, удалить"
+        cancelText="Отмена"
+        type="danger"
+      />
+
     </div>
   );
 };

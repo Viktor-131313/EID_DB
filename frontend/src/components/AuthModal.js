@@ -11,10 +11,11 @@ const AuthModal = ({ isOpen, onClose, onLogin }) => {
     setError('');
 
     if (username === 'admin' && password === 'Admin2026!') {
-      onLogin();
       setUsername('');
       setPassword('');
       onClose();
+      // Вызываем onLogin, который покажет уведомление
+      onLogin();
     } else {
       setError('Неверный логин или пароль');
     }

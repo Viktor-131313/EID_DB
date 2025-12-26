@@ -1,0 +1,155 @@
+это апи из одной программы которая отслеживает сроки и качество строительства. человек ходит по стройке и проставляет факт. есть 32 отчет в котором отображается процент выполненных работ. у меня есть дашборд в котором отображается исполнительная документация сгенерированная. он тоже на вебе. мне нужно чтобы было так:
+человек проставил факт на стройке по трем выполненным работам 100%, это подтянулось в мой дашборд. там человек генерирует исполнительную документацию. у меня отображается 
+"СТК. Внутренние стены - 1 из 3 , где 1 - сгенерировано актов, а 3 это факт который приходит по апи из другой программы. как мне это сделать?
+Для реализации такой системы вам нужно организовать обмен данными между двумя системами (строительный мониторинг и ваш дашборд). Вот пошаговое решение:
+
+1. Архитектура решения
+text
+[Стройка - Программа 1] → [API/База данных] → [Ваш дашборд - Программа 2]
+      ↓                            ↓
+ Факт выполненных работ      Отображение + генерация актов
+2. Способ реализации
+Вариант А: Прямая интеграция через API (рекомендуется)
+javascript
+// Пример структуры данных API
+const constructionAPI = {
+  project_id: "123",
+  works: [
+    {
+      work_id: "СТК_ВНУТРЕННИЕ_СТЕНЫ",
+      work_name: "Внутренние стены",
+      total_required: 3,    // Всего должно быть работ
+      completed: 3,         // Выполнено фактически (100%)
+      percentage: 100
+    },
+    // ... другие работы
+  ]
+}
+Вариант Б: Общая база данных
+Создайте общую таблицу:
+
+sql
+CREATE TABLE construction_progress (
+    id SERIAL PRIMARY KEY,
+    work_code VARCHAR(50),      -- "СТК_ВНУТРЕННИЕ_СТЕНЫ"
+    work_name VARCHAR(255),     -- "Внутренние стены"
+    required_count INT,         -- 3
+    completed_count INT,        -- 3 (пришло из API)
+    generated_acts INT DEFAULT 0 -- 1 (сгенерировано вашей системой)
+    last_updated TIMESTAMP
+);
+3. Реализация на вашем дашборде
+Backend (пример на Node.js/Express):
+javascript
+// Маршрут для получения данных
+app.get('/api/construction-status', async (req, res) => {
+  try {
+    // 1. Получаем фактические данные из строительной программы
+    const actualData = await fetchConstructionAPI();
+    
+    // 2. Получаем данные о сгенерированных актах из своей БД
+    const generatedActs = await getGeneratedActsFromDB();
+    
+    // 3. Объединяем данные
+    const result = actualData.works.map(work => ({
+      ...work,
+      generated_acts: generatedActs[work.work_id] || 0
+    }));
+    
+    res.json(result);
+  } catch (error) {
+    res.status(500).json({ error: error.message });
+  }
+});
+
+// Функция получения данных из строительной программы
+async function fetchConstructionAPI() {
+  const response = await fetch('https://construction-api.com/progress', {
+    headers: {
+      'Authorization': 'Bearer YOUR_API_KEY'
+    }
+  });
+  return response.json();
+}
+Frontend отображение:
+html
+<div class="work-status">
+  <h3>СТК. Внутренние стены</h3>
+  <div class="progress-info">
+    <span class="status">
+      {{ generated_acts }} из {{ completed_count }}
+    </span>
+    <div class="progress-bar">
+      <div class="progress-fill" :style="{width: (generated_acts/completed_count)*100 + '%'}"></div>
+    </div>
+    <button @click="generateAct" :disabled="generated_acts >= completed_count">
+      Сгенерировать акт
+    </button>
+  </div>
+</div>
+4. Алгоритм работы системы
+Получение данных:
+
+Регулярный опрос API строительной программы (каждые 5-10 минут)
+
+Или webhook-уведомления при изменении статуса
+
+Синхронизация:
+
+javascript
+// Псевдокод синхронизации
+function syncConstructionData() {
+  const apiData = getFromConstructionAPI();
+  const ourData = getFromOurDB();
+  
+  for (const work of apiData.works) {
+    if (work.completed_count > ourData[work.id].last_known_count) {
+      // Обновить в нашей БД
+      updateWorkProgress(work.id, work.completed_count);
+      // Отправить уведомление о новых доступных работах
+      sendNotification(`Доступно для актирования: ${work.name}`);
+    }
+  }
+}
+Генерация актов:
+
+При нажатии "Сгенерировать акт" увеличиваем счетчик generated_acts
+
+Проверяем, что generated_acts <= completed_count
+
+Генерируем документ
+
+5. Пример конечного JSON ответа для фронтенда:
+json
+{
+  "works": [
+    {
+      "id": "СТК_ВНУТРЕННИЕ_СТЕНЫ",
+      "name": "Внутренние стены",
+      "completed": 3,
+      "generated": 1,
+      "available_for_generation": 2,
+      "percentage_completed": 100,
+      "percentage_generated": 33
+    }
+  ]
+}
+6. Рекомендации по реализации:
+Идентификаторы работ: Используйте одинаковые коды работ в обеих системах
+
+Логирование: Ведите журнал всех операций синхронизации
+
+Очередь задач: Используйте очередь для генерации документов
+
+Вебхуки: Настройте уведомления от строительной программы при изменении статуса
+
+Кэширование: Кэшируйте данные API для уменьшения нагрузки
+
+7. Если у вас нет доступа к API строительной программы:
+Создайте промежуточный слой:
+
+Экспорт данных из строительной программы в CSV/Excel
+
+Автоматическая загрузка файла на FTP/s3
+
+Импорт в вашу систему по расписанию

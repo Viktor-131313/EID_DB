@@ -1,5 +1,6 @@
 import React, { useState, useEffect, useCallback, useRef } from 'react';
 import './ObjectModal.css';
+import ConfirmModal from './ConfirmModal';
 
 const ObjectModal = ({ object, onSave, onDelete, onClose, isAuthenticated = false }) => {
   const [formData, setFormData] = useState({
@@ -30,6 +31,7 @@ const ObjectModal = ({ object, onSave, onDelete, onClose, isAuthenticated = fals
   const [editingSMRList, setEditingSMRList] = useState(null); // 'generated', 'sent', 'approved', 'rejected', 'signed'
   const [selectedSMRId, setSelectedSMRId] = useState(null); // Для отслеживания выбранного СМР для удаления
   const [selectedSMRList, setSelectedSMRList] = useState(null);
+  const [confirmDeleteSMR, setConfirmDeleteSMR] = useState(null); // { smrId, listType, smrName }
 
   // Используем useRef для отслеживания, инициализирован ли formData
   const isInitializedRef = useRef(false);
@@ -289,9 +291,26 @@ const ObjectModal = ({ object, onSave, onDelete, onClose, isAuthenticated = fals
       return;
     }
 
-    if (!window.confirm('Вы уверены, что хотите удалить этот СМР?')) {
-      return;
-    }
+    // Находим название СМР для отображения в подтверждении
+    let smrName = '';
+    const allSMRs = [
+      ...formData.generatedActs,
+      ...formData.sentForApproval,
+      ...formData.approvedActs,
+      ...formData.rejectedActs,
+      ...formData.signedActs
+    ];
+    const smr = allSMRs.find(s => s.id === smrId);
+    smrName = smr ? smr.name : 'СМР';
+
+    // Показываем кастомное модальное окно подтверждения
+    setConfirmDeleteSMR({ smrId, listType, smrName });
+  }, [isAuthenticated, formData]);
+
+  const handleConfirmDeleteSMR = useCallback(() => {
+    if (!confirmDeleteSMR) return;
+
+    const { smrId, listType } = confirmDeleteSMR;
 
     setFormData(prev => {
       const updated = { ...prev };
@@ -326,11 +345,19 @@ const ObjectModal = ({ object, onSave, onDelete, onClose, isAuthenticated = fals
     setEditingSMRList(null);
     setSelectedSMRId(null);
     setSelectedSMRList(null);
+    setConfirmDeleteSMR(null);
+  }, [confirmDeleteSMR]);
+
+  const handleCancelDeleteSMR = useCallback(() => {
+    setConfirmDeleteSMR(null);
   }, []);
 
   // Обработка клавиши Delete для удаления СМР
   useEffect(() => {
     const handleKeyDown = (e) => {
+      // Если открыто модальное окно подтверждения удаления - не обрабатываем Delete
+      if (confirmDeleteSMR !== null) return;
+      
       // Проверяем, не в поле ввода ли мы (кроме поля редактирования СМР)
       if (e.target.tagName === 'INPUT' && e.target.type === 'text' && !e.target.className.includes('smr-name-edit')) {
         return;
@@ -340,19 +367,21 @@ const ObjectModal = ({ object, onSave, onDelete, onClose, isAuthenticated = fals
         // Если СМР в режиме редактирования - удаляем его
         if (editingSMRId && editingSMRList) {
           e.preventDefault();
+          e.stopPropagation(); // Останавливаем всплытие события
           deleteSMR(editingSMRId, editingSMRList);
         }
         // Если есть выбранный СМР (кликнули на него) - удаляем
         else if (selectedSMRId && selectedSMRList) {
           e.preventDefault();
+          e.stopPropagation(); // Останавливаем всплытие события
           deleteSMR(selectedSMRId, selectedSMRList);
         }
       }
     };
 
-    window.addEventListener('keydown', handleKeyDown);
-    return () => window.removeEventListener('keydown', handleKeyDown);
-  }, [editingSMRId, editingSMRList, selectedSMRId, selectedSMRList, deleteSMR]);
+    window.addEventListener('keydown', handleKeyDown, true); // Используем capture phase для перехвата события
+    return () => window.removeEventListener('keydown', handleKeyDown, true);
+  }, [editingSMRId, editingSMRList, selectedSMRId, selectedSMRList, confirmDeleteSMR, deleteSMR]);
 
   const addNewSMR = () => {
     if (!newSMRName.trim()) {
@@ -483,10 +512,24 @@ const ObjectModal = ({ object, onSave, onDelete, onClose, isAuthenticated = fals
     onSave(formData);
   };
 
+  const [confirmDeleteObject, setConfirmDeleteObject] = useState(false);
+
   const handleDelete = () => {
-    if (onDelete) {
-      onDelete();
+    if (object && isAuthenticated) {
+      setConfirmDeleteObject(true);
     }
+  };
+
+  const handleConfirmDeleteObject = () => {
+    if (onDelete && object) {
+      onDelete(object.id);
+      onClose();
+    }
+    setConfirmDeleteObject(false);
+  };
+
+  const handleCancelDeleteObject = () => {
+    setConfirmDeleteObject(false);
   };
 
   const handleBackdropClick = (e) => {
@@ -517,7 +560,7 @@ const ObjectModal = ({ object, onSave, onDelete, onClose, isAuthenticated = fals
       <div className="modal-content object-modal-content" onClick={(e) => e.stopPropagation()}>
           <div className="modal-header">
           <div className="modal-title">
-            {isAuthenticated ? (object ? 'Редактировать объект' : 'Добавить новый объект') : 'Просмотр объекта'}
+            {/* Заголовок убран по требованию */}
           </div>
           <button className="close-modal" onClick={onClose}>&times;</button>
         </div>
@@ -1110,28 +1153,61 @@ const ObjectModal = ({ object, onSave, onDelete, onClose, isAuthenticated = fals
           </div>
 
           <div className="actions-row">
-            {isAuthenticated && (
-              <div>
-                {object && (
-                  <button type="button" className="btn btn-danger" onClick={handleDelete}>
-                    <i className="fas fa-trash"></i> Удалить объект
+            <div style={{ display: 'flex', gap: '10px', width: '100%', justifyContent: 'space-between', alignItems: 'center' }}>
+              {/* Кнопка удаления объекта - только для существующих объектов и авторизованных пользователей */}
+              {object && isAuthenticated && (
+                <button 
+                  type="button" 
+                  className="btn btn-danger" 
+                  onClick={handleDelete}
+                  style={{ 
+                    backgroundColor: '#e74c3c', 
+                    color: 'white',
+                    border: 'none'
+                  }}
+                >
+                  <i className="fas fa-trash" style={{ marginRight: '8px' }}></i>
+                  Удалить объект
+                </button>
+              )}
+              <div style={{ display: 'flex', gap: '10px', marginLeft: 'auto' }}>
+                <button type="button" className="btn" onClick={onClose}>
+                  {isAuthenticated ? 'Отмена' : 'Закрыть'}
+                </button>
+                {isAuthenticated && (
+                  <button type="submit" className="btn">
+                    {object ? 'Сохранить изменения' : 'Добавить объект'}
                   </button>
                 )}
               </div>
-            )}
-            <div style={{ display: 'flex', gap: '10px', marginLeft: 'auto' }}>
-              <button type="button" className="btn" onClick={onClose}>
-                {isAuthenticated ? 'Отмена' : 'Закрыть'}
-              </button>
-              {isAuthenticated && (
-                <button type="submit" className="btn">
-                  {object ? 'Сохранить изменения' : 'Добавить объект'}
-                </button>
-              )}
             </div>
           </div>
         </form>
       </div>
+
+      {/* Модальное окно подтверждения удаления СМР */}
+      <ConfirmModal
+        isOpen={confirmDeleteSMR !== null}
+        title="Подтверждение удаления"
+        message={`Вы уверены, что хотите удалить СМР "${confirmDeleteSMR?.smrName || 'СМР'}"? Это действие нельзя отменить.`}
+        onConfirm={handleConfirmDeleteSMR}
+        onCancel={handleCancelDeleteSMR}
+        confirmText="Да, удалить"
+        cancelText="Отмена"
+        type="warning"
+      />
+
+      {/* Модальное окно подтверждения удаления объекта */}
+      <ConfirmModal
+        isOpen={confirmDeleteObject}
+        title="Подтверждение удаления объекта"
+        message={`Вы уверены, что хотите удалить объект "${object?.name || ''}"? Это действие нельзя отменить.`}
+        onConfirm={handleConfirmDeleteObject}
+        onCancel={handleCancelDeleteObject}
+        confirmText="Да, удалить"
+        cancelText="Отмена"
+        type="danger"
+      />
     </div>
   );
 };

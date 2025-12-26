@@ -5,6 +5,8 @@ import Container from './Container';
 import StatisticsWidget from './StatisticsWidget';
 import DevelopmentTasks from './DevelopmentTasks';
 import AuthModal from './AuthModal';
+import ToastNotification from './ToastNotification';
+import ConfirmModal from './ConfirmModal';
 import { updateContainer } from '../services/api-containers';
 import { exportDashboardToPDF } from '../utils/pdfExport';
 import { fetchTasks } from '../services/api-tasks';
@@ -22,6 +24,8 @@ const Dashboard = ({ containers, globalStats, loading, onContainerUpdate, isAuth
   const [statisticsData, setStatisticsData] = useState(null);
   const dashboardRef = useRef(null);
   const [authModalOpen, setAuthModalOpen] = useState(false);
+  const [toast, setToast] = useState(null);
+  const [confirmLogout, setConfirmLogout] = useState(false);
 
   useEffect(() => {
     // Сохраняем заголовок в localStorage
@@ -182,7 +186,7 @@ const Dashboard = ({ containers, globalStats, loading, onContainerUpdate, isAuth
           <div style={{ textAlign: 'center', marginTop: '20px' }}>
             <button 
               className="btn" 
-              onClick={onLogout}
+              onClick={() => setConfirmLogout(true)}
               style={{ backgroundColor: '#95a5a6', color: 'white' }}
             >
               <i className="fas fa-sign-out-alt"></i> Выйти
@@ -190,11 +194,38 @@ const Dashboard = ({ containers, globalStats, loading, onContainerUpdate, isAuth
           </div>
         )}
 
+        {/* Модальное окно подтверждения выхода */}
+        <ConfirmModal
+          isOpen={confirmLogout}
+          title="Подтверждение выхода"
+          message="Вы уверены, что хотите выйти из системы?"
+          onConfirm={() => {
+            onLogout();
+            setConfirmLogout(false);
+            setToast({ message: 'Вы находитесь в режиме просмотра', type: 'info' });
+          }}
+          onCancel={() => setConfirmLogout(false)}
+          confirmText="Да, выйти"
+          cancelText="Отмена"
+          type="warning"
+        />
+
         <AuthModal
           isOpen={authModalOpen}
           onClose={() => setAuthModalOpen(false)}
-          onLogin={onLogin}
+          onLogin={() => {
+            onLogin();
+            setToast({ message: 'Вы успешно вошли в систему!', type: 'success' });
+          }}
         />
+
+        {toast && (
+          <ToastNotification
+            message={toast.message}
+            type={toast.type}
+            onClose={() => setToast(null)}
+          />
+        )}
 
         <div className="footer">
           Дашборд обновлен: {new Date().toLocaleString('ru-RU')} | Praktis ID Пилот v1.0

@@ -1,6 +1,7 @@
 import React, { useState, useEffect } from 'react';
 import './DevelopmentTasks.css';
 import { fetchTasks, createTask, updateTask, deleteTask } from '../services/api-tasks';
+import ConfirmModal from './ConfirmModal';
 
 const DevelopmentTasks = ({ isAuthenticated = false }) => {
   const [tasks, setTasks] = useState([]);
@@ -11,6 +12,7 @@ const DevelopmentTasks = ({ isAuthenticated = false }) => {
   const [showAddForm, setShowAddForm] = useState(false);
   const [editingField, setEditingField] = useState(null); // { taskId, field }
   const [editingValue, setEditingValue] = useState('');
+  const [confirmDeleteTask, setConfirmDeleteTask] = useState(null); // ID задачи для удаления
 
   useEffect(() => {
     loadTasks();
@@ -45,27 +47,38 @@ const DevelopmentTasks = ({ isAuthenticated = false }) => {
     }
   };
 
-  const handleDeleteTask = async (taskId) => {
-    if (!window.confirm('Внимание! Вы уверены, что хотите удалить эту задачу? Это действие нельзя отменить.')) {
-      return;
-    }
+  const handleDeleteTask = (taskId) => {
+    setConfirmDeleteTask(taskId);
+  };
+
+  const handleConfirmDeleteTask = async () => {
+    if (!confirmDeleteTask) return;
     try {
-      await deleteTask(taskId);
+      await deleteTask(confirmDeleteTask);
+      setConfirmDeleteTask(null);
       await loadTasks();
     } catch (error) {
       console.error('Error deleting task:', error);
       alert('Ошибка при удалении задачи');
+      setConfirmDeleteTask(null);
     }
+  };
+
+  const handleCancelDeleteTask = () => {
+    setConfirmDeleteTask(null);
   };
 
   const handleKeyDown = async (e, taskId) => {
     if (!isAuthenticated) return;
+    // Если открыто модальное окно подтверждения удаления - не обрабатываем Delete
+    if (confirmDeleteTask !== null) return;
     if (e.key === 'Delete' && !e.ctrlKey && !e.altKey && !e.shiftKey) {
       // Проверяем, не в поле ввода ли мы
       if (e.target.tagName === 'INPUT' || e.target.tagName === 'SELECT' || e.target.tagName === 'TEXTAREA') {
         return;
       }
       e.preventDefault();
+      e.stopPropagation(); // Останавливаем всплытие события
       handleDeleteTask(taskId);
     }
   };
@@ -383,6 +396,18 @@ const DevelopmentTasks = ({ isAuthenticated = false }) => {
           }}
         />
       )}
+
+      {/* Модальное окно подтверждения удаления задачи */}
+      <ConfirmModal
+        isOpen={confirmDeleteTask !== null}
+        title="Подтверждение удаления задачи"
+        message="Внимание! Вы уверены, что хотите удалить эту задачу? Это действие нельзя отменить."
+        onConfirm={handleConfirmDeleteTask}
+        onCancel={handleCancelDeleteTask}
+        confirmText="Да, удалить"
+        cancelText="Отмена"
+        type="danger"
+      />
     </div>
   );
 };
