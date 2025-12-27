@@ -196,9 +196,9 @@ const Dashboard = ({ containers, globalStats, loading, onContainerUpdate, isAuth
           </div>
           <div className="containers-list" style={{ paddingLeft: isAuthenticated ? '50px' : '0' }}>
             {containers.map((container, index) => (
-              <div key={container.id} style={{ position: 'relative' }}>
+              <div key={container.id} className="container-wrapper" style={{ position: 'relative' }}>
                 {isAuthenticated && (
-                  <div style={{ 
+                  <div className="container-move-buttons" style={{ 
                     position: 'absolute', 
                     left: '-45px', 
                     top: '10px', 

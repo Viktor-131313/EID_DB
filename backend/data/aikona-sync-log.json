@@ -1,9 +1,31 @@
 {
-  "lastSync": null,
-  "timestamp": null,
-  "success": false,
-  "syncedObjects": [],
+  "lastSync": "2025-12-27T04:01:20.079Z",
+  "timestamp": "27.12.2025, 07:01:20",
+  "success": true,
+  "syncedCount": 4,
+  "errorCount": 0,
+  "syncedObjects": [
+    {
+      "name": "Парадный ансамбль, 8 очередь",
+      "containerName": "Объекты SetlGroup",
+      "aikonaId": 511
+    },
+    {
+      "name": "Парадный ансамбль, 7 очередь",
+      "containerName": "Объекты SetlGroup",
+      "aikonaId": 400
+    },
+    {
+      "name": "Univer sity, 11 очередь",
+      "containerName": "Объекты SetlGroup",
+      "aikonaId": 401
+    },
+    {
+      "name": "Ривьера, 1 очередь",
+      "containerName": "Объекты SetlGroup",
+      "aikonaId": 403
+    }
+  ],
   "failedObjects": [],
-  "message": "Синхронизация еще не выполнялась"
+  "message": "Синхронизация выполнена успешно в 27.12.2025, 07:01:20. Синхронизировано объектов: 4"
 }
-

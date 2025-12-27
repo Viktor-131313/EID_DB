@@ -8,6 +8,22 @@
   padding: 25px;
   margin-bottom: 30px;
   box-shadow: 0 4px 12px rgba(0,0,0,0.05);
+  width: 100%;
+  box-sizing: border-box;
+}
+
+/* Мобильные устройства - 360px */
+@media (max-width: 360px) {
+  .dashboard-section {
+    padding: 15px;
+    margin-bottom: 20px;
+    border-radius: 8px;
+  }
+
+  .containers-list {
+    padding-left: 0 !important;
+    gap: 15px;
+  }
 }
 
 .section-header {
@@ -97,6 +113,52 @@
     flex-direction: column;
     align-items: flex-start;
     gap: 15px;
+  }
+
+  .containers-list {
+    padding-left: 0 !important;
+  }
+}
+
+/* Мобильные устройства - 360px */
+@media (max-width: 360px) {
+  .dashboard-section {
+    padding: 15px 10px;
+    margin-bottom: 20px;
+    margin-left: 0;
+    margin-right: 0;
+    border-radius: 8px;
+  }
+
+  .section-header {
+    padding-left: 0;
+    padding-right: 0;
+  }
+
+  .containers-list {
+    padding-left: 0 !important;
+    padding-right: 0 !important;
+    margin-left: 0;
+    margin-right: 0;
+    gap: 15px;
+  }
+
+  .section-title {
+    font-size: 18px;
+  }
+
+  .main-title-input {
+    width: 100%;
+    font-size: 18px;
+  }
+
+  .container-wrapper {
+    margin: 0;
+    padding: 0;
+  }
+
+  .container-move-buttons {
+    display: none !important; /* Скрываем кнопки перемещения на мобилках */
   }
 }
 

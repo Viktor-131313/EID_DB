@@ -123,3 +123,29 @@
   }
 }
 
+/* Мобильные устройства - 360px */
+@media (max-width: 360px) {
+  .container-section {
+    padding: 15px 10px;
+    margin-bottom: 20px;
+    margin-left: 0;
+    margin-right: 0;
+  }
+
+  .container-header {
+    margin-bottom: 15px;
+    padding-bottom: 10px;
+    padding-left: 0;
+    padding-right: 0;
+  }
+
+  .container-title {
+    font-size: 20px;
+  }
+
+  .container-name-input {
+    width: 100%;
+    font-size: 20px;
+  }
+}
+
