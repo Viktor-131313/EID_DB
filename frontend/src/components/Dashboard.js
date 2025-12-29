@@ -8,6 +8,7 @@ import AuthModal from './AuthModal';
 import ToastNotification from './ToastNotification';
 import ConfirmModal from './ConfirmModal';
 import SyncLogModal from './SyncLogModal';
+import SnapshotScheduleModal from './SnapshotScheduleModal';
 import { updateContainer, moveContainer } from '../services/api-containers';
 import { exportDashboardToPDF } from '../utils/pdfExport';
 import { fetchTasks } from '../services/api-tasks';
@@ -28,6 +29,7 @@ const Dashboard = ({ containers, globalStats, loading, onContainerUpdate, isAuth
   const [toast, setToast] = useState(null);
   const [confirmLogout, setConfirmLogout] = useState(false);
   const [syncLogModalOpen, setSyncLogModalOpen] = useState(false);
+  const [snapshotScheduleModalOpen, setSnapshotScheduleModalOpen] = useState(false);
 
   useEffect(() => {
     // Сохраняем заголовок в localStorage
@@ -129,28 +131,52 @@ const Dashboard = ({ containers, globalStats, loading, onContainerUpdate, isAuth
                   <i className="far fa-calendar-alt"></i> {currentDate}
                 </div>
                 {isAuthenticated && (
-                  <button 
-                    className="btn btn-sync-log" 
-                    onClick={() => setSyncLogModalOpen(true)}
-                    title="Лог синхронизации с Айконой"
-                    style={{
-                      position: 'relative',
-                      backgroundColor: '#3498db',
-                      color: 'white',
-                      border: 'none',
-                      padding: '10px 15px',
-                      borderRadius: '6px',
-                      cursor: 'pointer',
-                      display: 'flex',
-                      alignItems: 'center',
-                      gap: '8px',
-                      fontSize: '14px',
-                      fontWeight: '500'
-                    }}
-                  >
-                    <i className="fas fa-envelope"></i>
-                    <span>Лог синхронизации</span>
-                  </button>
+                  <>
+                    <button 
+                      className="btn btn-sync-log" 
+                      onClick={() => setSyncLogModalOpen(true)}
+                      title="Лог синхронизации с Айконой"
+                      style={{
+                        position: 'relative',
+                        backgroundColor: '#3498db',
+                        color: 'white',
+                        border: 'none',
+                        padding: '10px 15px',
+                        borderRadius: '6px',
+                        cursor: 'pointer',
+                        display: 'flex',
+                        alignItems: 'center',
+                        gap: '8px',
+                        fontSize: '14px',
+                        fontWeight: '500'
+                      }}
+                    >
+                      <i className="fas fa-envelope"></i>
+                      <span>Лог синхронизации</span>
+                    </button>
+                    <button 
+                      className="btn btn-snapshot-schedule" 
+                      onClick={() => setSnapshotScheduleModalOpen(true)}
+                      title="Настройка автоматических снимков планерок"
+                      style={{
+                        position: 'relative',
+                        backgroundColor: '#9b59b6',
+                        color: 'white',
+                        border: 'none',
+                        padding: '10px 15px',
+                        borderRadius: '6px',
+                        cursor: 'pointer',
+                        display: 'flex',
+                        alignItems: 'center',
+                        gap: '8px',
+                        fontSize: '14px',
+                        fontWeight: '500'
+                      }}
+                    >
+                      <i className="fas fa-calendar-alt"></i>
+                      <span>Расписание снимков</span>
+                    </button>
+                  </>
                 )}
                 <button 
                   className="btn btn-export-pdf" 
@@ -319,6 +345,12 @@ const Dashboard = ({ containers, globalStats, loading, onContainerUpdate, isAuth
         <SyncLogModal
           isOpen={syncLogModalOpen}
           onClose={() => setSyncLogModalOpen(false)}
+        />
+
+        <SnapshotScheduleModal
+          isOpen={snapshotScheduleModalOpen}
+          onClose={() => setSnapshotScheduleModalOpen(false)}
+          isAuthenticated={isAuthenticated}
         />
 
         <div className="footer">

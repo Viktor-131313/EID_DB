@@ -15,6 +15,7 @@ app.use(express.urlencoded({ extended: true, limit: '50mb' }));
 const dataAdapter = require('./database/adapter');
 const { syncObjectFromAikona } = require('./services/aikona-sync');
 const { syncAllObjectsFromAikona, getLastSyncLog } = require('./services/aikona-auto-sync');
+const { createSnapshot: createScheduledSnapshot, getSchedule: getSnapshotSchedule, saveSchedule: saveSnapshotSchedule } = require('./services/snapshot-schedule');
 
 // Настройка автоматической синхронизации с Айконой
 const cron = require('node-cron');
@@ -31,6 +32,55 @@ cron.schedule('0 0 7 * * *', async () => {
 });
 
 console.log('[Cron] Автоматическая синхронизация с Айконой настроена на 7:00 каждый день (МСК)');
+
+// Настройка автоматического создания снимков планерок
+let snapshotScheduleTasks = [];
+
+function setupSnapshotSchedules() {
+    // Отменяем все существующие задачи
+    snapshotScheduleTasks.forEach(task => {
+        try {
+            if (task && typeof task.destroy === 'function') {
+                task.destroy();
+            }
+        } catch (error) {
+            console.error('[Snapshot Schedule] Ошибка при уничтожении задачи:', error);
+        }
+    });
+    snapshotScheduleTasks = [];
+
+    const schedule = getSnapshotSchedule();
+    
+    schedule.schedules.forEach((scheduleItem, index) => {
+        if (!scheduleItem.enabled) return;
+
+        // Формат cron: секунда минута час день_месяца месяц день_недели
+        // dayOfWeek: 0 = воскресенье, 1 = понедельник, ..., 6 = суббота
+        // В node-cron: 0 = воскресенье, 1 = понедельник, ..., 6 = суббота
+        const cronExpression = `0 ${scheduleItem.minute} ${scheduleItem.hour} * * ${scheduleItem.dayOfWeek}`;
+        
+        const task = cron.schedule(cronExpression, async () => {
+            const dayNames = ['воскресенье', 'понедельник', 'вторник', 'среда', 'четверг', 'пятница', 'суббота'];
+            console.log(`[Cron] Запуск автоматического создания снимка планерки (${dayNames[scheduleItem.dayOfWeek]}, ${scheduleItem.hour}:${scheduleItem.minute.toString().padStart(2, '0')})`);
+            try {
+                await createScheduledSnapshot();
+            } catch (error) {
+                console.error('[Cron] Ошибка при автоматическом создании снимка:', error);
+            }
+        }, {
+            scheduled: true,
+            timezone: "Europe/Moscow"
+        });
+
+        snapshotScheduleTasks.push(task);
+        
+        const dayNames = ['воскресенье', 'понедельник', 'вторник', 'среда', 'четверг', 'пятница', 'суббота'];
+        console.log(`[Cron] Автоматическое создание снимка настроено: ${dayNames[scheduleItem.dayOfWeek]}, ${scheduleItem.hour}:${scheduleItem.minute.toString().padStart(2, '0')} (МСК)`);
+    });
+}
+
+// Инициализируем расписание при старте сервера
+setupSnapshotSchedules();
 
 // Инициализация данных при старте сервера
 (async () => {
@@ -868,6 +918,91 @@ app.delete('/api/snapshots/:snapshotId', async (req, res) => {
     } catch (error) {
         console.error('Error deleting snapshot:', error);
         res.status(500).json({ error: 'Failed to delete snapshot' });
+    }
+});
+
+// API Routes for Snapshot Schedule
+
+// GET /api/snapshot-schedule - получить настройки расписания снимков
+app.get('/api/snapshot-schedule', async (req, res) => {
+    try {
+        const schedule = getSnapshotSchedule();
+        res.json(schedule);
+    } catch (error) {
+        console.error('Error getting snapshot schedule:', error);
+        res.status(500).json({ error: 'Failed to get snapshot schedule' });
+    }
+});
+
+// POST /api/snapshot-schedule - сохранить настройки расписания снимков
+app.post('/api/snapshot-schedule', async (req, res) => {
+    try {
+        const scheduleData = req.body;
+        console.log('[Snapshot Schedule API] Received schedule data:', JSON.stringify(scheduleData, null, 2));
+        
+        // Валидация данных
+        if (!scheduleData.schedules || !Array.isArray(scheduleData.schedules)) {
+            console.error('[Snapshot Schedule API] Invalid schedule data structure');
+            return res.status(400).json({ error: 'Invalid schedule data' });
+        }
+
+        // Валидация каждого элемента расписания
+        for (let i = 0; i < scheduleData.schedules.length; i++) {
+            const scheduleItem = scheduleData.schedules[i];
+            
+            // Преобразуем строки в числа, если нужно
+            if (typeof scheduleItem.dayOfWeek === 'string') {
+                scheduleItem.dayOfWeek = parseInt(scheduleItem.dayOfWeek);
+            }
+            if (typeof scheduleItem.hour === 'string') {
+                scheduleItem.hour = parseInt(scheduleItem.hour);
+            }
+            if (typeof scheduleItem.minute === 'string') {
+                scheduleItem.minute = parseInt(scheduleItem.minute);
+            }
+            
+            if (typeof scheduleItem.dayOfWeek !== 'number' || isNaN(scheduleItem.dayOfWeek) || scheduleItem.dayOfWeek < 0 || scheduleItem.dayOfWeek > 6) {
+                console.error(`[Snapshot Schedule API] Invalid dayOfWeek at index ${i}:`, scheduleItem.dayOfWeek);
+                return res.status(400).json({ error: `Invalid dayOfWeek at index ${i} (must be 0-6)` });
+            }
+            if (typeof scheduleItem.hour !== 'number' || isNaN(scheduleItem.hour) || scheduleItem.hour < 0 || scheduleItem.hour > 23) {
+                console.error(`[Snapshot Schedule API] Invalid hour at index ${i}:`, scheduleItem.hour);
+                return res.status(400).json({ error: `Invalid hour at index ${i} (must be 0-23)` });
+            }
+            if (typeof scheduleItem.minute !== 'number' || isNaN(scheduleItem.minute) || scheduleItem.minute < 0 || scheduleItem.minute > 59) {
+                console.error(`[Snapshot Schedule API] Invalid minute at index ${i}:`, scheduleItem.minute);
+                return res.status(400).json({ error: `Invalid minute at index ${i} (must be 0-59)` });
+            }
+            if (typeof scheduleItem.enabled !== 'boolean') {
+                scheduleItem.enabled = scheduleItem.enabled !== false; // По умолчанию true
+            }
+        }
+
+        console.log('[Snapshot Schedule API] Validated schedule data:', JSON.stringify(scheduleData, null, 2));
+        
+        const saveResult = saveSnapshotSchedule(scheduleData);
+        console.log('[Snapshot Schedule API] Save result:', saveResult);
+        
+        if (saveResult) {
+            // Перезагружаем расписание
+            try {
+                setupSnapshotSchedules();
+                console.log('[Snapshot Schedule API] Schedule setup completed successfully');
+                res.json({ message: 'Schedule saved successfully', schedule: scheduleData });
+            } catch (setupError) {
+                console.error('[Snapshot Schedule API] Error setting up snapshot schedules:', setupError);
+                console.error('[Snapshot Schedule API] Setup error stack:', setupError.stack);
+                // Расписание сохранено, но не применено - всё равно возвращаем успех
+                res.json({ message: 'Schedule saved successfully (warning: failed to apply)', schedule: scheduleData });
+            }
+        } else {
+            console.error('[Snapshot Schedule API] Failed to save schedule file');
+            res.status(500).json({ error: 'Failed to save schedule' });
+        }
+    } catch (error) {
+        console.error('[Snapshot Schedule API] Error saving snapshot schedule:', error);
+        console.error('[Snapshot Schedule API] Error stack:', error.stack);
+        res.status(500).json({ error: 'Failed to save snapshot schedule', details: error.message });
     }
 });
 

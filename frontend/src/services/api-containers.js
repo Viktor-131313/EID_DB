@@ -236,3 +236,28 @@ export const getAikonaSyncLog = async () => {
   }
   return response.json();
 };
+
+// Получить настройки расписания снимков
+export const fetchSnapshotSchedule = async () => {
+  const response = await fetch(`${API_URL}/api/snapshot-schedule`);
+  if (!response.ok) {
+    throw new Error('Failed to fetch snapshot schedule');
+  }
+  return response.json();
+};
+
+// Сохранить настройки расписания снимков
+export const saveSnapshotSchedule = async (scheduleData) => {
+  const response = await fetch(`${API_URL}/api/snapshot-schedule`, {
+    method: 'POST',
+    headers: {
+      'Content-Type': 'application/json',
+    },
+    body: JSON.stringify(scheduleData),
+  });
+  if (!response.ok) {
+    const error = await response.json();
+    throw new Error(error.error || 'Failed to save snapshot schedule');
+  }
+  return response.json();
+};

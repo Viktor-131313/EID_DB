@@ -1,0 +1,16 @@
+{
+  "schedules": [
+    {
+      "dayOfWeek": 2,
+      "hour": 9,
+      "minute": 40,
+      "enabled": true
+    },
+    {
+      "dayOfWeek": 4,
+      "hour": 10,
+      "minute": 20,
+      "enabled": true
+    }
+  ]
+}
