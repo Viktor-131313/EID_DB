@@ -460,5 +460,428 @@
         ]
       }
     ]
+  },
+  {
+    "id": 1767076800751,
+    "date": "2025-12-30T06:40:00.751Z",
+    "type": "meeting",
+    "containers": [
+      {
+        "id": 10,
+        "name": "Объекты SetlGroup",
+        "objects": [
+          {
+            "id": 1,
+            "name": "Парадный ансамбль, 8 очередь",
+            "description": "8.1 корпус, ООО \"СК-Монолит\"",
+            "smrs": [
+              {
+                "id": 2,
+                "name": "СТК. Кладка наружных стен",
+                "generatedActs": 26,
+                "sentForApproval": 20,
+                "approvedActs": 1,
+                "rejectedActs": 0,
+                "signedActs": 0
+              },
+              {
+                "id": 3,
+                "name": "СТК. Внутренние стены и перегородки",
+                "generatedActs": 28,
+                "sentForApproval": 28,
+                "approvedActs": 1,
+                "rejectedActs": 0,
+                "signedActs": 0
+              },
+              {
+                "id": 4,
+                "name": "СТК. Кладка надстроек на кровле",
+                "generatedActs": 5,
+                "sentForApproval": 5,
+                "approvedActs": 0,
+                "rejectedActs": 0,
+                "signedActs": 0
+              },
+              {
+                "id": 5,
+                "name": "СТК. Вентиляционные каналы из мелкоштучных элементов",
+                "generatedActs": 21,
+                "sentForApproval": 21,
+                "approvedActs": 1,
+                "rejectedActs": 0,
+                "signedActs": 0
+              }
+            ]
+          },
+          {
+            "id": 2,
+            "name": "Парадный ансамбль, 7 очередь",
+            "description": "7.1 корпус, ООО \"САНТЕХ-СТАНДАРТ\"",
+            "smrs": [
+              {
+                "id": 1,
+                "name": "СТК. Стояки ливневой канализации",
+                "generatedActs": 1,
+                "sentForApproval": 1,
+                "approvedActs": 0,
+                "rejectedActs": 0,
+                "signedActs": 0
+              },
+              {
+                "id": 2,
+                "name": "СТК. Стояки систем ХВС, ГВС, канализации и водорозеток",
+                "generatedActs": 1,
+                "sentForApproval": 1,
+                "approvedActs": 0,
+                "rejectedActs": 1,
+                "signedActs": 0
+              },
+              {
+                "id": 3,
+                "name": "СТК. Горизонтальная разводка труб PEX системы отопления",
+                "generatedActs": 0,
+                "sentForApproval": 0,
+                "approvedActs": 0,
+                "rejectedActs": 0,
+                "signedActs": 0
+              },
+              {
+                "id": 4,
+                "name": "СТК. Магистрали канализации в подвале и (или) тех. Этаже",
+                "generatedActs": 0,
+                "sentForApproval": 0,
+                "approvedActs": 0,
+                "rejectedActs": 0,
+                "signedActs": 0
+              },
+              {
+                "id": 5,
+                "name": "СТК. Магистрали ливневой канализации в подвале и (или) тех. Этаже",
+                "generatedActs": 0,
+                "sentForApproval": 0,
+                "approvedActs": 0,
+                "rejectedActs": 0,
+                "signedActs": 0
+              },
+              {
+                "id": 6,
+                "name": "СТК. Магистрали системы воздуховодов в подвале и (или) тех. Этаже",
+                "generatedActs": 1,
+                "sentForApproval": 1,
+                "approvedActs": 0,
+                "rejectedActs": 0,
+                "signedActs": 0
+              },
+              {
+                "id": 7,
+                "name": "СТК. Магистрали системы отопления в подвале и (или) тех. Этаже",
+                "generatedActs": 0,
+                "sentForApproval": 0,
+                "approvedActs": 0,
+                "rejectedActs": 0,
+                "signedActs": 0
+              },
+              {
+                "id": 8,
+                "name": "СТК. Отопительные приборы",
+                "generatedActs": 0,
+                "sentForApproval": 0,
+                "approvedActs": 0,
+                "rejectedActs": 0,
+                "signedActs": 0
+              },
+              {
+                "id": 9,
+                "name": "СТК. Магистрали систем ХВС, ГВС в подвале и (или) тех. Этаже",
+                "generatedActs": 0,
+                "sentForApproval": 0,
+                "approvedActs": 0,
+                "rejectedActs": 0,
+                "signedActs": 0
+              },
+              {
+                "id": 10,
+                "name": "СТК. Стояки системы отопления",
+                "generatedActs": 1,
+                "sentForApproval": 1,
+                "approvedActs": 0,
+                "rejectedActs": 1,
+                "signedActs": 0
+              },
+              {
+                "id": 11,
+                "name": "СТК. Транзитные воздуховоды системы вентиляции",
+                "generatedActs": 1,
+                "sentForApproval": 1,
+                "approvedActs": 0,
+                "rejectedActs": 0,
+                "signedActs": 0
+              },
+              {
+                "id": 12,
+                "name": "СТК. Гидравлические испытания системы отопления",
+                "generatedActs": 0,
+                "sentForApproval": 0,
+                "approvedActs": 0,
+                "rejectedActs": 0,
+                "signedActs": 0
+              }
+            ]
+          },
+          {
+            "id": 3,
+            "name": "Univer sity, 11 очередь",
+            "description": "12 корпус, ООО \"Энсейв констракшн\"",
+            "smrs": [
+              {
+                "id": 1,
+                "name": "СТК. Утеплитель \"мокрого\" фасада (с лесов)",
+                "generatedActs": 1,
+                "sentForApproval": 0,
+                "approvedActs": 0,
+                "rejectedActs": 0,
+                "signedActs": 0
+              },
+              {
+                "id": 2,
+                "name": "СТК. Утеплитель \"мокрого\" фасада (с балконов)",
+                "generatedActs": 42,
+                "sentForApproval": 42,
+                "approvedActs": 0,
+                "rejectedActs": 0,
+                "signedActs": 0
+              },
+              {
+                "id": 3,
+                "name": "СТК. Подсистема вентфасада (кронштейны)",
+                "generatedActs": 17,
+                "sentForApproval": 17,
+                "approvedActs": 0,
+                "rejectedActs": 0,
+                "signedActs": 0
+              },
+              {
+                "id": 4,
+                "name": "СТК. Армирующий слой \"мокрого\" фасада (с лесов)",
+                "generatedActs": 5,
+                "sentForApproval": 5,
+                "approvedActs": 0,
+                "rejectedActs": 0,
+                "signedActs": 0
+              },
+              {
+                "id": 5,
+                "name": "СТК. Армирующий слой \"мокрого\" фасада (с балконов)",
+                "generatedActs": 42,
+                "sentForApproval": 42,
+                "approvedActs": 3,
+                "rejectedActs": 0,
+                "signedActs": 0
+              },
+              {
+                "id": 6,
+                "name": "СТК. Декоративное оштукатуривание \"мокрого\" фасада (с лесов)",
+                "generatedActs": 5,
+                "sentForApproval": 5,
+                "approvedActs": 1,
+                "rejectedActs": 0,
+                "signedActs": 0
+              },
+              {
+                "id": 7,
+                "name": "СТК. Декоративное оштукатуривание \"мокрого\" фасада (с балконов)",
+                "generatedActs": 42,
+                "sentForApproval": 42,
+                "approvedActs": 0,
+                "rejectedActs": 0,
+                "signedActs": 0
+              },
+              {
+                "id": 8,
+                "name": "СТК. Утеплитель вентфасада",
+                "generatedActs": 15,
+                "sentForApproval": 15,
+                "approvedActs": 0,
+                "rejectedActs": 0,
+                "signedActs": 0
+              },
+              {
+                "id": 9,
+                "name": "СТК. Камень (плитка) вентфасада",
+                "generatedActs": 0,
+                "sentForApproval": 0,
+                "approvedActs": 0,
+                "rejectedActs": 0,
+                "signedActs": 0
+              },
+              {
+                "id": 10,
+                "name": "СТК. Минераловатные плиты утеплителя (надстроек на кровле)",
+                "generatedActs": 11,
+                "sentForApproval": 11,
+                "approvedActs": 0,
+                "rejectedActs": 0,
+                "signedActs": 0
+              },
+              {
+                "id": 11,
+                "name": "СТК. Армирующий слой фасадов (надстроек на кровле)",
+                "generatedActs": 10,
+                "sentForApproval": 10,
+                "approvedActs": 0,
+                "rejectedActs": 0,
+                "signedActs": 0
+              },
+              {
+                "id": 12,
+                "name": "СТК. Декоративное оштукатуривание фасада по минераловатной плите (надстроек на кровле)",
+                "generatedActs": 11,
+                "sentForApproval": 10,
+                "approvedActs": 1,
+                "rejectedActs": 0,
+                "signedActs": 0
+              },
+              {
+                "id": 13,
+                "name": "СТК. Подсистема вентфасада (направляющие)",
+                "generatedActs": 1,
+                "sentForApproval": 1,
+                "approvedActs": 0,
+                "rejectedActs": 0,
+                "signedActs": 0
+              },
+              {
+                "id": 14,
+                "name": "СТК. Покраска фасадной краской (с лесов, 1й слой)",
+                "generatedActs": 0,
+                "sentForApproval": 0,
+                "approvedActs": 0,
+                "rejectedActs": 0,
+                "signedActs": 0
+              },
+              {
+                "id": 15,
+                "name": "СТК. Покраска фасадной краской (с лесов, 2й слой)",
+                "generatedActs": 0,
+                "sentForApproval": 0,
+                "approvedActs": 0,
+                "rejectedActs": 0,
+                "signedActs": 0
+              }
+            ]
+          },
+          {
+            "id": 4,
+            "name": "Ривьера, 1 очередь",
+            "description": "1.1 корпус, ООО \"Авангард\"",
+            "smrs": [
+              {
+                "id": 1,
+                "name": "СТК. Кладка наружных стен",
+                "generatedActs": 0,
+                "sentForApproval": 0,
+                "approvedActs": 0,
+                "rejectedActs": 0,
+                "signedActs": 0
+              },
+              {
+                "id": 2,
+                "name": "СТК. Внутренние стены и перегородки",
+                "generatedActs": 4,
+                "sentForApproval": 4,
+                "approvedActs": 4,
+                "rejectedActs": 0,
+                "signedActs": 0
+              },
+              {
+                "id": 3,
+                "name": "СТК. Кладка надстроек на кровле",
+                "generatedActs": 0,
+                "sentForApproval": 0,
+                "approvedActs": 0,
+                "rejectedActs": 0,
+                "signedActs": 0
+              },
+              {
+                "id": 4,
+                "name": "СТК. Вентиляционные каналы из мелкоштучных элементов",
+                "generatedActs": 0,
+                "sentForApproval": 0,
+                "approvedActs": 0,
+                "rejectedActs": 0,
+                "signedActs": 0
+              }
+            ]
+          }
+        ]
+      },
+      {
+        "id": 11,
+        "name": "Объект особого внимания ГСН",
+        "objects": [
+          {
+            "id": 5,
+            "name": "Univer sity, 12 очередь",
+            "description": "7 корпус, подрядчик не определен",
+            "smrs": []
+          }
+        ]
+      },
+      {
+        "id": 2,
+        "name": "Объекты ФСК",
+        "objects": [
+          {
+            "id": 7,
+            "name": "ФСК Регионы/Форест",
+            "description": "Корпус 2.2, ООО \"Юнионстрой плюс\"",
+            "smrs": [
+              {
+                "id": 1,
+                "name": "СТК. Кладка наружных стен",
+                "generatedActs": 0,
+                "sentForApproval": 0,
+                "approvedActs": 0,
+                "rejectedActs": 0,
+                "signedActs": 0
+              },
+              {
+                "id": 2,
+                "name": "СТК. Внутренние стены и перегородки",
+                "generatedActs": 1,
+                "sentForApproval": 1,
+                "approvedActs": 0,
+                "rejectedActs": 0,
+                "signedActs": 0
+              },
+              {
+                "id": 3,
+                "name": "СТК. Кладка надстроек на кровле",
+                "generatedActs": 0,
+                "sentForApproval": 0,
+                "approvedActs": 0,
+                "rejectedActs": 0,
+                "signedActs": 0
+              },
+              {
+                "id": 4,
+                "name": "СТК. Вентиляционные каналы из мелкоштучных элементов",
+                "generatedActs": 0,
+                "sentForApproval": 0,
+                "approvedActs": 0,
+                "rejectedActs": 0,
+                "signedActs": 0
+              }
+            ]
+          },
+          {
+            "id": 8,
+            "name": "ФСК Москва/Первый Измайловский",
+            "description": "ДОО",
+            "smrs": []
+          }
+        ]
+      }
+    ]
   }
 ]

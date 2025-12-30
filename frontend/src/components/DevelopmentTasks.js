@@ -344,6 +344,15 @@ const DevelopmentTasks = ({ isAuthenticated = false }) => {
                   </div>
                 </td>
                 <td>
+                  {task.taskManagerLink && (
+                    <button 
+                      className="btn-task-manager-link" 
+                      onClick={() => window.open(task.taskManagerLink, '_blank')}
+                      title="Открыть в таск-менеджере"
+                    >
+                      <i className="fas fa-external-link-alt"></i>
+                    </button>
+                  )}
                   {isAuthenticated && (
                     <>
                       <button 
@@ -421,7 +430,8 @@ const TaskModal = ({ task, onSave, onClose }) => {
     status: task?.status || 'To Do',
     plannedFixMonth: task?.plannedFixMonth || '',
     plannedFixYear: task?.plannedFixYear || '',
-    priority: task?.priority || 'non-critical'
+    priority: task?.priority || 'non-critical',
+    taskManagerLink: task?.taskManagerLink || ''
   });
 
   const handleChange = (e) => {
@@ -571,6 +581,19 @@ const TaskModal = ({ task, onSave, onClose }) => {
               <option value="non-critical">Некритично</option>
               <option value="user-request">Пожелания от пользователей</option>
             </select>
+          </div>
+
+          <div className="form-group">
+            <label className="form-label" htmlFor="taskManagerLink">Ссылка на таск-менеджер</label>
+            <input
+              type="url"
+              className="form-input"
+              id="taskManagerLink"
+              name="taskManagerLink"
+              value={formData.taskManagerLink}
+              onChange={handleChange}
+              placeholder="https://..."
+            />
           </div>
 
           <div className="actions-row">

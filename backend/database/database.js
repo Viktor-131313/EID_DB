@@ -58,6 +58,28 @@ async function initializeDatabase() {
                 console.warn('⚠️  Предупреждение при миграции aikona_object_id:', migrationError.message);
             }
         }
+
+        // Проверяем и добавляем колонку task_manager_link, если её нет (миграция)
+        try {
+            await pool.query(`
+                DO $$ 
+                BEGIN
+                    IF NOT EXISTS (
+                        SELECT 1 FROM information_schema.columns 
+                        WHERE table_name = 'tasks' 
+                        AND column_name = 'task_manager_link'
+                    ) THEN
+                        ALTER TABLE tasks ADD COLUMN task_manager_link TEXT;
+                        RAISE NOTICE 'Column task_manager_link added to tasks table';
+                    END IF;
+                END $$;
+            `);
+            console.log('✅ Миграция task_manager_link проверена/выполнена');
+        } catch (migrationError) {
+            if (!migrationError.message.includes('already exists')) {
+                console.warn('⚠️  Предупреждение при миграции task_manager_link:', migrationError.message);
+            }
+        }
     } catch (error) {
         console.error('❌ Ошибка инициализации базы данных:', error);
         throw error;
@@ -356,7 +378,7 @@ async function getAllTasks() {
     try {
         const result = await pool.query(
             `SELECT id, task_number, description, discovery_date, status, 
-                    planned_fix_month, planned_fix_year, priority,
+                    planned_fix_month, planned_fix_year, priority, task_manager_link,
                     created_at, updated_at
              FROM tasks
              ORDER BY 
@@ -378,6 +400,7 @@ async function getAllTasks() {
             plannedFixMonth: row.planned_fix_month,
             plannedFixYear: row.planned_fix_year,
             priority: row.priority,
+            taskManagerLink: row.task_manager_link || null,
             createdAt: row.created_at.toISOString(),
             updatedAt: row.updated_at.toISOString()
         }));
@@ -402,8 +425,8 @@ async function saveTasks(tasks) {
         for (const task of tasks || []) {
             await client.query(
                 `INSERT INTO tasks (id, task_number, description, discovery_date, status, 
-                                  planned_fix_month, planned_fix_year, priority)
-                 VALUES ($1, $2, $3, $4, $5, $6, $7, $8)`,
+                                  planned_fix_month, planned_fix_year, priority, task_manager_link)
+                 VALUES ($1, $2, $3, $4, $5, $6, $7, $8, $9)`,
                 [
                     task.id,
                     task.taskNumber,
@@ -412,7 +435,8 @@ async function saveTasks(tasks) {
                     task.status || 'To Do',
                     task.plannedFixMonth || null,
                     task.plannedFixYear || null,
-                    task.priority || 'non-critical'
+                    task.priority || 'non-critical',
+                    task.taskManagerLink || null
                 ]
             );
         }

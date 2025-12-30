@@ -51,6 +51,7 @@ CREATE TABLE IF NOT EXISTS tasks (
     planned_fix_month VARCHAR(2),
     planned_fix_year INTEGER,
     priority VARCHAR(50) DEFAULT 'non-critical',
+    task_manager_link TEXT,
     created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
     updated_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP
 );

@@ -1,23 +1,29 @@
 import React, { useState } from 'react';
 import './AuthModal.css';
+import { login } from '../services/api-containers';
 
 const AuthModal = ({ isOpen, onClose, onLogin }) => {
   const [username, setUsername] = useState('');
   const [password, setPassword] = useState('');
   const [error, setError] = useState('');
+  const [loading, setLoading] = useState(false);
 
-  const handleSubmit = (e) => {
+  const handleSubmit = async (e) => {
     e.preventDefault();
     setError('');
+    setLoading(true);
 
-    if (username === 'admin' && password === 'Admin2026!') {
+    try {
+      await login(username, password);
       setUsername('');
       setPassword('');
       onClose();
       // Вызываем onLogin, который покажет уведомление
       onLogin();
-    } else {
-      setError('Неверный логин или пароль');
+    } catch (err) {
+      setError(err.message || 'Неверный логин или пароль');
+    } finally {
+      setLoading(false);
     }
   };
 
@@ -75,8 +81,8 @@ const AuthModal = ({ isOpen, onClose, onLogin }) => {
             <button type="button" className="btn" onClick={handleClose}>
               Отмена
             </button>
-            <button type="submit" className="btn btn-primary">
-              Войти
+            <button type="submit" className="btn btn-primary" disabled={loading}>
+              {loading ? 'Вход...' : 'Войти'}
             </button>
           </div>
         </form>

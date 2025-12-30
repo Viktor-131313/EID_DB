@@ -14,6 +14,82 @@ const getApiUrl = () => {
 
 const API_URL = getApiUrl();
 
+// Получить токен из localStorage
+const getAuthToken = () => {
+  return localStorage.getItem('authToken');
+};
+
+// Сохранить токен в localStorage
+export const setAuthToken = (token) => {
+  if (token) {
+    localStorage.setItem('authToken', token);
+  } else {
+    localStorage.removeItem('authToken');
+  }
+};
+
+// Получить заголовки с авторизацией
+const getAuthHeaders = () => {
+  const token = getAuthToken();
+  return {
+    'Content-Type': 'application/json',
+    ...(token && { 'Authorization': `Bearer ${token}` })
+  };
+};
+
+// API для аутентификации
+
+// Войти в систему
+export const login = async (username, password) => {
+  const response = await fetch(`${API_URL}/api/auth/login`, {
+    method: 'POST',
+    headers: {
+      'Content-Type': 'application/json',
+    },
+    body: JSON.stringify({ username, password }),
+  });
+  
+  if (!response.ok) {
+    const error = await response.json();
+    throw new Error(error.error || 'Login failed');
+  }
+  
+  const data = await response.json();
+  if (data.token) {
+    setAuthToken(data.token);
+  }
+  return data;
+};
+
+// Проверить валидность токена
+export const verifyToken = async () => {
+  const token = getAuthToken();
+  if (!token) {
+    return false;
+  }
+  
+  try {
+    const response = await fetch(`${API_URL}/api/auth/verify`, {
+      headers: getAuthHeaders(),
+    });
+    
+    if (!response.ok) {
+      setAuthToken(null);
+      return false;
+    }
+    
+    return true;
+  } catch (error) {
+    setAuthToken(null);
+    return false;
+  }
+};
+
+// Выйти из системы
+export const logout = () => {
+  setAuthToken(null);
+};
+
 // Получить все контейнеры
 export const fetchContainers = async () => {
   const response = await fetch(`${API_URL}/api/containers`);

@@ -1,7 +1,7 @@
 import React, { useState, useEffect, useCallback } from 'react';
 import './App.css';
 import Dashboard from './components/Dashboard';
-import { fetchContainers, createContainer, fetchStats } from './services/api-containers';
+import { fetchContainers, createContainer, fetchStats, verifyToken, logout as apiLogout } from './services/api-containers';
 
 function App() {
   const [containers, setContainers] = useState([]);
@@ -14,18 +14,29 @@ function App() {
     rejectedActs: 0
   });
   const [loading, setLoading] = useState(true);
-  const [isAuthenticated, setIsAuthenticated] = useState(() => {
-    // Проверяем, была ли авторизация ранее (хранится в sessionStorage)
-    return sessionStorage.getItem('isAuthenticated') === 'true';
-  });
+  const [isAuthenticated, setIsAuthenticated] = useState(false);
+  const [authChecked, setAuthChecked] = useState(false);
 
   useEffect(() => {
+    // Проверяем токен при загрузке приложения
+    const checkAuth = async () => {
+      try {
+        const isValid = await verifyToken();
+        setIsAuthenticated(isValid);
+      } catch (error) {
+        console.error('Error verifying token:', error);
+        setIsAuthenticated(false);
+      } finally {
+        setAuthChecked(true);
+      }
+    };
+    
+    checkAuth();
     loadData();
     
     // Обработка клавиши Insert для создания нового контейнера (только для авторизованных)
     const handleKeyPress = (e) => {
-      const isAuth = sessionStorage.getItem('isAuthenticated') === 'true';
-      if (isAuth && (e.key === 'Insert' || (e.key === 'Insert' && !e.shiftKey && !e.ctrlKey && !e.altKey))) {
+      if (isAuthenticated && (e.key === 'Insert' || (e.key === 'Insert' && !e.shiftKey && !e.ctrlKey && !e.altKey))) {
         e.preventDefault();
         handleCreateContainer();
       }
@@ -33,7 +44,7 @@ function App() {
 
     window.addEventListener('keydown', handleKeyPress);
     return () => window.removeEventListener('keydown', handleKeyPress);
-  }, []);
+  }, [isAuthenticated]);
 
   const loadData = async () => {
     try {
@@ -68,12 +79,11 @@ function App() {
 
   const handleLogin = () => {
     setIsAuthenticated(true);
-    sessionStorage.setItem('isAuthenticated', 'true');
   };
 
   const handleLogout = () => {
+    apiLogout();
     setIsAuthenticated(false);
-    sessionStorage.removeItem('isAuthenticated');
   };
 
   return (

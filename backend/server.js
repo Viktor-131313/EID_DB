@@ -1,9 +1,18 @@
+// Загружаем переменные окружения из .env файла
+require('dotenv').config();
+
 const express = require('express');
 const cors = require('cors');
 const path = require('path');
+const jwt = require('jsonwebtoken');
+const bcrypt = require('bcrypt');
 
 const app = express();
 const PORT = process.env.PORT || 3001;
+
+// JWT Configuration
+const JWT_SECRET = process.env.JWT_SECRET || 'your-secret-key-change-in-production'; // ⚠️ ОБЯЗАТЕЛЬНО НАСТРОЙТЕ В ПРОДАКШЕНЕ!
+const JWT_EXPIRES_IN = '24h';
 
 // Middleware
 app.use(cors());
@@ -322,6 +331,66 @@ function compareSnapshots(oldSnapshot, newSnapshot) {
         changes
     };
 }
+
+// Middleware для проверки аутентификации
+function authenticateToken(req, res, next) {
+    const authHeader = req.headers['authorization'];
+    const token = authHeader && authHeader.split(' ')[1]; // Bearer TOKEN
+
+    if (!token) {
+        return res.status(401).json({ error: 'Access token required' });
+    }
+
+    jwt.verify(token, JWT_SECRET, (err, user) => {
+        if (err) {
+            return res.status(403).json({ error: 'Invalid or expired token' });
+        }
+        req.user = user;
+        next();
+    });
+}
+
+// API Routes for Authentication
+
+// POST /api/auth/login - авторизация администратора
+app.post('/api/auth/login', async (req, res) => {
+    try {
+        const { username, password } = req.body;
+
+        // Получаем учетные данные из переменных окружения
+        const adminUsername = process.env.ADMIN_USERNAME || 'admin';
+        const adminPassword = process.env.ADMIN_PASSWORD || 'Admin2026!'; // ⚠️ ИЗМЕНИТЕ В ПРОДАКШЕНЕ!
+
+        // Проверяем учетные данные
+        if (username !== adminUsername || password !== adminPassword) {
+            return res.status(401).json({ error: 'Invalid username or password' });
+        }
+
+        // Создаем JWT токен
+        const token = jwt.sign(
+            { username: adminUsername, role: 'admin' },
+            JWT_SECRET,
+            { expiresIn: JWT_EXPIRES_IN }
+        );
+
+        res.json({
+            success: true,
+            token,
+            user: { username: adminUsername, role: 'admin' }
+        });
+    } catch (error) {
+        console.error('Error during login:', error);
+        res.status(500).json({ error: 'Internal server error during login' });
+    }
+});
+
+// GET /api/auth/verify - проверка валидности токена
+app.get('/api/auth/verify', authenticateToken, (req, res) => {
+    res.json({
+        valid: true,
+        user: req.user
+    });
+});
 
 // API Routes
 
@@ -1090,6 +1159,7 @@ app.post('/api/tasks', async (req, res) => {
             plannedFixMonth: req.body.plannedFixMonth || null,
             plannedFixYear: req.body.plannedFixYear || null,
             priority: req.body.priority || 'non-critical',
+            taskManagerLink: req.body.taskManagerLink || null,
             createdAt: new Date().toISOString(),
             updatedAt: new Date().toISOString()
         };
@@ -1124,6 +1194,7 @@ app.put('/api/tasks/:taskId', async (req, res) => {
             plannedFixMonth: req.body.plannedFixMonth !== undefined ? req.body.plannedFixMonth : tasks[index].plannedFixMonth,
             plannedFixYear: req.body.plannedFixYear !== undefined ? req.body.plannedFixYear : tasks[index].plannedFixYear,
             priority: req.body.priority !== undefined ? req.body.priority : (tasks[index].priority || 'non-critical'),
+            taskManagerLink: req.body.taskManagerLink !== undefined ? req.body.taskManagerLink : (tasks[index].taskManagerLink || null),
             updatedAt: new Date().toISOString()
         };
 

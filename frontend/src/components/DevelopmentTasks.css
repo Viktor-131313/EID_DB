@@ -150,6 +150,7 @@
   color: #0f5132;
 }
 
+.btn-task-manager-link,
 .btn-edit-task,
 .btn-delete-task {
   padding: 6px 10px;
@@ -159,6 +160,15 @@
   margin-right: 5px;
   font-size: 14px;
   transition: background-color 0.2s;
+}
+
+.btn-task-manager-link {
+  background-color: #9b59b6;
+  color: white;
+}
+
+.btn-task-manager-link:hover {
+  background-color: #8e44ad;
 }
 
 .btn-edit-task {

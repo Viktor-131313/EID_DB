@@ -21,7 +21,11 @@ try {
 }
 
 const AIKONA_API_URL = 'https://icona.setl.ru/rest_api/api/IntegrationObjectInfo';
-const AIKONA_API_KEY = 'f48941fd-ab51-4edd-b1f2-f202597c9920';
+const AIKONA_API_KEY = process.env.AIKONA_API_KEY;
+
+if (!AIKONA_API_KEY) {
+    console.warn('⚠️  AIKONA_API_KEY не установлен в переменных окружения. Функции синхронизации с Айконой не будут работать.');
+}
 
 /**
  * Получить данные объекта из API Айконы
@@ -29,6 +33,10 @@ const AIKONA_API_KEY = 'f48941fd-ab51-4edd-b1f2-f202597c9920';
  * @returns {Promise<Object>} Данные объекта из Айконы
  */
 async function fetchAikonaObjectData(objectId) {
+    if (!AIKONA_API_KEY) {
+        throw new Error('AIKONA_API_KEY не настроен в переменных окружения');
+    }
+    
     const url = `${AIKONA_API_URL}?ObjectId=${objectId}&ApiKey=${AIKONA_API_KEY}`;
     
     try {
