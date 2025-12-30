@@ -294,7 +294,7 @@ const Dashboard = ({ containers, globalStats, loading, onContainerUpdate, isAuth
                     gap: '5px',
                     zIndex: 10
                   }}>
-                    <Tooltip text={index === 0 ? 'Контейнер уже первый' : 'Переместить вверх'}>
+                    <Tooltip text={index === 0 ? 'Контейнер уже первый' : 'Переместить вверх'} position="top">
                       <button
                         className="btn"
                         onClick={async (e) => {
@@ -320,7 +320,7 @@ const Dashboard = ({ containers, globalStats, loading, onContainerUpdate, isAuth
                         <i className="fas fa-arrow-up"></i>
                       </button>
                     </Tooltip>
-                    <Tooltip text={index === containers.length - 1 ? 'Контейнер уже последний' : 'Переместить вниз'}>
+                    <Tooltip text={index === containers.length - 1 ? 'Контейнер уже последний' : 'Переместить вниз'} position="bottom">
                       <button
                         className="btn"
                         onClick={async (e) => {
