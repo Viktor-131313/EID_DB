@@ -483,6 +483,7 @@ async function saveTasks(tasks) {
             AND column_name = 'task_manager_link'
         `);
         const hasTaskManagerLink = columnCheck.rows.length > 0;
+        console.log(`[saveTasks] hasTaskManagerLink: ${hasTaskManagerLink}, saving ${tasks?.length || 0} tasks`);
         
         for (const task of tasks || []) {
             try {
@@ -503,6 +504,7 @@ async function saveTasks(tasks) {
                             (task.taskManagerLink && typeof task.taskManagerLink === 'string' && task.taskManagerLink.trim() !== '' ? task.taskManagerLink.trim() : null)
                         ]
                     );
+                    console.log(`[saveTasks] Task ${task.id}: saved taskManagerLink =`, task.taskManagerLink);
                 } else {
                     await client.query(
                         `INSERT INTO tasks (id, task_number, description, discovery_date, status, 

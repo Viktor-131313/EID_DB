@@ -1165,10 +1165,15 @@ app.post('/api/tasks', async (req, res) => {
             updatedAt: new Date().toISOString()
         };
         console.log('[POST /api/tasks] New task:', JSON.stringify(newTask, null, 2));
+        console.log('[POST /api/tasks] taskManagerLink in newTask:', newTask.taskManagerLink);
 
         tasks.push(newTask);
         if (await dataAdapter.writeTasks(tasks)) {
-            res.status(201).json(newTask);
+            // Перезагружаем задачи из БД чтобы вернуть актуальные данные
+            const savedTasks = await dataAdapter.readTasks();
+            const savedTask = savedTasks.find(t => t.id === newTask.id);
+            console.log('[POST /api/tasks] Saved task from DB:', JSON.stringify(savedTask, null, 2));
+            res.status(201).json(savedTask || newTask);
         } else {
             res.status(500).json({ error: 'Failed to save task' });
         }
@@ -1212,9 +1217,14 @@ app.put('/api/tasks/:taskId', async (req, res) => {
 
         tasks[index] = updatedTask;
         console.log(`[PUT /api/tasks/${req.params.taskId}] Updated task:`, JSON.stringify(updatedTask, null, 2));
+        console.log(`[PUT /api/tasks/${req.params.taskId}] taskManagerLink in updatedTask:`, updatedTask.taskManagerLink);
         if (await dataAdapter.writeTasks(tasks)) {
             console.log(`[PUT /api/tasks/${req.params.taskId}] Task saved successfully`);
-            res.json(updatedTask);
+            // Перезагружаем задачи из БД чтобы вернуть актуальные данные
+            const savedTasks = await dataAdapter.readTasks();
+            const savedTask = savedTasks.find(t => t.id === updatedTask.id);
+            console.log(`[PUT /api/tasks/${req.params.taskId}] Saved task from DB:`, JSON.stringify(savedTask, null, 2));
+            res.json(savedTask || updatedTask);
         } else {
             console.error(`[PUT /api/tasks/${req.params.taskId}] Failed to save task`);
             res.status(500).json({ error: 'Failed to update task' });
