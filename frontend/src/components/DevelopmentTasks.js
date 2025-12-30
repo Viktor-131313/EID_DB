@@ -395,7 +395,7 @@ const DevelopmentTasks = ({ isAuthenticated = false }) => {
                 </td>
                 <td>
                   {task.taskManagerLink && (
-                    <Tooltip text="Открыть в таск-менеджере">
+                    <Tooltip text="Открыть в таск-менеджере" position="bottom">
                       <button 
                         className="btn-task-manager-link" 
                         onClick={() => window.open(task.taskManagerLink, '_blank')}
@@ -406,7 +406,7 @@ const DevelopmentTasks = ({ isAuthenticated = false }) => {
                   )}
                   {isAuthenticated && (
                     <>
-                      <Tooltip text="Редактировать">
+                      <Tooltip text="Редактировать" position="bottom">
                         <button 
                           className="btn-edit-task" 
                           onClick={() => handleEditTask(task)}
@@ -414,7 +414,7 @@ const DevelopmentTasks = ({ isAuthenticated = false }) => {
                           <i className="fas fa-edit"></i>
                         </button>
                       </Tooltip>
-                      <Tooltip text="Удалить (или нажмите Delete)">
+                      <Tooltip text="Удалить (или нажмите Delete)" position="bottom">
                         <button 
                           className="btn-delete-task" 
                           onClick={() => handleDeleteTask(task.id)}

@@ -17,7 +17,7 @@
   white-space: nowrap;
   border-radius: 6px;
   box-shadow: 0 2px 8px rgba(0, 0, 0, 0.3);
-  z-index: 99999;
+  z-index: 999999 !important; /* Максимальный z-index для tooltips */
   pointer-events: none;
   opacity: 0;
   animation: tooltipFadeIn 0.2s ease-out forwards;
@@ -26,12 +26,30 @@
 /* Для tooltip внутри таблиц - убеждаемся, что он виден и не обрезан */
 .tasks-table-container {
   overflow-x: auto;
-  overflow-y: visible;
+  overflow-y: visible !important;
+  overflow: visible !important; /* Разрешаем выход tooltips за пределы */
+}
+
+.tasks-table {
+  overflow: visible !important; /* Таблица не должна обрезать tooltips */
+}
+
+.tasks-table tbody {
+  overflow: visible !important;
+}
+
+.tasks-table tr {
+  overflow: visible !important;
+}
+
+.tasks-table td {
+  overflow: visible !important; /* Ячейки не должны обрезать tooltips */
 }
 
 .tasks-table .tooltip-wrapper {
   position: relative;
-  z-index: 1;
+  z-index: auto; /* Убираем ограничение z-index для wrapper */
+  overflow: visible !important;
 }
 
 .tooltip::after {

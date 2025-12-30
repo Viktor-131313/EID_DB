@@ -54,9 +54,10 @@
 
 .tasks-table-container {
   overflow-x: auto;
-  overflow-y: visible;
+  overflow-y: visible !important;
   margin-bottom: 20px;
   position: relative;
+  padding-bottom: 60px; /* Добавляем отступ снизу, чтобы tooltips не обрезались */
 }
 
 .tasks-table {
@@ -162,6 +163,8 @@
   border-radius: 4px;
   cursor: pointer;
   margin-right: 5px;
+  position: relative;
+  z-index: 1; /* Низкий z-index для кнопок, чтобы tooltips были выше */
   font-size: 14px;
   transition: background-color 0.2s;
 }
@@ -219,11 +222,19 @@ td .tooltip-wrapper {
 /* Убеждаемся, что tooltip виден поверх таблицы */
 .tasks-table {
   position: relative;
-  overflow: visible;
+  overflow: visible !important;
+}
+
+.tasks-table tbody {
+  overflow: visible !important;
+}
+
+.tasks-table tr {
+  overflow: visible !important;
 }
 
 .tasks-table td {
-  overflow: visible;
+  overflow: visible !important;
   position: relative;
 }
 
