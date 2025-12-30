@@ -472,6 +472,28 @@ async function saveTasks(tasks) {
     try {
         await client.query('BEGIN');
         
+        // Проверяем и добавляем колонку task_manager_link, если её нет (миграция)
+        try {
+            await client.query(`
+                DO $$ 
+                BEGIN
+                    IF NOT EXISTS (
+                        SELECT 1 FROM information_schema.columns 
+                        WHERE table_name = 'tasks' 
+                        AND column_name = 'task_manager_link'
+                    ) THEN
+                        ALTER TABLE tasks ADD COLUMN task_manager_link TEXT;
+                        RAISE NOTICE 'Column task_manager_link added to tasks table';
+                    END IF;
+                END $$;
+            `);
+            console.log('[saveTasks] Миграция task_manager_link проверена/выполнена');
+        } catch (migrationError) {
+            if (!migrationError.message.includes('already exists')) {
+                console.warn('[saveTasks] Предупреждение при миграции task_manager_link:', migrationError.message);
+            }
+        }
+        
         // Удаляем все задачи и вставляем заново (можно делать upsert)
         await client.query('DELETE FROM tasks');
         
