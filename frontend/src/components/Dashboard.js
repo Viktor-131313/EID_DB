@@ -122,7 +122,7 @@ const Dashboard = ({ containers, globalStats, loading, onContainerUpdate, isAuth
       <div className="container">
         <div className="header">
           <div className="logo">
-            <Tooltip text="Нажмите для входа администратора">
+            <Tooltip text="Нажмите для входа администратора" position="bottom">
               <div 
                 className="logo-icon" 
                 onClick={() => setAuthModalOpen(true)}
@@ -138,7 +138,7 @@ const Dashboard = ({ containers, globalStats, loading, onContainerUpdate, isAuth
           </div>
               <div style={{ display: 'flex', alignItems: 'center', gap: '15px' }}>
                 {criticalObjectsData.totalCritical > 0 && (
-                  <Tooltip text={`${criticalObjectsData.totalCritical} критических объектов требуют внимания`}>
+                  <Tooltip text={`${criticalObjectsData.totalCritical} критических объектов требуют внимания`} position="bottom">
                     <button
                       className="btn btn-alerts"
                       onClick={() => setAlertsPanelOpen(true)}
@@ -184,7 +184,7 @@ const Dashboard = ({ containers, globalStats, loading, onContainerUpdate, isAuth
                 </div>
                 {isAuthenticated && (
                   <>
-                    <Tooltip text="Лог синхронизации с Айконой">
+                    <Tooltip text="Лог синхронизации с Айконой" position="bottom">
                       <button 
                         className="btn btn-sync-log" 
                         onClick={() => setSyncLogModalOpen(true)}
@@ -207,7 +207,7 @@ const Dashboard = ({ containers, globalStats, loading, onContainerUpdate, isAuth
                         <span>Лог синхронизации</span>
                       </button>
                     </Tooltip>
-                    <Tooltip text="Настройка автоматических снимков планерок">
+                    <Tooltip text="Настройка автоматических снимков планерок" position="bottom">
                       <button 
                         className="btn btn-snapshot-schedule" 
                         onClick={() => setSnapshotScheduleModalOpen(true)}
@@ -232,7 +232,7 @@ const Dashboard = ({ containers, globalStats, loading, onContainerUpdate, isAuth
                     </Tooltip>
                   </>
                 )}
-                <Tooltip text="Экспортировать дашборд в PDF">
+                <Tooltip text="Экспортировать дашборд в PDF" position="bottom">
                   <button 
                     className="btn btn-export-pdf" 
                     onClick={handleExportPDF}
