@@ -4,7 +4,7 @@ import ConfirmModal from './ConfirmModal';
 import Tooltip from './Tooltip';
 import { syncObjectFromAikona } from '../services/api-containers';
 
-const ObjectModal = ({ object, onSave, onDelete, onClose, isAuthenticated = false }) => {
+const ObjectModal = ({ object, onSave, onDelete, onClose, isAuthenticated = false, highlightCritical = false }) => {
   const [formData, setFormData] = useState({
     name: '',
     description: '',
@@ -610,6 +610,29 @@ const ObjectModal = ({ object, onSave, onDelete, onClose, isAuthenticated = fals
   const totalRejected = calculateTotalRejected();
   const totalSigned = calculateTotalSigned();
   const generatedPercent = totalGeneratedFrom > 0 ? Math.round((totalGenerated / totalGeneratedFrom) * 100) : 0;
+  
+  // Автоматическое раскрытие и подсветка критических секций при открытии через панель проблем
+  useEffect(() => {
+    if (highlightCritical && formData.generatedActs && formData.generatedActs.length > 0) {
+      // Рассчитываем метрики
+      const totalGen = formData.generatedActs.reduce((sum, smr) => sum + (smr.count || 0), 0);
+      const totalGenFrom = formData.generatedActs.reduce((sum, smr) => sum + (smr.total || 0), 0);
+      const readinessPercent = totalGenFrom > 0 ? Math.round((totalGen / totalGenFrom) * 100) : 0;
+      
+      // Если объект критичен (готовность < 70%), раскрываем секцию и подсвечиваем
+      if (readinessPercent < 70 && !expandedSections.generated) {
+        setExpandedSections(prev => ({ ...prev, generated: true }));
+        
+        // Прокручиваем к секции через небольшую задержку
+        setTimeout(() => {
+          const sectionElement = document.querySelector('.form-section.critical-section');
+          if (sectionElement) {
+            sectionElement.scrollIntoView({ behavior: 'smooth', block: 'center' });
+          }
+        }, 300);
+      }
+    }
+  }, [highlightCritical, formData.generatedActs, expandedSections.generated]);
 
   // Автоматическое изменение высоты textarea при загрузке
   useEffect(() => {
@@ -639,17 +662,45 @@ const ObjectModal = ({ object, onSave, onDelete, onClose, isAuthenticated = fals
           <div className="form-group">
             {formData.photo ? (
               <div className="photo-preview-container">
-                <img src={formData.photo} alt="Фото объекта" className="photo-preview" />
+                <div className="photo-preview-wrapper">
+                  <img src={formData.photo} alt="Фото объекта" className="photo-preview" />
+                </div>
                 {isAuthenticated && (
-                  <Tooltip text="Удалить фото">
-                    <button
-                      type="button"
-                      className="btn-remove-photo"
-                      onClick={() => setFormData({ ...formData, photo: null })}
-                    >
-                      <i className="fas fa-times"></i>
-                    </button>
-                  </Tooltip>
+                  <div className="photo-controls">
+                    <Tooltip text="Изменить фото" position="bottom">
+                      <button
+                        type="button"
+                        className="btn-change-photo"
+                        onClick={() => {
+                          const input = document.createElement('input');
+                          input.type = 'file';
+                          input.accept = 'image/jpeg,image/jpg,image/png';
+                          input.onchange = (e) => {
+                            const file = e.target.files[0];
+                            if (file) {
+                              const reader = new FileReader();
+                              reader.onloadend = () => {
+                                setFormData({ ...formData, photo: reader.result });
+                              };
+                              reader.readAsDataURL(file);
+                            }
+                          };
+                          input.click();
+                        }}
+                      >
+                        <i className="fas fa-edit"></i>
+                      </button>
+                    </Tooltip>
+                    <Tooltip text="Удалить фото" position="bottom">
+                      <button
+                        type="button"
+                        className="btn-remove-photo"
+                        onClick={() => setFormData({ ...formData, photo: null })}
+                      >
+                        <i className="fas fa-times"></i>
+                      </button>
+                    </Tooltip>
+                  </div>
                 )}
               </div>
             ) : (
@@ -778,9 +829,9 @@ const ObjectModal = ({ object, onSave, onDelete, onClose, isAuthenticated = fals
           </div>
 
           {/* Сгенерированных актов */}
-          <div className="form-section">
+          <div className={`form-section ${highlightCritical && generatedPercent < 70 ? 'critical-section' : ''}`}>
             <div 
-              className="form-section-header"
+              className={`form-section-header ${highlightCritical && generatedPercent < 70 ? 'critical-section-header' : ''}`}
               onClick={() => toggleSection('generated')}
             >
               <div>

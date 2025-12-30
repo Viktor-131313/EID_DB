@@ -138,6 +138,36 @@
   background-color: #e9ecef;
 }
 
+/* Подсветка критических секций */
+.form-section.critical-section {
+  border: 2px solid #e74c3c;
+  box-shadow: 0 0 10px rgba(231, 76, 60, 0.3);
+  animation: criticalPulse 2s ease-in-out infinite;
+}
+
+.form-section-header.critical-section-header {
+  background-color: #fee;
+  border-bottom: 2px solid #e74c3c;
+  position: relative;
+}
+
+.form-section-header.critical-section-header::before {
+  content: '⚠';
+  position: absolute;
+  right: 15px;
+  font-size: 20px;
+  color: #e74c3c;
+}
+
+@keyframes criticalPulse {
+  0%, 100% {
+    box-shadow: 0 0 10px rgba(231, 76, 60, 0.3);
+  }
+  50% {
+    box-shadow: 0 0 20px rgba(231, 76, 60, 0.6);
+  }
+}
+
 .form-section-header i {
   margin-right: 10px;
   color: #2c5aa0;
@@ -517,9 +547,15 @@
   position: relative;
   width: 100%;
   border-radius: 8px;
-  overflow: hidden;
+  overflow: visible; /* Для tooltips */
   border: 1px solid #ddd;
   margin-bottom: 20px;
+}
+
+.photo-preview-wrapper {
+  width: 100%;
+  border-radius: 8px;
+  overflow: hidden; /* Для изображения */
 }
 
 .photo-preview {
@@ -530,17 +566,42 @@
   display: block;
 }
 
-.btn-remove-photo {
+.photo-controls {
   position: absolute;
   top: 10px;
   right: 10px;
-  background-color: rgba(231, 76, 60, 0.9);
+  display: flex;
+  gap: 8px;
+  z-index: 100; /* Чтобы tooltips были поверх всех элементов */
+}
+
+.btn-change-photo,
+.btn-remove-photo {
+  background-color: rgba(44, 90, 160, 0.9);
   color: white;
   border: none;
   border-radius: 50%;
   width: 30px;
   height: 30px;
   cursor: pointer;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  transition: all 0.2s;
+}
+
+.btn-remove-photo {
+  background-color: rgba(231, 76, 60, 0.9);
+}
+
+.btn-change-photo:hover {
+  background-color: rgba(44, 90, 160, 1);
+  transform: scale(1.1);
+}
+
+.btn-remove-photo:hover {
+  background-color: rgba(231, 76, 60, 1);
+  transform: scale(1.1);
   display: flex;
   align-items: center;
   justify-content: center;

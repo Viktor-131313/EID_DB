@@ -1,83 +1,9 @@
 import React from 'react';
 import './ObjectsList.css';
 import Tooltip from './Tooltip';
+import { calculatePerformanceMetrics } from '../utils/performanceMetrics';
 
 const ObjectsList = ({ objects, onEditObject }) => {
-  // Расчет метрик исполнительности
-  const calculatePerformanceMetrics = (obj) => {
-    let generated = 0;
-    let generatedTotal = 0;
-    if (Array.isArray(obj.generatedActs)) {
-      generated = obj.generatedActs.reduce((sum, smr) => sum + (smr.count || 0), 0);
-      generatedTotal = obj.generatedActs.reduce((sum, smr) => sum + (smr.total || 0), 0);
-    } else if (typeof obj.generatedActs === 'number') {
-      generated = obj.generatedActs;
-      generatedTotal = obj.generatedActs;
-    }
-
-    // Процент готовности: сколько актов создано от принятых работ
-    const readinessPercent = generatedTotal > 0 ? Math.round((generated / generatedTotal) * 100) : 0;
-    const lag = generatedTotal - generated; // Отставание
-
-    // Определяем статус на основе процента готовности
-    let statusClass = 'status-good';
-    let statusText = 'Хорошо';
-    let isCritical = false;
-
-    if (generatedTotal > 0) {
-      if (readinessPercent < 70) {
-        statusClass = 'status-critical';
-        statusText = 'Критично';
-        isCritical = true;
-      } else if (readinessPercent < 85) {
-        statusClass = 'status-warning';
-        statusText = 'Требует внимания';
-      } else {
-        statusClass = 'status-good';
-        statusText = 'Хорошо';
-      }
-    } else {
-      // Если нет данных из Айконы, используем старую логику
-      let sent = 0;
-      if (Array.isArray(obj.sentForApproval)) {
-        sent = obj.sentForApproval.reduce((sum, smr) => sum + (smr.count || 0), 0);
-      } else if (typeof obj.sentForApproval === 'number') {
-        sent = obj.sentForApproval;
-      }
-      
-      let approved = 0;
-      if (Array.isArray(obj.approvedActs)) {
-        approved = obj.approvedActs.reduce((sum, smr) => sum + (smr.count || 0), 0);
-      } else if (typeof obj.approvedActs === 'number') {
-        approved = obj.approvedActs;
-      }
-      
-      const approvedPercent = sent > 0 ? (approved / sent) * 100 : 0;
-
-      if (approvedPercent >= 80) {
-        statusClass = 'status-good';
-        statusText = 'Хорошо';
-      } else if (approvedPercent >= 50) {
-        statusClass = 'status-warning';
-        statusText = 'В работе';
-      } else {
-        statusClass = 'status-critical';
-        statusText = 'Требует внимания';
-        isCritical = true;
-      }
-    }
-
-    return {
-      statusClass,
-      statusText,
-      isCritical,
-      readinessPercent,
-      lag,
-      generated,
-      generatedTotal
-    };
-  };
-
   if (objects.length === 0) {
     return (
       <div className="empty-state">
@@ -137,9 +63,11 @@ const ObjectsList = ({ objects, onEditObject }) => {
             onClick={() => onEditObject(obj)}
           >
             {metrics.isCritical && (
-              <div className="critical-alert-badge" title="Объект требует внимания">
-                <i className="fas fa-exclamation-triangle"></i>
-              </div>
+              <Tooltip text="Объект требует внимания">
+                <div className="critical-alert-badge">
+                  <i className="fas fa-exclamation-triangle"></i>
+                </div>
+              </Tooltip>
             )}
             {obj.photo && (
               <div className="object-photo-container">
@@ -196,6 +124,26 @@ const ObjectsList = ({ objects, onEditObject }) => {
               <div className="stat-item">Согласовано: {approved} ({approvedPercent}%)</div>
               <div className="stat-item">Отклонено: {rejected}</div>
             </div>
+
+            {/* Метрики исполнительности */}
+            {generatedTotal > 0 && (
+              <div className="performance-metrics">
+                <div className="performance-metric">
+                  <span className="metric-label">Готовность актов:</span>
+                  <span className={`metric-value ${metrics.readinessPercent < 70 ? 'metric-critical' : metrics.readinessPercent < 85 ? 'metric-warning' : 'metric-good'}`}>
+                    {metrics.readinessPercent}%
+                  </span>
+                </div>
+                {metrics.lag > 0 && (
+                  <div className="performance-metric">
+                    <span className="metric-label">Отставание:</span>
+                    <span className="metric-value metric-lag">
+                      {metrics.lag} актов
+                    </span>
+                  </div>
+                )}
+              </div>
+            )}
 
             {/* Блокирующие факторы */}
             {obj.blockingFactors && Array.isArray(obj.blockingFactors) && obj.blockingFactors.length > 0 && (

@@ -15,7 +15,7 @@ import {
   deleteContainer
 } from '../services/api-containers';
 
-const Container = ({ container, onUpdate, isAuthenticated = false }) => {
+const Container = ({ container, onUpdate, isAuthenticated = false, openObjectId = null, onObjectOpened, highlightCriticalOnOpen = false }) => {
   const [objects, setObjects] = useState([]);
   const [stats, setStats] = useState({
     totalObjects: 0,
@@ -36,6 +36,23 @@ const Container = ({ container, onUpdate, isAuthenticated = false }) => {
   useEffect(() => {
     loadData();
   }, [container.id]);
+
+  const [highlightCritical, setHighlightCritical] = useState(false);
+
+  // Открытие объекта по ID из AlertsPanel
+  useEffect(() => {
+    if (openObjectId && objects.length > 0) {
+      const objectToOpen = objects.find(obj => obj.id === openObjectId);
+      if (objectToOpen) {
+        setEditingObject({ ...objectToOpen, containerId: container.id, id: objectToOpen.id });
+        setModalOpen(true);
+        setHighlightCritical(highlightCriticalOnOpen);
+        if (onObjectOpened) {
+          onObjectOpened();
+        }
+      }
+    }
+  }, [openObjectId, objects, container.id, onObjectOpened, highlightCriticalOnOpen]);
 
   // Обработчик клавиши Delete для удаления контейнера
   useEffect(() => {
@@ -84,6 +101,7 @@ const Container = ({ container, onUpdate, isAuthenticated = false }) => {
   const handleEditObject = (object) => {
     setEditingObject({ ...object, containerId: container.id, id: object.id });
     setModalOpen(true);
+    setHighlightCritical(false); // Обычное открытие - без подсветки
   };
 
   const handleSaveObject = async (objectData) => {
@@ -126,6 +144,7 @@ const Container = ({ container, onUpdate, isAuthenticated = false }) => {
   const handleCloseModal = () => {
     setModalOpen(false);
     setEditingObject(null);
+    setHighlightCritical(false);
   };
 
   const handleDoubleClickName = () => {
@@ -276,6 +295,7 @@ const Container = ({ container, onUpdate, isAuthenticated = false }) => {
           onDelete={handleDeleteObject}
           onClose={handleCloseModal}
           isAuthenticated={isAuthenticated}
+          highlightCritical={highlightCritical}
         />
       )}
 

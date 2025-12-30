@@ -9,10 +9,12 @@ import ToastNotification from './ToastNotification';
 import ConfirmModal from './ConfirmModal';
 import SyncLogModal from './SyncLogModal';
 import SnapshotScheduleModal from './SnapshotScheduleModal';
+import AlertsPanel from './AlertsPanel';
 import Tooltip from './Tooltip';
 import { updateContainer, moveContainer } from '../services/api-containers';
 import { exportDashboardToPDF } from '../utils/pdfExport';
 import { fetchTasks } from '../services/api-tasks';
+import { calculateCriticalObjects } from '../utils/performanceMetrics';
 
 const Dashboard = ({ containers, globalStats, loading, onContainerUpdate, isAuthenticated, onLogin, onLogout }) => {
   const currentDate = new Date().toLocaleDateString('ru-RU', {
@@ -31,6 +33,12 @@ const Dashboard = ({ containers, globalStats, loading, onContainerUpdate, isAuth
   const [confirmLogout, setConfirmLogout] = useState(false);
   const [syncLogModalOpen, setSyncLogModalOpen] = useState(false);
   const [snapshotScheduleModalOpen, setSnapshotScheduleModalOpen] = useState(false);
+  const [alertsPanelOpen, setAlertsPanelOpen] = useState(false);
+  const [objectToOpen, setObjectToOpen] = useState(null); // { containerId, objectId }
+  const [highlightCriticalOnOpen, setHighlightCriticalOnOpen] = useState(false);
+
+  // Расчет критических объектов
+  const criticalObjectsData = calculateCriticalObjects(containers);
 
   useEffect(() => {
     // Сохраняем заголовок в localStorage
@@ -129,6 +137,48 @@ const Dashboard = ({ containers, globalStats, loading, onContainerUpdate, isAuth
             </div>
           </div>
               <div style={{ display: 'flex', alignItems: 'center', gap: '15px' }}>
+                {criticalObjectsData.totalCritical > 0 && (
+                  <Tooltip text={`${criticalObjectsData.totalCritical} критических объектов требуют внимания`}>
+                    <button
+                      className="btn btn-alerts"
+                      onClick={() => setAlertsPanelOpen(true)}
+                      style={{
+                        backgroundColor: '#e74c3c',
+                        color: 'white',
+                        border: 'none',
+                        padding: '10px 15px',
+                        borderRadius: '6px',
+                        cursor: 'pointer',
+                        display: 'flex',
+                        alignItems: 'center',
+                        gap: '8px',
+                        fontSize: '14px',
+                        fontWeight: '500',
+                        position: 'relative'
+                      }}
+                    >
+                      <i className="fas fa-exclamation-triangle"></i>
+                      <span>Проблемы</span>
+                      <span style={{
+                        position: 'absolute',
+                        top: '-8px',
+                        right: '-8px',
+                        backgroundColor: '#c0392b',
+                        color: 'white',
+                        borderRadius: '50%',
+                        width: '24px',
+                        height: '24px',
+                        display: 'flex',
+                        alignItems: 'center',
+                        justifyContent: 'center',
+                        fontSize: '12px',
+                        fontWeight: 'bold'
+                      }}>
+                        {criticalObjectsData.totalCritical}
+                      </span>
+                    </button>
+                  </Tooltip>
+                )}
                 <div className="date-display">
                   <i className="far fa-calendar-alt"></i> {currentDate}
                 </div>
@@ -228,7 +278,12 @@ const Dashboard = ({ containers, globalStats, loading, onContainerUpdate, isAuth
           </div>
           <div className="containers-list" style={{ paddingLeft: isAuthenticated ? '50px' : '0' }}>
             {containers.map((container, index) => (
-              <div key={container.id} className="container-wrapper" style={{ position: 'relative' }}>
+              <div 
+                key={container.id} 
+                className="container-wrapper" 
+                style={{ position: 'relative' }}
+                data-container-id={container.id}
+              >
                 {isAuthenticated && (
                   <div className="container-move-buttons" style={{ 
                     position: 'absolute', 
@@ -297,6 +352,12 @@ const Dashboard = ({ containers, globalStats, loading, onContainerUpdate, isAuth
                   container={container}
                   onUpdate={onContainerUpdate}
                   isAuthenticated={isAuthenticated}
+                  openObjectId={objectToOpen && objectToOpen.containerId === container.id ? objectToOpen.objectId : null}
+                  onObjectOpened={() => {
+                    setObjectToOpen(null);
+                    setHighlightCriticalOnOpen(false);
+                  }}
+                  highlightCriticalOnOpen={highlightCriticalOnOpen && objectToOpen && objectToOpen.containerId === container.id}
                 />
               </div>
             ))}
@@ -359,6 +420,24 @@ const Dashboard = ({ containers, globalStats, loading, onContainerUpdate, isAuth
           isOpen={snapshotScheduleModalOpen}
           onClose={() => setSnapshotScheduleModalOpen(false)}
           isAuthenticated={isAuthenticated}
+        />
+
+        <AlertsPanel
+          isOpen={alertsPanelOpen}
+          onClose={() => setAlertsPanelOpen(false)}
+          criticalObjects={criticalObjectsData}
+          onObjectClick={(containerId, objectId) => {
+            setAlertsPanelOpen(false);
+            setObjectToOpen({ containerId, objectId });
+            setHighlightCriticalOnOpen(true); // Включаем подсветку критических секций
+            // Прокручиваем к контейнеру
+            setTimeout(() => {
+              const containerElement = document.querySelector(`[data-container-id="${containerId}"]`);
+              if (containerElement) {
+                containerElement.scrollIntoView({ behavior: 'smooth', block: 'center' });
+              }
+            }, 100);
+          }}
         />
 
         <div className="footer">

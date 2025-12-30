@@ -1,12 +1,14 @@
 import React, { useState } from 'react';
 import './Tooltip.css';
 
-const Tooltip = ({ text, children }) => {
+const Tooltip = ({ text, children, position = 'top' }) => {
   const [show, setShow] = useState(false);
 
   if (!text) {
     return children;
   }
+
+  const tooltipClass = position === 'bottom' ? 'tooltip tooltip-bottom' : 'tooltip';
 
   return (
     <div 
@@ -16,7 +18,7 @@ const Tooltip = ({ text, children }) => {
     >
       {children}
       {show && (
-        <div className="tooltip">
+        <div className={tooltipClass}>
           {text}
         </div>
       )}

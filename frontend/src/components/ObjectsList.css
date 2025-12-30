@@ -13,6 +13,41 @@
   cursor: pointer;
   display: flex;
   flex-direction: column;
+  position: relative;
+}
+
+.object-card-critical {
+  border: 2px solid #e74c3c;
+  box-shadow: 0 2px 8px rgba(231, 76, 60, 0.2);
+}
+
+.critical-alert-badge {
+  position: absolute;
+  top: 10px;
+  right: 10px;
+  background-color: #e74c3c;
+  color: white;
+  border-radius: 50%;
+  width: 28px;
+  height: 28px;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  font-size: 14px;
+  z-index: 10;
+  box-shadow: 0 2px 4px rgba(0, 0, 0, 0.2);
+  animation: pulse 2s infinite;
+}
+
+@keyframes pulse {
+  0%, 100% {
+    opacity: 1;
+    transform: scale(1);
+  }
+  50% {
+    opacity: 0.8;
+    transform: scale(1.05);
+  }
 }
 
 .object-photo-container {
@@ -253,5 +288,87 @@
   .stat-item {
     font-size: 12px;
   }
+}
+
+/* Критические карточки */
+.object-card-critical {
+  border: 2px solid #e74c3c !important;
+  box-shadow: 0 2px 8px rgba(231, 76, 60, 0.2) !important;
+}
+
+.critical-alert-badge {
+  position: absolute;
+  top: 10px;
+  right: 10px;
+  background-color: #e74c3c;
+  color: white;
+  border-radius: 50%;
+  width: 28px;
+  height: 28px;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  font-size: 14px;
+  z-index: 10;
+  box-shadow: 0 2px 4px rgba(0, 0, 0, 0.2);
+  animation: pulse 2s infinite;
+}
+
+@keyframes pulse {
+  0%, 100% {
+    opacity: 1;
+    transform: scale(1);
+  }
+  50% {
+    opacity: 0.8;
+    transform: scale(1.05);
+  }
+}
+
+/* Метрики исполнительности */
+.performance-metrics {
+  margin-top: 15px;
+  padding: 12px;
+  background-color: #f8f9fa;
+  border-radius: 6px;
+  border: 1px solid #e1e5eb;
+}
+
+.performance-metric {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  margin-bottom: 8px;
+}
+
+.performance-metric:last-child {
+  margin-bottom: 0;
+}
+
+.metric-label {
+  font-size: 13px;
+  color: #7f8c8d;
+  font-weight: 500;
+}
+
+.metric-value {
+  font-size: 14px;
+  font-weight: 600;
+}
+
+.metric-good {
+  color: #27ae60;
+}
+
+.metric-warning {
+  color: #f39c12;
+}
+
+.metric-critical {
+  color: #e74c3c;
+}
+
+.metric-lag {
+  color: #e74c3c;
 }
 
