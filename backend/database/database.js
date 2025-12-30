@@ -492,7 +492,7 @@ async function saveTasks(tasks) {
                             task.plannedFixMonth || null,
                             task.plannedFixYear || null,
                             task.priority || 'non-critical',
-                            task.taskManagerLink || null
+                            (task.taskManagerLink && typeof task.taskManagerLink === 'string' && task.taskManagerLink.trim() !== '' ? task.taskManagerLink.trim() : null)
                         ]
                     );
                 } else {

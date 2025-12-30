@@ -1199,7 +1199,9 @@ app.put('/api/tasks/:taskId', async (req, res) => {
             plannedFixMonth: req.body.plannedFixMonth !== undefined ? req.body.plannedFixMonth : tasks[index].plannedFixMonth,
             plannedFixYear: req.body.plannedFixYear !== undefined ? req.body.plannedFixYear : tasks[index].plannedFixYear,
             priority: req.body.priority !== undefined ? req.body.priority : (tasks[index].priority || 'non-critical'),
-            taskManagerLink: req.body.taskManagerLink !== undefined ? req.body.taskManagerLink : (tasks[index].taskManagerLink || null),
+            taskManagerLink: req.body.taskManagerLink !== undefined 
+                ? (req.body.taskManagerLink && typeof req.body.taskManagerLink === 'string' && req.body.taskManagerLink.trim() !== '' ? req.body.taskManagerLink.trim() : null)
+                : (tasks[index].taskManagerLink || null),
             updatedAt: new Date().toISOString()
         };
 
@@ -1211,7 +1213,12 @@ app.put('/api/tasks/:taskId', async (req, res) => {
         }
     } catch (error) {
         console.error('Error updating task:', error);
-        res.status(500).json({ error: 'Failed to update task' });
+        console.error('Error details:', error.message);
+        console.error('Error stack:', error.stack);
+        res.status(500).json({ 
+            error: 'Failed to update task',
+            details: error.message 
+        });
     }
 });
 
