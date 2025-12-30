@@ -444,14 +444,19 @@ const TaskModal = ({ task, onSave, onClose }) => {
 
   const handleSubmit = async (e) => {
     e.preventDefault();
+    // Явно формируем taskData, чтобы гарантировать наличие всех полей
     const taskData = {
-      ...formData,
       taskNumber: formData.taskNumber ? parseInt(formData.taskNumber) : null,
+      description: formData.description || '',
+      discoveryDate: formData.discoveryDate || new Date().toISOString().split('T')[0],
+      status: formData.status || 'To Do',
       plannedFixMonth: formData.plannedFixMonth || null,
       plannedFixYear: formData.plannedFixYear ? parseInt(formData.plannedFixYear) : null,
-      taskManagerLink: formData.taskManagerLink || null
+      priority: formData.priority || 'non-critical',
+      taskManagerLink: (formData.taskManagerLink && formData.taskManagerLink.trim() !== '') ? formData.taskManagerLink.trim() : null
     };
     console.log('TaskModal: Submitting task data:', taskData);
+    console.log('TaskModal: taskManagerLink value:', taskData.taskManagerLink);
     await onSave(taskData);
   };
 
