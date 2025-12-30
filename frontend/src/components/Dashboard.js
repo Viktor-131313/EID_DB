@@ -36,6 +36,7 @@ const Dashboard = ({ containers, globalStats, loading, onContainerUpdate, isAuth
   const [alertsPanelOpen, setAlertsPanelOpen] = useState(false);
   const [objectToOpen, setObjectToOpen] = useState(null); // { containerId, objectId }
   const [highlightCriticalOnOpen, setHighlightCriticalOnOpen] = useState(false);
+  const [showDateText, setShowDateText] = useState(false); // Для показа текста даты на мобильных
 
   // Расчет критических объектов
   const criticalObjectsData = calculateCriticalObjects(containers);
@@ -179,8 +180,16 @@ const Dashboard = ({ containers, globalStats, loading, onContainerUpdate, isAuth
                     </button>
                   </Tooltip>
                 )}
-                <div className="date-display">
-                  <i className="far fa-calendar-alt"></i> {currentDate}
+                <div 
+                  className="date-display"
+                  onClick={() => {
+                    setShowDateText(true);
+                    setTimeout(() => setShowDateText(false), 3000);
+                  }}
+                  style={{ cursor: 'pointer' }}
+                >
+                  <i className="far fa-calendar-alt"></i>
+                  <span className={showDateText ? 'date-text-visible' : ''}>{currentDate}</span>
                 </div>
                 {isAuthenticated && (
                   <>
@@ -237,7 +246,9 @@ const Dashboard = ({ containers, globalStats, loading, onContainerUpdate, isAuth
                     className="btn btn-export-pdf" 
                     onClick={handleExportPDF}
                   >
-                    <i className="fas fa-file-pdf"></i> Экспорт в PDF
+                    <i className="fas fa-file-pdf btn-export-icon"></i>
+                    <span className="btn-export-text">Экспорт в PDF</span>
+                    <span className="btn-export-mobile">PDF</span>
                   </button>
                 </Tooltip>
               </div>

@@ -108,6 +108,11 @@
   background-color: #c0392b;
 }
 
+/* Скрываем мобильный текст по умолчанию (показывается только на мобильных) */
+.btn-export-mobile {
+  display: none;
+}
+
 @media (max-width: 768px) {
   .section-header {
     flex-direction: column;
@@ -159,6 +164,113 @@
 
   .container-move-buttons {
     display: none !important; /* Скрываем кнопки перемещения на мобилках */
+  }
+
+  /* Уменьшаем и смещаем кнопки в хедере на мобильных - одинаковый размер и пропорциональное распределение */
+  .header > div:last-child {
+    display: flex;
+    flex-wrap: wrap;
+    gap: 6px !important;
+    width: 100%;
+    justify-content: space-between;
+    align-items: center;
+  }
+
+  /* Все кнопки и дата - одинакового размера и голубого цвета */
+  .btn-alerts,
+  .btn-sync-log,
+  .btn-snapshot-schedule,
+  .btn-export-pdf,
+  .date-display {
+    flex: 1 1 calc(25% - 6px) !important; /* Каждая кнопка занимает 25% ширины с учетом gap */
+    min-width: 40px !important;
+    max-width: 50px !important;
+    width: 50px !important; /* Фиксированная ширина для всех - одинаковый размер */
+    padding: 8px !important;
+    font-size: 10px !important;
+    gap: 4px !important;
+    display: flex !important;
+    align-items: center;
+    justify-content: center;
+    box-sizing: border-box;
+    background-color: #3498db !important; /* Голубой цвет для всех */
+    color: white !important;
+    border-radius: 6px !important;
+    cursor: pointer;
+    border: none !important; /* Убираем границы */
+    font-weight: 500 !important;
+    transition: background-color 0.3s !important;
+  }
+  
+  /* Специфичное переопределение для кнопки PDF - убираем красный цвет полностью */
+  button.btn.btn-export-pdf,
+  .btn.btn-export-pdf,
+  .header button.btn-export-pdf,
+  .header .btn-export-pdf {
+    background-color: #3498db !important; /* Обязательно голубой вместо красного #e74c3c */
+    background: #3498db !important; /* Дополнительное свойство для надежности */
+    color: white !important;
+    border-color: #3498db !important;
+  }
+
+  /* Скрываем текст, оставляем только иконки */
+  .btn-alerts > span:not([style*="absolute"]),
+  .btn-sync-log span,
+  .btn-snapshot-schedule span {
+    display: none !important;
+  }
+
+  /* Для даты - текст скрыт по умолчанию, показывается при клике */
+  .date-display > span {
+    display: none !important;
+  }
+
+  /* Показываем текст даты при клике */
+  .date-display .date-text-visible {
+    display: inline !important;
+    margin-left: 4px;
+    font-size: 9px;
+    white-space: nowrap;
+  }
+
+  /* Для кнопки экспорта: скрываем обычный текст и мобильный текст, показываем только иконку как у других */
+  .btn-export-pdf .btn-export-text {
+    display: none !important;
+  }
+
+  .btn-export-pdf .btn-export-mobile {
+    display: none !important;
+  }
+
+  /* Иконка экспорта - показываем как у других кнопок */
+  .btn-export-pdf .btn-export-icon {
+    display: inline !important;
+  }
+
+  /* Иконки одинакового размера */
+  .btn-alerts i,
+  .btn-sync-log i,
+  .btn-snapshot-schedule i,
+  .btn-export-pdf i,
+  .date-display i {
+    font-size: 14px !important;
+    margin: 0 !important;
+    padding: 0 !important;
+  }
+
+  /* Hover для всех кнопок на мобильных - более темный голубой */
+  .btn-alerts:hover,
+  .btn-sync-log:hover,
+  .btn-snapshot-schedule:hover,
+  .btn-export-pdf:hover,
+  .date-display:hover {
+    background-color: #2980b9 !important; /* Более темный голубой при наведении */
+  }
+
+  /* Специальная обработка для бейджа с количеством проблем - оставляем видимым */
+  .btn-alerts span[style*="absolute"] {
+    display: flex !important;
+    position: absolute !important;
   }
 }
 

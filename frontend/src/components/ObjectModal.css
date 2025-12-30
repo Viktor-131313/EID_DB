@@ -642,3 +642,55 @@
     flex-direction: column;
   }
 }
+
+/* Мобильные устройства - 360px */
+@media (max-width: 360px) {
+  .object-modal-content {
+    padding: 15px;
+    max-width: 100%;
+    margin: 10px;
+  }
+
+  .smr-item {
+    flex-wrap: wrap;
+    gap: 5px;
+  }
+
+  .smr-label {
+    width: 100%;
+    margin-bottom: 5px;
+    font-size: 12px;
+  }
+
+  .smr-input {
+    flex: 1;
+    min-width: 60px;
+    max-width: 80px;
+    font-size: 12px;
+    padding: 6px 8px;
+  }
+
+  .smr-input-separator {
+    margin: 0 3px;
+    font-size: 12px;
+    white-space: nowrap;
+    flex-shrink: 0; /* Не сжимается */
+    min-width: 20px; /* Минимальная ширина для "из" */
+  }
+
+  /* Убеждаемся, что "из" видно */
+  .smr-item > * {
+    flex-shrink: 0;
+  }
+
+  .smr-columns-header {
+    font-size: 11px;
+    padding: 6px 8px;
+  }
+
+  .smr-column-header-name,
+  .smr-column-header-count,
+  .smr-column-header-total {
+    font-size: 11px;
+  }
+}
