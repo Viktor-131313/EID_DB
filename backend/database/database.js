@@ -59,6 +59,27 @@ async function initializeDatabase() {
             }
         }
 
+        // Проверяем и изменяем task_number на nullable (миграция)
+        try {
+            await pool.query(`
+                DO $$ 
+                BEGIN
+                    IF EXISTS (
+                        SELECT 1 FROM information_schema.columns 
+                        WHERE table_name = 'tasks' 
+                        AND column_name = 'task_number'
+                        AND is_nullable = 'NO'
+                    ) THEN
+                        ALTER TABLE tasks ALTER COLUMN task_number DROP NOT NULL;
+                        RAISE NOTICE 'Column task_number changed to nullable';
+                    END IF;
+                END $$;
+            `);
+            console.log('✅ Миграция task_number (nullable) проверена/выполнена');
+        } catch (migrationError) {
+            console.warn('⚠️  Предупреждение при миграции task_number:', migrationError.message);
+        }
+
         // Проверяем и добавляем колонку task_manager_link, если её нет (миграция)
         try {
             await pool.query(`
@@ -376,20 +397,43 @@ async function saveContainers(containersData) {
  */
 async function getAllTasks() {
     try {
-        const result = await pool.query(
-            `SELECT id, task_number, description, discovery_date, status, 
-                    planned_fix_month, planned_fix_year, priority, task_manager_link,
-                    created_at, updated_at
-             FROM tasks
-             ORDER BY 
-                 CASE priority 
-                     WHEN 'critical' THEN 1 
-                     WHEN 'non-critical' THEN 2 
-                     WHEN 'user-request' THEN 3 
-                     ELSE 4 
-                 END,
-                 id`
-        );
+        // Проверяем, существует ли колонка task_manager_link
+        const columnCheck = await pool.query(`
+            SELECT column_name 
+            FROM information_schema.columns 
+            WHERE table_name = 'tasks' 
+            AND column_name = 'task_manager_link'
+        `);
+        
+        const hasTaskManagerLink = columnCheck.rows.length > 0;
+        
+        const query = hasTaskManagerLink
+            ? `SELECT id, task_number, description, discovery_date, status, 
+                      planned_fix_month, planned_fix_year, priority, task_manager_link,
+                      created_at, updated_at
+               FROM tasks
+               ORDER BY 
+                   CASE priority 
+                       WHEN 'critical' THEN 1 
+                       WHEN 'non-critical' THEN 2 
+                       WHEN 'user-request' THEN 3 
+                       ELSE 4 
+                   END,
+                   id`
+            : `SELECT id, task_number, description, discovery_date, status, 
+                      planned_fix_month, planned_fix_year, priority,
+                      created_at, updated_at
+               FROM tasks
+               ORDER BY 
+                   CASE priority 
+                       WHEN 'critical' THEN 1 
+                       WHEN 'non-critical' THEN 2 
+                       WHEN 'user-request' THEN 3 
+                       ELSE 4 
+                   END,
+                   id`;
+        
+        const result = await pool.query(query);
         
         return result.rows.map(row => ({
             id: row.id,
@@ -406,6 +450,7 @@ async function getAllTasks() {
         }));
     } catch (error) {
         console.error('Ошибка при получении задач:', error);
+        console.error('Error stack:', error.stack);
         throw error;
     }
 }
@@ -422,23 +467,56 @@ async function saveTasks(tasks) {
         // Удаляем все задачи и вставляем заново (можно делать upsert)
         await client.query('DELETE FROM tasks');
         
+        // Проверяем, существует ли колонка task_manager_link
+        const columnCheck = await client.query(`
+            SELECT column_name 
+            FROM information_schema.columns 
+            WHERE table_name = 'tasks' 
+            AND column_name = 'task_manager_link'
+        `);
+        const hasTaskManagerLink = columnCheck.rows.length > 0;
+        
         for (const task of tasks || []) {
-            await client.query(
-                `INSERT INTO tasks (id, task_number, description, discovery_date, status, 
-                                  planned_fix_month, planned_fix_year, priority, task_manager_link)
-                 VALUES ($1, $2, $3, $4, $5, $6, $7, $8, $9)`,
-                [
-                    task.id,
-                    task.taskNumber,
-                    task.description,
-                    task.discoveryDate || null,
-                    task.status || 'To Do',
-                    task.plannedFixMonth || null,
-                    task.plannedFixYear || null,
-                    task.priority || 'non-critical',
-                    task.taskManagerLink || null
-                ]
-            );
+            try {
+                if (hasTaskManagerLink) {
+                    await client.query(
+                        `INSERT INTO tasks (id, task_number, description, discovery_date, status, 
+                                          planned_fix_month, planned_fix_year, priority, task_manager_link)
+                         VALUES ($1, $2, $3, $4, $5, $6, $7, $8, $9)`,
+                        [
+                            task.id,
+                            task.taskNumber || null,
+                            task.description || '',
+                            task.discoveryDate || null,
+                            task.status || 'To Do',
+                            task.plannedFixMonth || null,
+                            task.plannedFixYear || null,
+                            task.priority || 'non-critical',
+                            task.taskManagerLink || null
+                        ]
+                    );
+                } else {
+                    await client.query(
+                        `INSERT INTO tasks (id, task_number, description, discovery_date, status, 
+                                          planned_fix_month, planned_fix_year, priority)
+                         VALUES ($1, $2, $3, $4, $5, $6, $7, $8)`,
+                        [
+                            task.id,
+                            task.taskNumber || null,
+                            task.description || '',
+                            task.discoveryDate || null,
+                            task.status || 'To Do',
+                            task.plannedFixMonth || null,
+                            task.plannedFixYear || null,
+                            task.priority || 'non-critical'
+                        ]
+                    );
+                }
+            } catch (insertError) {
+                console.error(`Ошибка при вставке задачи ${task.id}:`, insertError);
+                console.error(`Task data:`, JSON.stringify(task, null, 2));
+                throw insertError;
+            }
         }
         
         await client.query('COMMIT');

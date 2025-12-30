@@ -253,6 +253,17 @@
   width: 90%;
 }
 
+/* Стили для модального окна задач - черный цвет текста */
+.task-modal-content .modal-title {
+  color: #000000 !important;
+  font-weight: 600;
+}
+
+.task-modal-content .form-label {
+  color: #000000 !important;
+  font-weight: 500;
+}
+
 .task-number-input {
   display: inline-block;
   width: 150px;

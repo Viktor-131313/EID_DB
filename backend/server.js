@@ -1172,7 +1172,12 @@ app.post('/api/tasks', async (req, res) => {
         }
     } catch (error) {
         console.error('Error creating task:', error);
-        res.status(500).json({ error: 'Failed to create task' });
+        console.error('Error details:', error.message);
+        console.error('Error stack:', error.stack);
+        res.status(500).json({ 
+            error: 'Failed to create task',
+            details: error.message 
+        });
     }
 });
 

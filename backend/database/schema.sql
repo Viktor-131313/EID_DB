@@ -44,7 +44,7 @@ CREATE INDEX IF NOT EXISTS idx_acts_smr ON acts(object_id, smr_id);
 -- Таблица задач разработки
 CREATE TABLE IF NOT EXISTS tasks (
     id SERIAL PRIMARY KEY,
-    task_number INTEGER NOT NULL,
+    task_number INTEGER,
     description TEXT NOT NULL,
     discovery_date DATE,
     status VARCHAR(50) DEFAULT 'To Do',
