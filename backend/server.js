@@ -1150,6 +1150,7 @@ app.get('/api/tasks', async (req, res) => {
 app.post('/api/tasks', async (req, res) => {
     try {
         const tasks = await dataAdapter.readTasks();
+        console.log('[POST /api/tasks] Request body:', JSON.stringify(req.body, null, 2));
         const newTask = {
             id: tasks.length > 0 ? Math.max(...tasks.map(t => t.id)) + 1 : 1,
             taskNumber: req.body.taskNumber || null,
@@ -1159,10 +1160,11 @@ app.post('/api/tasks', async (req, res) => {
             plannedFixMonth: req.body.plannedFixMonth || null,
             plannedFixYear: req.body.plannedFixYear || null,
             priority: req.body.priority || 'non-critical',
-            taskManagerLink: req.body.taskManagerLink || null,
+            taskManagerLink: (req.body.taskManagerLink && typeof req.body.taskManagerLink === 'string' && req.body.taskManagerLink.trim() !== '') ? req.body.taskManagerLink.trim() : null,
             createdAt: new Date().toISOString(),
             updatedAt: new Date().toISOString()
         };
+        console.log('[POST /api/tasks] New task:', JSON.stringify(newTask, null, 2));
 
         tasks.push(newTask);
         if (await dataAdapter.writeTasks(tasks)) {

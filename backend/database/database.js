@@ -435,19 +435,27 @@ async function getAllTasks() {
         
         const result = await pool.query(query);
         
-        return result.rows.map(row => ({
-            id: row.id,
-            taskNumber: row.task_number,
-            description: row.description,
-            discoveryDate: row.discovery_date ? row.discovery_date.toISOString().split('T')[0] : null,
-            status: row.status,
-            plannedFixMonth: row.planned_fix_month,
-            plannedFixYear: row.planned_fix_year,
-            priority: row.priority,
-            taskManagerLink: row.task_manager_link || null,
-            createdAt: row.created_at.toISOString(),
-            updatedAt: row.updated_at.toISOString()
-        }));
+        const mappedTasks = result.rows.map(row => {
+            const task = {
+                id: row.id,
+                taskNumber: row.task_number,
+                description: row.description,
+                discoveryDate: row.discovery_date ? row.discovery_date.toISOString().split('T')[0] : null,
+                status: row.status,
+                plannedFixMonth: row.planned_fix_month,
+                plannedFixYear: row.planned_fix_year,
+                priority: row.priority,
+                taskManagerLink: hasTaskManagerLink ? (row.task_manager_link || null) : null,
+                createdAt: row.created_at.toISOString(),
+                updatedAt: row.updated_at.toISOString()
+            };
+            if (hasTaskManagerLink) {
+                console.log(`[getAllTasks] Task ${task.id} taskManagerLink:`, task.taskManagerLink, 'raw:', row.task_manager_link);
+            }
+            return task;
+        });
+        
+        return mappedTasks;
     } catch (error) {
         console.error('Ошибка при получении задач:', error);
         console.error('Error stack:', error.stack);
