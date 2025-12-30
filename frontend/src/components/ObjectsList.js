@@ -3,30 +3,79 @@ import './ObjectsList.css';
 import Tooltip from './Tooltip';
 
 const ObjectsList = ({ objects, onEditObject }) => {
-  const calculateStatus = (obj) => {
-    let sent = 0;
-    if (Array.isArray(obj.sentForApproval)) {
-      sent = obj.sentForApproval.reduce((sum, smr) => sum + (smr.count || 0), 0);
-    } else if (typeof obj.sentForApproval === 'number') {
-      sent = obj.sentForApproval;
+  // Расчет метрик исполнительности
+  const calculatePerformanceMetrics = (obj) => {
+    let generated = 0;
+    let generatedTotal = 0;
+    if (Array.isArray(obj.generatedActs)) {
+      generated = obj.generatedActs.reduce((sum, smr) => sum + (smr.count || 0), 0);
+      generatedTotal = obj.generatedActs.reduce((sum, smr) => sum + (smr.total || 0), 0);
+    } else if (typeof obj.generatedActs === 'number') {
+      generated = obj.generatedActs;
+      generatedTotal = obj.generatedActs;
     }
-    
-    let approved = 0;
-    if (Array.isArray(obj.approvedActs)) {
-      approved = obj.approvedActs.reduce((sum, smr) => sum + (smr.count || 0), 0);
-    } else if (typeof obj.approvedActs === 'number') {
-      approved = obj.approvedActs;
-    }
-    
-    const approvedPercent = sent > 0 ? (approved / sent) * 100 : 0;
 
-    if (approvedPercent >= 80) {
-      return { class: 'status-good', text: 'Хорошо' };
-    } else if (approvedPercent >= 50) {
-      return { class: 'status-warning', text: 'В работе' };
+    // Процент готовности: сколько актов создано от принятых работ
+    const readinessPercent = generatedTotal > 0 ? Math.round((generated / generatedTotal) * 100) : 0;
+    const lag = generatedTotal - generated; // Отставание
+
+    // Определяем статус на основе процента готовности
+    let statusClass = 'status-good';
+    let statusText = 'Хорошо';
+    let isCritical = false;
+
+    if (generatedTotal > 0) {
+      if (readinessPercent < 70) {
+        statusClass = 'status-critical';
+        statusText = 'Критично';
+        isCritical = true;
+      } else if (readinessPercent < 85) {
+        statusClass = 'status-warning';
+        statusText = 'Требует внимания';
+      } else {
+        statusClass = 'status-good';
+        statusText = 'Хорошо';
+      }
     } else {
-      return { class: 'status-critical', text: 'Требует внимания' };
+      // Если нет данных из Айконы, используем старую логику
+      let sent = 0;
+      if (Array.isArray(obj.sentForApproval)) {
+        sent = obj.sentForApproval.reduce((sum, smr) => sum + (smr.count || 0), 0);
+      } else if (typeof obj.sentForApproval === 'number') {
+        sent = obj.sentForApproval;
+      }
+      
+      let approved = 0;
+      if (Array.isArray(obj.approvedActs)) {
+        approved = obj.approvedActs.reduce((sum, smr) => sum + (smr.count || 0), 0);
+      } else if (typeof obj.approvedActs === 'number') {
+        approved = obj.approvedActs;
+      }
+      
+      const approvedPercent = sent > 0 ? (approved / sent) * 100 : 0;
+
+      if (approvedPercent >= 80) {
+        statusClass = 'status-good';
+        statusText = 'Хорошо';
+      } else if (approvedPercent >= 50) {
+        statusClass = 'status-warning';
+        statusText = 'В работе';
+      } else {
+        statusClass = 'status-critical';
+        statusText = 'Требует внимания';
+        isCritical = true;
+      }
     }
+
+    return {
+      statusClass,
+      statusText,
+      isCritical,
+      readinessPercent,
+      lag,
+      generated,
+      generatedTotal
+    };
   };
 
   if (objects.length === 0) {
@@ -41,19 +90,12 @@ const ObjectsList = ({ objects, onEditObject }) => {
   return (
     <div className="objects-grid">
       {objects.map(obj => {
-        const status = calculateStatus(obj);
+        const metrics = calculatePerformanceMetrics(obj);
+        const status = { class: metrics.statusClass, text: metrics.statusText };
         
-        // Подсчитываем общее количество из массивов СМР
-        // Поддержка старого формата данных (числа) для обратной совместимости
-        let generated = 0;
-        let generatedTotal = 0;
-        if (Array.isArray(obj.generatedActs)) {
-          generated = obj.generatedActs.reduce((sum, smr) => sum + (smr.count || 0), 0);
-          generatedTotal = obj.generatedActs.reduce((sum, smr) => sum + (smr.total || 0), 0);
-        } else if (typeof obj.generatedActs === 'number') {
-          generated = obj.generatedActs;
-          generatedTotal = obj.generatedActs; // Для старого формата принимаем count как total
-        }
+        // Используем данные из метрик
+        const generated = metrics.generated;
+        const generatedTotal = metrics.generatedTotal;
         
         let sent = 0;
         if (Array.isArray(obj.sentForApproval)) {
@@ -91,9 +133,14 @@ const ObjectsList = ({ objects, onEditObject }) => {
         return (
           <div
             key={obj.id}
-            className="object-card"
+            className={`object-card ${metrics.isCritical ? 'object-card-critical' : ''}`}
             onClick={() => onEditObject(obj)}
           >
+            {metrics.isCritical && (
+              <div className="critical-alert-badge" title="Объект требует внимания">
+                <i className="fas fa-exclamation-triangle"></i>
+              </div>
+            )}
             {obj.photo && (
               <div className="object-photo-container">
                 <img src={obj.photo} alt={obj.name} className="object-photo" />

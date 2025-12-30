@@ -14,6 +14,7 @@ const DevelopmentTasks = ({ isAuthenticated = false }) => {
   const [editingField, setEditingField] = useState(null); // { taskId, field }
   const [editingValue, setEditingValue] = useState('');
   const [confirmDeleteTask, setConfirmDeleteTask] = useState(null); // ID задачи для удаления
+  const [isExpanded, setIsExpanded] = useState(false); // Свернуто по умолчанию
 
   useEffect(() => {
     loadTasks();
@@ -164,13 +165,47 @@ const DevelopmentTasks = ({ isAuthenticated = false }) => {
   return (
     <div className="development-tasks-section">
       <div className="tasks-header">
-        <h2>
-          <i className="fas fa-tasks"></i> Задачи для разработки
-        </h2>
+        <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', width: '100%' }}>
+          <h2 style={{ margin: 0, display: 'flex', alignItems: 'center', gap: '10px' }}>
+            <i className="fas fa-tasks"></i> Задачи для разработки ({tasks.length})
+          </h2>
+          <button
+            className="btn-toggle-tasks"
+            onClick={() => setIsExpanded(!isExpanded)}
+            style={{
+              background: 'transparent',
+              border: '1px solid #ddd',
+              borderRadius: '6px',
+              padding: '8px 16px',
+              cursor: 'pointer',
+              display: 'flex',
+              alignItems: 'center',
+              gap: '8px',
+              fontSize: '14px',
+              color: '#2c3e50',
+              transition: 'all 0.2s'
+            }}
+            onMouseEnter={(e) => {
+              e.target.style.backgroundColor = '#f5f5f5';
+              e.target.style.borderColor = '#2c5aa0';
+              e.target.style.color = '#2c5aa0';
+            }}
+            onMouseLeave={(e) => {
+              e.target.style.backgroundColor = 'transparent';
+              e.target.style.borderColor = '#ddd';
+              e.target.style.color = '#2c3e50';
+            }}
+          >
+            <i className={`fas fa-chevron-${isExpanded ? 'up' : 'down'}`}></i>
+            {isExpanded ? 'Свернуть' : 'Развернуть'}
+          </button>
+        </div>
       </div>
 
-      {/* Фильтры */}
-      <div className="tasks-filters">
+      {isExpanded && (
+        <>
+          {/* Фильтры */}
+          <div className="tasks-filters">
         <div className="filter-group">
           <label>Статус:</label>
           <select value={filterStatus} onChange={(e) => setFilterStatus(e.target.value)}>
@@ -403,13 +438,15 @@ const DevelopmentTasks = ({ isAuthenticated = false }) => {
         </table>
       </div>
 
-      {/* Кнопка добавления */}
-      {isAuthenticated && (
-        <div className="tasks-footer">
-          <button className="btn-add-task" onClick={handleAddNew}>
-            <i className="fas fa-plus"></i> Добавить задачу
-          </button>
-        </div>
+          {/* Кнопка добавления */}
+          {isAuthenticated && (
+            <div className="tasks-footer">
+              <button className="btn-add-task" onClick={handleAddNew}>
+                <i className="fas fa-plus"></i> Добавить задачу
+              </button>
+            </div>
+          )}
+        </>
       )}
 
       {/* Модальное окно для редактирования/добавления задачи */}
