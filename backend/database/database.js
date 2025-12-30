@@ -449,9 +449,6 @@ async function getAllTasks() {
                 createdAt: row.created_at.toISOString(),
                 updatedAt: row.updated_at.toISOString()
             };
-            if (hasTaskManagerLink) {
-                console.log(`[getAllTasks] Task ${task.id} taskManagerLink:`, task.taskManagerLink, 'raw:', row.task_manager_link);
-            }
             return task;
         });
         
@@ -487,7 +484,6 @@ async function saveTasks(tasks) {
                     END IF;
                 END $$;
             `);
-            console.log('[saveTasks] Миграция task_manager_link проверена/выполнена');
         } catch (migrationError) {
             if (!migrationError.message.includes('already exists')) {
                 console.warn('[saveTasks] Предупреждение при миграции task_manager_link:', migrationError.message);
@@ -505,7 +501,6 @@ async function saveTasks(tasks) {
             AND column_name = 'task_manager_link'
         `);
         const hasTaskManagerLink = columnCheck.rows.length > 0;
-        console.log(`[saveTasks] hasTaskManagerLink: ${hasTaskManagerLink}, saving ${tasks?.length || 0} tasks`);
         
         for (const task of tasks || []) {
             try {
@@ -526,7 +521,6 @@ async function saveTasks(tasks) {
                             (task.taskManagerLink && typeof task.taskManagerLink === 'string' && task.taskManagerLink.trim() !== '' ? task.taskManagerLink.trim() : null)
                         ]
                     );
-                    console.log(`[saveTasks] Task ${task.id}: saved taskManagerLink =`, task.taskManagerLink);
                 } else {
                     await client.query(
                         `INSERT INTO tasks (id, task_number, description, discovery_date, status, 
@@ -572,7 +566,7 @@ async function getAllSnapshots() {
         );
         
         return result.rows.map(row => ({
-            id: row.id,
+            id: Number(row.id), // Убеждаемся, что ID - это число
             date: row.date.toISOString(),
             type: row.type,
             containers: row.containers_data

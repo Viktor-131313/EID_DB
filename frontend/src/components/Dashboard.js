@@ -9,6 +9,7 @@ import ToastNotification from './ToastNotification';
 import ConfirmModal from './ConfirmModal';
 import SyncLogModal from './SyncLogModal';
 import SnapshotScheduleModal from './SnapshotScheduleModal';
+import Tooltip from './Tooltip';
 import { updateContainer, moveContainer } from '../services/api-containers';
 import { exportDashboardToPDF } from '../utils/pdfExport';
 import { fetchTasks } from '../services/api-tasks';
@@ -113,14 +114,15 @@ const Dashboard = ({ containers, globalStats, loading, onContainerUpdate, isAuth
       <div className="container">
         <div className="header">
           <div className="logo">
-            <div 
-              className="logo-icon" 
-              onClick={() => setAuthModalOpen(true)}
-              style={{ cursor: 'pointer' }}
-              title="Нажмите для входа администратора"
-            >
-              <img src="/favicon.png" alt="Logo" className="logo-image" />
-            </div>
+            <Tooltip text="Нажмите для входа администратора">
+              <div 
+                className="logo-icon" 
+                onClick={() => setAuthModalOpen(true)}
+                style={{ cursor: 'pointer' }}
+              >
+                <img src="/favicon.png" alt="Logo" className="logo-image" />
+              </div>
+            </Tooltip>
             <div className="logo-text">
               <h1>Praktis ID - Пилотные объекты</h1>
               <p>Мониторинг внедрения электронной исполнительной документации</p>
@@ -132,59 +134,62 @@ const Dashboard = ({ containers, globalStats, loading, onContainerUpdate, isAuth
                 </div>
                 {isAuthenticated && (
                   <>
-                    <button 
-                      className="btn btn-sync-log" 
-                      onClick={() => setSyncLogModalOpen(true)}
-                      title="Лог синхронизации с Айконой"
-                      style={{
-                        position: 'relative',
-                        backgroundColor: '#3498db',
-                        color: 'white',
-                        border: 'none',
-                        padding: '10px 15px',
-                        borderRadius: '6px',
-                        cursor: 'pointer',
-                        display: 'flex',
-                        alignItems: 'center',
-                        gap: '8px',
-                        fontSize: '14px',
-                        fontWeight: '500'
-                      }}
-                    >
-                      <i className="fas fa-envelope"></i>
-                      <span>Лог синхронизации</span>
-                    </button>
-                    <button 
-                      className="btn btn-snapshot-schedule" 
-                      onClick={() => setSnapshotScheduleModalOpen(true)}
-                      title="Настройка автоматических снимков планерок"
-                      style={{
-                        position: 'relative',
-                        backgroundColor: '#9b59b6',
-                        color: 'white',
-                        border: 'none',
-                        padding: '10px 15px',
-                        borderRadius: '6px',
-                        cursor: 'pointer',
-                        display: 'flex',
-                        alignItems: 'center',
-                        gap: '8px',
-                        fontSize: '14px',
-                        fontWeight: '500'
-                      }}
-                    >
-                      <i className="fas fa-calendar-alt"></i>
-                      <span>Расписание снимков</span>
-                    </button>
+                    <Tooltip text="Лог синхронизации с Айконой">
+                      <button 
+                        className="btn btn-sync-log" 
+                        onClick={() => setSyncLogModalOpen(true)}
+                        style={{
+                          position: 'relative',
+                          backgroundColor: '#3498db',
+                          color: 'white',
+                          border: 'none',
+                          padding: '10px 15px',
+                          borderRadius: '6px',
+                          cursor: 'pointer',
+                          display: 'flex',
+                          alignItems: 'center',
+                          gap: '8px',
+                          fontSize: '14px',
+                          fontWeight: '500'
+                        }}
+                      >
+                        <i className="fas fa-envelope"></i>
+                        <span>Лог синхронизации</span>
+                      </button>
+                    </Tooltip>
+                    <Tooltip text="Настройка автоматических снимков планерок">
+                      <button 
+                        className="btn btn-snapshot-schedule" 
+                        onClick={() => setSnapshotScheduleModalOpen(true)}
+                        style={{
+                          position: 'relative',
+                          backgroundColor: '#9b59b6',
+                          color: 'white',
+                          border: 'none',
+                          padding: '10px 15px',
+                          borderRadius: '6px',
+                          cursor: 'pointer',
+                          display: 'flex',
+                          alignItems: 'center',
+                          gap: '8px',
+                          fontSize: '14px',
+                          fontWeight: '500'
+                        }}
+                      >
+                        <i className="fas fa-calendar-alt"></i>
+                        <span>Расписание снимков</span>
+                      </button>
+                    </Tooltip>
                   </>
                 )}
-                <button 
-                  className="btn btn-export-pdf" 
-                  onClick={handleExportPDF}
-                  title="Экспортировать дашборд в PDF"
-                >
-                  <i className="fas fa-file-pdf"></i> Экспорт в PDF
-                </button>
+                <Tooltip text="Экспортировать дашборд в PDF">
+                  <button 
+                    className="btn btn-export-pdf" 
+                    onClick={handleExportPDF}
+                  >
+                    <i className="fas fa-file-pdf"></i> Экспорт в PDF
+                  </button>
+                </Tooltip>
               </div>
         </div>
 
@@ -210,14 +215,15 @@ const Dashboard = ({ containers, globalStats, loading, onContainerUpdate, isAuth
                 autoFocus
               />
             ) : (
-              <div
-                className={`section-title ${isAuthenticated ? 'main-title-editable' : ''}`}
-                onDoubleClick={handleMainTitleDoubleClick}
-                title={isAuthenticated ? 'Двойной клик для переименования' : ''}
-                style={{ cursor: isAuthenticated ? 'pointer' : 'default' }}
-              >
-                <i className="fas fa-list-alt"></i> {mainTitle} ({containers.length})
-              </div>
+              <Tooltip text={isAuthenticated ? 'Двойной клик для переименования' : ''}>
+                <div
+                  className={`section-title ${isAuthenticated ? 'main-title-editable' : ''}`}
+                  onDoubleClick={handleMainTitleDoubleClick}
+                  style={{ cursor: isAuthenticated ? 'pointer' : 'default' }}
+                >
+                  <i className="fas fa-list-alt"></i> {mainTitle} ({containers.length})
+                </div>
+              </Tooltip>
             )}
           </div>
           <div className="containers-list" style={{ paddingLeft: isAuthenticated ? '50px' : '0' }}>
@@ -233,56 +239,58 @@ const Dashboard = ({ containers, globalStats, loading, onContainerUpdate, isAuth
                     gap: '5px',
                     zIndex: 10
                   }}>
-                    <button
-                      className="btn"
-                      onClick={async (e) => {
-                        e.stopPropagation();
-                        try {
-                          await moveContainer(container.id, 'up');
-                          onContainerUpdate(); // Обновляем список контейнеров
-                        } catch (error) {
-                          console.error('Error moving container up:', error);
-                          alert('Ошибка при перемещении контейнера: ' + error.message);
-                        }
-                      }}
-                      disabled={index === 0}
-                      style={{
-                        padding: '5px 10px',
-                        fontSize: '12px',
-                        minWidth: '35px',
-                        opacity: index === 0 ? 0.5 : 1,
-                        cursor: index === 0 ? 'not-allowed' : 'pointer',
-                        backgroundColor: index === 0 ? '#ccc' : '#3498db'
-                      }}
-                      title={index === 0 ? 'Контейнер уже первый' : 'Переместить вверх'}
-                    >
-                      <i className="fas fa-arrow-up"></i>
-                    </button>
-                    <button
-                      className="btn"
-                      onClick={async (e) => {
-                        e.stopPropagation();
-                        try {
-                          await moveContainer(container.id, 'down');
-                          onContainerUpdate(); // Обновляем список контейнеров
-                        } catch (error) {
-                          console.error('Error moving container down:', error);
-                          alert('Ошибка при перемещении контейнера: ' + error.message);
-                        }
-                      }}
-                      disabled={index === containers.length - 1}
-                      style={{
-                        padding: '5px 10px',
-                        fontSize: '12px',
-                        minWidth: '35px',
-                        opacity: index === containers.length - 1 ? 0.5 : 1,
-                        cursor: index === containers.length - 1 ? 'not-allowed' : 'pointer',
-                        backgroundColor: index === containers.length - 1 ? '#ccc' : '#3498db'
-                      }}
-                      title={index === containers.length - 1 ? 'Контейнер уже последний' : 'Переместить вниз'}
-                    >
-                      <i className="fas fa-arrow-down"></i>
-                    </button>
+                    <Tooltip text={index === 0 ? 'Контейнер уже первый' : 'Переместить вверх'}>
+                      <button
+                        className="btn"
+                        onClick={async (e) => {
+                          e.stopPropagation();
+                          try {
+                            await moveContainer(container.id, 'up');
+                            onContainerUpdate(); // Обновляем список контейнеров
+                          } catch (error) {
+                            console.error('Error moving container up:', error);
+                            alert('Ошибка при перемещении контейнера: ' + error.message);
+                          }
+                        }}
+                        disabled={index === 0}
+                        style={{
+                          padding: '5px 10px',
+                          fontSize: '12px',
+                          minWidth: '35px',
+                          opacity: index === 0 ? 0.5 : 1,
+                          cursor: index === 0 ? 'not-allowed' : 'pointer',
+                          backgroundColor: index === 0 ? '#ccc' : '#3498db'
+                        }}
+                      >
+                        <i className="fas fa-arrow-up"></i>
+                      </button>
+                    </Tooltip>
+                    <Tooltip text={index === containers.length - 1 ? 'Контейнер уже последний' : 'Переместить вниз'}>
+                      <button
+                        className="btn"
+                        onClick={async (e) => {
+                          e.stopPropagation();
+                          try {
+                            await moveContainer(container.id, 'down');
+                            onContainerUpdate(); // Обновляем список контейнеров
+                          } catch (error) {
+                            console.error('Error moving container down:', error);
+                            alert('Ошибка при перемещении контейнера: ' + error.message);
+                          }
+                        }}
+                        disabled={index === containers.length - 1}
+                        style={{
+                          padding: '5px 10px',
+                          fontSize: '12px',
+                          minWidth: '35px',
+                          opacity: index === containers.length - 1 ? 0.5 : 1,
+                          cursor: index === containers.length - 1 ? 'not-allowed' : 'pointer',
+                          backgroundColor: index === containers.length - 1 ? '#ccc' : '#3498db'
+                        }}
+                      >
+                        <i className="fas fa-arrow-down"></i>
+                      </button>
+                    </Tooltip>
                   </div>
                 )}
                 <Container

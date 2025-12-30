@@ -949,7 +949,11 @@ app.post('/api/snapshots', async (req, res) => {
         
         // Используем addSnapshot для базы данных или writeSnapshots для файлов
         if (dataAdapter.useDatabase) {
-            await dataAdapter.addSnapshot(newSnapshot);
+            const savedId = await dataAdapter.addSnapshot(newSnapshot);
+            // Используем ID, который вернула база данных, если он был возвращен
+            if (savedId) {
+                newSnapshot.id = savedId;
+            }
             res.status(201).json(newSnapshot);
         } else {
             const snapshots = await dataAdapter.readSnapshots();
@@ -1108,8 +1112,20 @@ app.get('/api/snapshots/latest/compare', async (req, res) => {
 // GET /api/snapshots/compare/:snapshotId - сравнить текущее состояние с указанным снимком
 app.get('/api/snapshots/compare/:snapshotId', async (req, res) => {
     try {
+        const snapshotIdParam = req.params.snapshotId;
+        // Убираем возможный суффикс типа ":1" из ID
+        const snapshotId = parseInt(snapshotIdParam.split(':')[0]);
+        
+        if (isNaN(snapshotId)) {
+            return res.status(400).json({ error: 'Invalid snapshot ID' });
+        }
+        
         const snapshots = await dataAdapter.readSnapshots();
-        const snapshot = snapshots.find(s => s.id === parseInt(req.params.snapshotId));
+        // Сравниваем как число, так как ID в базе может быть числом
+        const snapshot = snapshots.find(s => {
+            const sId = typeof s.id === 'string' ? parseInt(s.id.split(':')[0]) : s.id;
+            return sId === snapshotId;
+        });
         
         if (!snapshot) {
             return res.status(404).json({ error: 'Snapshot not found' });
@@ -1150,7 +1166,6 @@ app.get('/api/tasks', async (req, res) => {
 app.post('/api/tasks', async (req, res) => {
     try {
         const tasks = await dataAdapter.readTasks();
-        console.log('[POST /api/tasks] Request body:', JSON.stringify(req.body, null, 2));
         const newTask = {
             id: tasks.length > 0 ? Math.max(...tasks.map(t => t.id)) + 1 : 1,
             taskNumber: req.body.taskNumber || null,
@@ -1164,15 +1179,12 @@ app.post('/api/tasks', async (req, res) => {
             createdAt: new Date().toISOString(),
             updatedAt: new Date().toISOString()
         };
-        console.log('[POST /api/tasks] New task:', JSON.stringify(newTask, null, 2));
-        console.log('[POST /api/tasks] taskManagerLink in newTask:', newTask.taskManagerLink);
 
         tasks.push(newTask);
         if (await dataAdapter.writeTasks(tasks)) {
             // Перезагружаем задачи из БД чтобы вернуть актуальные данные
             const savedTasks = await dataAdapter.readTasks();
             const savedTask = savedTasks.find(t => t.id === newTask.id);
-            console.log('[POST /api/tasks] Saved task from DB:', JSON.stringify(savedTask, null, 2));
             res.status(201).json(savedTask || newTask);
         } else {
             res.status(500).json({ error: 'Failed to save task' });
@@ -1191,15 +1203,12 @@ app.post('/api/tasks', async (req, res) => {
 // PUT /api/tasks/:taskId - обновить задачу
 app.put('/api/tasks/:taskId', async (req, res) => {
     try {
-        console.log(`[PUT /api/tasks/${req.params.taskId}] Request body:`, JSON.stringify(req.body, null, 2));
         const tasks = await dataAdapter.readTasks();
         const index = tasks.findIndex(t => t.id === parseInt(req.params.taskId));
         if (index === -1) {
-            console.log(`[PUT /api/tasks/${req.params.taskId}] Task not found`);
             return res.status(404).json({ error: 'Task not found' });
         }
 
-        console.log(`[PUT /api/tasks/${req.params.taskId}] Current task:`, JSON.stringify(tasks[index], null, 2));
         const updatedTask = {
             ...tasks[index],
             taskNumber: req.body.taskNumber !== undefined ? req.body.taskNumber : tasks[index].taskNumber,
@@ -1216,14 +1225,10 @@ app.put('/api/tasks/:taskId', async (req, res) => {
         };
 
         tasks[index] = updatedTask;
-        console.log(`[PUT /api/tasks/${req.params.taskId}] Updated task:`, JSON.stringify(updatedTask, null, 2));
-        console.log(`[PUT /api/tasks/${req.params.taskId}] taskManagerLink in updatedTask:`, updatedTask.taskManagerLink);
         if (await dataAdapter.writeTasks(tasks)) {
-            console.log(`[PUT /api/tasks/${req.params.taskId}] Task saved successfully`);
             // Перезагружаем задачи из БД чтобы вернуть актуальные данные
             const savedTasks = await dataAdapter.readTasks();
             const savedTask = savedTasks.find(t => t.id === updatedTask.id);
-            console.log(`[PUT /api/tasks/${req.params.taskId}] Saved task from DB:`, JSON.stringify(savedTask, null, 2));
             res.json(savedTask || updatedTask);
         } else {
             console.error(`[PUT /api/tasks/${req.params.taskId}] Failed to save task`);

@@ -2,6 +2,7 @@ import React, { useState, useEffect } from 'react';
 import './DevelopmentTasks.css';
 import { fetchTasks, createTask, updateTask, deleteTask } from '../services/api-tasks';
 import ConfirmModal from './ConfirmModal';
+import Tooltip from './Tooltip';
 
 const DevelopmentTasks = ({ isAuthenticated = false }) => {
   const [tasks, setTasks] = useState([]);
@@ -226,149 +227,166 @@ const DevelopmentTasks = ({ isAuthenticated = false }) => {
                 <td 
                   onClick={() => isAuthenticated && !editingField && handleFieldEdit(task.id, 'status', task.status)}
                   className={isAuthenticated ? "editable-cell" : ""}
-                  title={isAuthenticated ? "Кликните для редактирования" : ""}
                   style={{ cursor: isAuthenticated ? 'pointer' : 'default' }}
                 >
-                  {editingField && editingField.taskId === task.id && editingField.field === 'status' ? (
-                    <select
-                      value={editingValue}
-                      onChange={(e) => setEditingValue(e.target.value)}
-                      onBlur={async () => {
-                        try {
-                          const updatedTask = { ...task, status: editingValue };
-                          await updateTask(task.id, updatedTask);
-                          await loadTasks();
-                          handleFieldCancel();
-                        } catch (error) {
-                          console.error('Error updating status:', error);
-                        }
-                      }}
-                      onKeyDown={(e) => {
-                        if (e.key === 'Enter') {
-                          e.preventDefault();
-                          handleFieldSave(task.id, 'status');
-                        } else if (e.key === 'Escape') {
-                          handleFieldCancel();
-                        }
-                      }}
-                      autoFocus
-                      onClick={(e) => e.stopPropagation()}
-                    >
-                      <option value="To Do">To Do</option>
-                      <option value="In Progress">In Progress</option>
-                      <option value="Review">Review</option>
-                      <option value="Done">Done</option>
-                    </select>
-                  ) : (
-                    <span className={`task-status task-status-${task.status.replace(' ', '-').toLowerCase()}`}>
-                      {task.status}
-                    </span>
-                  )}
+                  <Tooltip text={isAuthenticated ? "Кликните для редактирования" : ""}>
+                    <div>
+                      {editingField && editingField.taskId === task.id && editingField.field === 'status' ? (
+                        <select
+                          value={editingValue}
+                          onChange={(e) => setEditingValue(e.target.value)}
+                          onBlur={async () => {
+                            try {
+                              const updatedTask = { ...task, status: editingValue };
+                              await updateTask(task.id, updatedTask);
+                              await loadTasks();
+                              handleFieldCancel();
+                            } catch (error) {
+                              console.error('Error updating status:', error);
+                            }
+                          }}
+                          onKeyDown={(e) => {
+                            if (e.key === 'Enter') {
+                              e.preventDefault();
+                              handleFieldSave(task.id, 'status');
+                            } else if (e.key === 'Escape') {
+                              handleFieldCancel();
+                            }
+                          }}
+                          autoFocus
+                          onClick={(e) => e.stopPropagation()}
+                        >
+                          <option value="To Do">To Do</option>
+                          <option value="In Progress">In Progress</option>
+                          <option value="Review">Review</option>
+                          <option value="Done">Done</option>
+                        </select>
+                      ) : (
+                        <span className={`task-status task-status-${task.status.replace(' ', '-').toLowerCase()}`}>
+                          {task.status}
+                        </span>
+                      )}
+                    </div>
+                  </Tooltip>
                 </td>
                 <td 
                   onClick={() => isAuthenticated && !editingField && handleFieldEdit(task.id, 'plannedFix', `${task.plannedFixMonth || ''}/${task.plannedFixYear || ''}`)}
                   className={isAuthenticated ? "editable-cell" : ""}
-                  title={isAuthenticated ? "Кликните для редактирования" : ""}
                   style={{ cursor: isAuthenticated ? 'pointer' : 'default' }}
                 >
-                  {editingField && editingField.taskId === task.id && editingField.field === 'plannedFix' ? (
-                    <div className="planned-fix-edit" onClick={(e) => e.stopPropagation()}>
-                      <select
-                        value={task.plannedFixMonth || ''}
-                        onChange={async (e) => {
-                          const month = e.target.value;
-                          const updatedTask = { ...task, plannedFixMonth: month };
-                          try {
-                            await updateTask(task.id, updatedTask);
-                            await loadTasks();
-                          } catch (error) {
-                            console.error('Error updating planned fix month:', error);
-                          }
-                        }}
-                        autoFocus
-                      >
-                        <option value="">Месяц</option>
-                        {['01', '02', '03', '04', '05', '06', '07', '08', '09', '10', '11', '12'].map(m => (
-                          <option key={m} value={m}>{['Январь', 'Февраль', 'Март', 'Апрель', 'Май', 'Июнь', 
-                            'Июль', 'Август', 'Сентябрь', 'Октябрь', 'Ноябрь', 'Декабрь'][parseInt(m) - 1]}</option>
-                        ))}
-                      </select>
-                      <select
-                        value={task.plannedFixYear || ''}
-                        onChange={async (e) => {
-                          const year = e.target.value;
-                          const updatedTask = { ...task, plannedFixYear: year ? parseInt(year) : null };
-                          try {
-                            await updateTask(task.id, updatedTask);
-                            await loadTasks();
-                            handleFieldCancel();
-                          } catch (error) {
-                            console.error('Error updating planned fix year:', error);
-                          }
-                        }}
-                      >
-                        <option value="">Год</option>
-                        {Array.from({ length: 5 }, (_, i) => new Date().getFullYear() + i).map(year => (
-                          <option key={year} value={year}>{year}</option>
-                        ))}
-                      </select>
+                  <Tooltip text={isAuthenticated ? "Кликните для редактирования" : ""}>
+                    <div>
+                      {editingField && editingField.taskId === task.id && editingField.field === 'plannedFix' ? (
+                        <div className="planned-fix-edit" onClick={(e) => e.stopPropagation()}>
+                          <select
+                            value={task.plannedFixMonth || ''}
+                            onChange={async (e) => {
+                              const month = e.target.value;
+                              const updatedTask = { ...task, plannedFixMonth: month };
+                              try {
+                                await updateTask(task.id, updatedTask);
+                                await loadTasks();
+                              } catch (error) {
+                                console.error('Error updating planned fix month:', error);
+                              }
+                            }}
+                            autoFocus
+                          >
+                            <option value="">Месяц</option>
+                            {['01', '02', '03', '04', '05', '06', '07', '08', '09', '10', '11', '12'].map(m => (
+                              <option key={m} value={m}>{['Январь', 'Февраль', 'Март', 'Апрель', 'Май', 'Июнь', 
+                                'Июль', 'Август', 'Сентябрь', 'Октябрь', 'Ноябрь', 'Декабрь'][parseInt(m) - 1]}</option>
+                            ))}
+                          </select>
+                          <select
+                            value={task.plannedFixYear || ''}
+                            onChange={async (e) => {
+                              const year = e.target.value;
+                              const updatedTask = { ...task, plannedFixYear: year ? parseInt(year) : null };
+                              try {
+                                await updateTask(task.id, updatedTask);
+                                await loadTasks();
+                                handleFieldCancel();
+                              } catch (error) {
+                                console.error('Error updating planned fix year:', error);
+                              }
+                            }}
+                          >
+                            <option value="">Год</option>
+                            {Array.from({ length: 5 }, (_, i) => new Date().getFullYear() + i).map(year => (
+                              <option key={year} value={year}>{year}</option>
+                            ))}
+                          </select>
+                        </div>
+                      ) : (
+                        task.plannedFixMonth && task.plannedFixYear 
+                          ? `${task.plannedFixMonth}/${task.plannedFixYear}` 
+                          : 'Не указано'
+                      )}
                     </div>
-                  ) : (
-                    task.plannedFixMonth && task.plannedFixYear 
-                      ? `${task.plannedFixMonth}/${task.plannedFixYear}` 
-                      : 'Не указано'
-                  )}
+                  </Tooltip>
                 </td>
                 <td>
                   <div className="task-priority">
                     {task.priority === 'critical' && (
-                      <span className="priority-icon priority-critical" title="Критично">
-                        <i className="fas fa-exclamation-circle"></i>
-                      </span>
+                      <Tooltip text="Критично">
+                        <span className="priority-icon priority-critical">
+                          <i className="fas fa-exclamation-circle"></i>
+                        </span>
+                      </Tooltip>
                     )}
                     {task.priority === 'non-critical' && (
-                      <span className="priority-icon priority-non-critical" title="Некритично">
-                        <i className="fas fa-exclamation-triangle"></i>
-                      </span>
+                      <Tooltip text="Некритично">
+                        <span className="priority-icon priority-non-critical">
+                          <i className="fas fa-exclamation-triangle"></i>
+                        </span>
+                      </Tooltip>
                     )}
                     {task.priority === 'user-request' && (
-                      <span className="priority-icon priority-user-request" title="Пожелания от пользователей">
-                        <i className="fas fa-lightbulb"></i>
-                      </span>
+                      <Tooltip text="Пожелания от пользователей">
+                        <span className="priority-icon priority-user-request">
+                          <i className="fas fa-lightbulb"></i>
+                        </span>
+                      </Tooltip>
                     )}
                     {!task.priority && (
-                      <span className="priority-icon priority-non-critical" title="Некритично">
-                        <i className="fas fa-exclamation-triangle"></i>
-                      </span>
+                      <Tooltip text="Некритично">
+                        <span className="priority-icon priority-non-critical">
+                          <i className="fas fa-exclamation-triangle"></i>
+                        </span>
+                      </Tooltip>
                     )}
                   </div>
                 </td>
                 <td>
                   {task.taskManagerLink && (
-                    <button 
-                      className="btn-task-manager-link" 
-                      onClick={() => window.open(task.taskManagerLink, '_blank')}
-                      title="Открыть в таск-менеджере"
-                    >
-                      <i className="fas fa-external-link-alt"></i>
-                    </button>
+                    <Tooltip text="Открыть в таск-менеджере">
+                      <button 
+                        className="btn-task-manager-link" 
+                        onClick={() => window.open(task.taskManagerLink, '_blank')}
+                      >
+                        <i className="fas fa-external-link-alt"></i>
+                      </button>
+                    </Tooltip>
                   )}
                   {isAuthenticated && (
                     <>
-                      <button 
-                        className="btn-edit-task" 
-                        onClick={() => handleEditTask(task)}
-                        title="Редактировать"
-                      >
-                        <i className="fas fa-edit"></i>
-                      </button>
-                      <button 
-                        className="btn-delete-task" 
-                        onClick={() => handleDeleteTask(task.id)}
-                        title="Удалить (или нажмите Delete)"
-                      >
-                        <i className="fas fa-trash"></i>
-                      </button>
+                      <Tooltip text="Редактировать">
+                        <button 
+                          className="btn-edit-task" 
+                          onClick={() => handleEditTask(task)}
+                        >
+                          <i className="fas fa-edit"></i>
+                        </button>
+                      </Tooltip>
+                      <Tooltip text="Удалить (или нажмите Delete)">
+                        <button 
+                          className="btn-delete-task" 
+                          onClick={() => handleDeleteTask(task.id)}
+                        >
+                          <i className="fas fa-trash"></i>
+                        </button>
+                      </Tooltip>
                     </>
                   )}
                 </td>
@@ -455,8 +473,6 @@ const TaskModal = ({ task, onSave, onClose }) => {
       priority: formData.priority || 'non-critical',
       taskManagerLink: (formData.taskManagerLink && formData.taskManagerLink.trim() !== '') ? formData.taskManagerLink.trim() : null
     };
-    console.log('TaskModal: Submitting task data:', taskData);
-    console.log('TaskModal: taskManagerLink value:', taskData.taskManagerLink);
     await onSave(taskData);
   };
 

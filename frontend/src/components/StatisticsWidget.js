@@ -2,6 +2,7 @@ import React, { useState, useEffect } from 'react';
 import './StatisticsWidget.css';
 import ConfirmModal from './ConfirmModal';
 import ToastNotification from './ToastNotification';
+import Tooltip from './Tooltip';
 import { 
   fetchSnapshots, 
   createSnapshot, 
@@ -50,9 +51,6 @@ const StatisticsWidget = ({ expanded, onToggle, onDataChange, isAuthenticated = 
       } else {
         data = await compareWithLatestSnapshot();
       }
-      console.log('Comparison data loaded:', data);
-      console.log('Comparison.comparison:', data.comparison);
-      console.log('Comparison.comparison.summary:', data.comparison?.summary);
       setComparison(data);
       setSelectedSnapshotId(snapshotId);
       if (onDataChange) {
@@ -213,9 +211,12 @@ const StatisticsWidget = ({ expanded, onToggle, onDataChange, isAuthenticated = 
                     className="btn-delete-snapshot"
                     onClick={(e) => handleDeleteSnapshotClick(snapshot.id, e)}
                     disabled={loading}
-                    title="Удалить снимок"
                   >
-                    <i className="fas fa-times"></i>
+                    <Tooltip text="Удалить снимок">
+                      <span>
+                        <i className="fas fa-times"></i>
+                      </span>
+                    </Tooltip>
                   </button>
                 )}
               </div>

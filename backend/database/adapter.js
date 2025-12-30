@@ -317,8 +317,8 @@ async function writeSnapshots(snapshots) {
 async function addSnapshot(snapshot) {
     if (useDatabase) {
         try {
-            await db.saveSnapshot(snapshot);
-            return true;
+            const savedId = await db.saveSnapshot(snapshot);
+            return savedId; // Возвращаем ID, который вернула база данных
         } catch (error) {
             console.error('Error adding snapshot to database:', error);
             return false;
@@ -326,7 +326,7 @@ async function addSnapshot(snapshot) {
     } else {
         const snapshots = await readSnapshots();
         snapshots.push(snapshot);
-        return await writeSnapshots(snapshots);
+        return await writeSnapshots(snapshots) ? snapshot.id : false;
     }
 }
 

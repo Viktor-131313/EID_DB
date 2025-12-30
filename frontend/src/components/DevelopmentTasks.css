@@ -54,7 +54,9 @@
 
 .tasks-table-container {
   overflow-x: auto;
+  overflow-y: visible;
   margin-bottom: 20px;
+  position: relative;
 }
 
 .tasks-table {
@@ -80,6 +82,8 @@
   padding: 12px 15px;
   border-bottom: 1px solid #e1e5eb;
   font-size: 14px;
+  position: relative;
+  overflow: visible;
 }
 
 .tasks-table tbody tr:hover {
@@ -194,6 +198,7 @@
   display: flex;
   align-items: center;
   justify-content: center;
+  gap: 5px;
 }
 
 .priority-icon {
@@ -201,6 +206,25 @@
   display: inline-flex;
   align-items: center;
   justify-content: center;
+  cursor: pointer;
+}
+
+/* Убеждаемся, что tooltip-wrapper внутри td работает правильно */
+td .tooltip-wrapper {
+  display: inline-block;
+  vertical-align: middle;
+  position: relative;
+}
+
+/* Убеждаемся, что tooltip виден поверх таблицы */
+.tasks-table {
+  position: relative;
+  overflow: visible;
+}
+
+.tasks-table td {
+  overflow: visible;
+  position: relative;
 }
 
 .priority-critical {

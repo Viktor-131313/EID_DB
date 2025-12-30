@@ -2,6 +2,7 @@ import React, { useState, useEffect } from 'react';
 import './SnapshotScheduleModal.css';
 import { fetchSnapshotSchedule, saveSnapshotSchedule } from '../services/api-containers';
 import ToastNotification from './ToastNotification';
+import Tooltip from './Tooltip';
 
 const SnapshotScheduleModal = ({ isOpen, onClose, isAuthenticated }) => {
   const [schedule, setSchedule] = useState({ schedules: [] });
@@ -130,9 +131,12 @@ const SnapshotScheduleModal = ({ isOpen, onClose, isAuthenticated }) => {
                             className="btn-remove-schedule"
                             onClick={() => handleRemoveSchedule(index)}
                             disabled={!isAuthenticated}
-                            title="Удалить расписание"
                           >
-                            <i className="fas fa-trash"></i>
+                            <Tooltip text="Удалить расписание">
+                              <span>
+                                <i className="fas fa-trash"></i>
+                              </span>
+                            </Tooltip>
                           </button>
                         )}
                       </div>

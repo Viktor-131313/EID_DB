@@ -1,5 +1,6 @@
 import React from 'react';
 import './ObjectsList.css';
+import Tooltip from './Tooltip';
 
 const ObjectsList = ({ objects, onEditObject }) => {
   const calculateStatus = (obj) => {
@@ -108,9 +109,11 @@ const ObjectsList = ({ objects, onEditObject }) => {
             {obj.status && (
               <div className="object-status-container">
                 <div className="object-status-label">Статус:</div>
-                <div className="object-status-text" title={obj.status}>
-                  {obj.status}
-                </div>
+                <Tooltip text={obj.status}>
+                  <div className="object-status-text">
+                    {obj.status}
+                  </div>
+                </Tooltip>
               </div>
             )}
             

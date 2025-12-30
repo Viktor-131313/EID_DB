@@ -2,6 +2,7 @@ import React, { useState, useEffect, useCallback } from 'react';
 import './Container.css';
 import ObjectsList from './ObjectsList';
 import ObjectModal from './ObjectModal';
+import Tooltip from './Tooltip';
 import SummaryCards from './SummaryCards';
 import ConfirmModal from './ConfirmModal';
 import {
@@ -87,16 +88,10 @@ const Container = ({ container, onUpdate, isAuthenticated = false }) => {
 
   const handleSaveObject = async (objectData) => {
     try {
-      console.log('Saving object data:', objectData);
-      console.log('Blocking factors being saved:', objectData.blockingFactors);
       if (editingObject && editingObject.id) {
-        const result = await updateContainerObject(container.id, editingObject.id, objectData);
-        console.log('Object updated:', result);
-        console.log('Blocking factors in updated object:', result.blockingFactors);
+        await updateContainerObject(container.id, editingObject.id, objectData);
       } else {
-        const result = await createContainerObject(container.id, objectData);
-        console.log('Object created:', result);
-        console.log('Blocking factors in created object:', result.blockingFactors);
+        await createContainerObject(container.id, objectData);
       }
       setModalOpen(false);
       setEditingObject(null);
@@ -233,14 +228,15 @@ const Container = ({ container, onUpdate, isAuthenticated = false }) => {
             autoFocus
           />
         ) : (
-          <h2
-            className={isAuthenticated ? "container-title" : "container-title"}
-            onDoubleClick={handleDoubleClickName}
-            title={isAuthenticated ? "Двойной клик для переименования" : ""}
-            style={{ cursor: isAuthenticated ? 'pointer' : 'default' }}
-          >
-            {container.name} ({objects.length})
-          </h2>
+          <Tooltip text={isAuthenticated ? "Двойной клик для переименования" : ""}>
+            <h2
+              className={isAuthenticated ? "container-title" : "container-title"}
+              onDoubleClick={handleDoubleClickName}
+              style={{ cursor: isAuthenticated ? 'pointer' : 'default' }}
+            >
+              {container.name} ({objects.length})
+            </h2>
+          </Tooltip>
         )}
         <div style={{ display: 'flex', gap: '10px', alignItems: 'center' }}>
           <button

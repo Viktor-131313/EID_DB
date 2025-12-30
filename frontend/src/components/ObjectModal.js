@@ -1,6 +1,7 @@
 import React, { useState, useEffect, useCallback, useRef } from 'react';
 import './ObjectModal.css';
 import ConfirmModal from './ConfirmModal';
+import Tooltip from './Tooltip';
 import { syncObjectFromAikona } from '../services/api-containers';
 
 const ObjectModal = ({ object, onSave, onDelete, onClose, isAuthenticated = false }) => {
@@ -50,12 +51,10 @@ const ObjectModal = ({ object, onSave, onDelete, onClose, isAuthenticated = fals
     
     // Если это новый объект (null) или объект с другим ID, инициализируем форму
     if (!isInitializedRef.current || lastObjectIdRef.current !== currentObjectId) {
-      console.log('useEffect triggered - initializing form, object:', object);
       isInitializedRef.current = true;
       lastObjectIdRef.current = currentObjectId;
       
       if (object) {
-        console.log('Object blockingFactors:', object.blockingFactors);
         // Преобразуем старые данные в новый формат, если нужно
         let generatedActs = object.generatedActs || [];
         let sentForApproval = object.sentForApproval || [];
@@ -98,7 +97,6 @@ const ObjectModal = ({ object, onSave, onDelete, onClose, isAuthenticated = fals
         }
         
         const blockingFactors = Array.isArray(object.blockingFactors) ? object.blockingFactors : [];
-        console.log('Setting formData with blockingFactors:', blockingFactors);
         
         setFormData({
           name: object.name || '',
@@ -114,7 +112,6 @@ const ObjectModal = ({ object, onSave, onDelete, onClose, isAuthenticated = fals
           blockingFactors
         });
       } else {
-        console.log('Initializing empty form');
         // Пустая форма для нового объекта
         setFormData({
           name: '',
@@ -130,8 +127,6 @@ const ObjectModal = ({ object, onSave, onDelete, onClose, isAuthenticated = fals
           blockingFactors: []
         });
       }
-    } else {
-      console.log('useEffect triggered but form already initialized, skipping reset');
     }
   }, [object]);
 
@@ -518,8 +513,6 @@ const ObjectModal = ({ object, onSave, onDelete, onClose, isAuthenticated = fals
       return;
     }
 
-    console.log('Submitting form data:', formData);
-    console.log('Blocking factors in form data:', formData.blockingFactors);
     onSave(formData);
   };
 
@@ -648,14 +641,15 @@ const ObjectModal = ({ object, onSave, onDelete, onClose, isAuthenticated = fals
               <div className="photo-preview-container">
                 <img src={formData.photo} alt="Фото объекта" className="photo-preview" />
                 {isAuthenticated && (
-                  <button
-                    type="button"
-                    className="btn-remove-photo"
-                    onClick={() => setFormData({ ...formData, photo: null })}
-                    title="Удалить фото"
-                  >
-                    <i className="fas fa-times"></i>
-                  </button>
+                  <Tooltip text="Удалить фото">
+                    <button
+                      type="button"
+                      className="btn-remove-photo"
+                      onClick={() => setFormData({ ...formData, photo: null })}
+                    >
+                      <i className="fas fa-times"></i>
+                    </button>
+                  </Tooltip>
                 )}
               </div>
             ) : (
@@ -824,17 +818,18 @@ const ObjectModal = ({ object, onSave, onDelete, onClose, isAuthenticated = fals
                         autoFocus
                       />
                     ) : (
-                      <label
-                        className={isAuthenticated ? "smr-label smr-label-editable" : "smr-label"}
-                        onDoubleClick={isAuthenticated ? (e) => {
-                          e.stopPropagation();
-                          handleSMRDoubleClick(smr.id, smr.name, 'generated');
-                        } : undefined}
-                        title={isAuthenticated ? "Двойной клик для переименования, Delete для удаления" : ""}
-                        style={{ cursor: isAuthenticated ? 'pointer' : 'default' }}
-                      >
-                        {smr.name}
-                      </label>
+                      <Tooltip text={isAuthenticated ? "Двойной клик для переименования, Delete для удаления" : ""}>
+                        <label
+                          className={isAuthenticated ? "smr-label smr-label-editable" : "smr-label"}
+                          onDoubleClick={isAuthenticated ? (e) => {
+                            e.stopPropagation();
+                            handleSMRDoubleClick(smr.id, smr.name, 'generated');
+                          } : undefined}
+                          style={{ cursor: isAuthenticated ? 'pointer' : 'default' }}
+                        >
+                          {smr.name}
+                        </label>
+                      </Tooltip>
                     )}
                     <input
                       type="number"
@@ -925,17 +920,18 @@ const ObjectModal = ({ object, onSave, onDelete, onClose, isAuthenticated = fals
                           autoFocus
                         />
                       ) : (
-                        <label
-                          className={isAuthenticated ? "smr-label smr-label-editable" : "smr-label"}
-                          onDoubleClick={isAuthenticated ? (e) => {
-                            e.stopPropagation();
-                            handleSMRDoubleClick(smr.id, smr.name, 'sent');
-                          } : undefined}
-                          title={isAuthenticated ? "Двойной клик для переименования, Delete для удаления" : ""}
-                          style={{ cursor: isAuthenticated ? 'pointer' : 'default' }}
-                        >
-                          {smr.name}
-                        </label>
+                        <Tooltip text={isAuthenticated ? "Двойной клик для переименования, Delete для удаления" : ""}>
+                          <label
+                            className={isAuthenticated ? "smr-label smr-label-editable" : "smr-label"}
+                            onDoubleClick={isAuthenticated ? (e) => {
+                              e.stopPropagation();
+                              handleSMRDoubleClick(smr.id, smr.name, 'sent');
+                            } : undefined}
+                            style={{ cursor: isAuthenticated ? 'pointer' : 'default' }}
+                          >
+                            {smr.name}
+                          </label>
+                        </Tooltip>
                       )}
                     <input
                       type="number"
@@ -997,17 +993,18 @@ const ObjectModal = ({ object, onSave, onDelete, onClose, isAuthenticated = fals
                           autoFocus
                         />
                       ) : (
-                        <label
-                          className={isAuthenticated ? "smr-label smr-label-editable" : "smr-label"}
-                          onDoubleClick={isAuthenticated ? (e) => {
-                            e.stopPropagation();
-                            handleSMRDoubleClick(smr.id, smr.name, 'approved');
-                          } : undefined}
-                          title={isAuthenticated ? "Двойной клик для переименования, Delete для удаления" : ""}
-                          style={{ cursor: isAuthenticated ? 'pointer' : 'default' }}
-                        >
-                          {smr.name}
-                        </label>
+                        <Tooltip text={isAuthenticated ? "Двойной клик для переименования, Delete для удаления" : ""}>
+                          <label
+                            className={isAuthenticated ? "smr-label smr-label-editable" : "smr-label"}
+                            onDoubleClick={isAuthenticated ? (e) => {
+                              e.stopPropagation();
+                              handleSMRDoubleClick(smr.id, smr.name, 'approved');
+                            } : undefined}
+                            style={{ cursor: isAuthenticated ? 'pointer' : 'default' }}
+                          >
+                            {smr.name}
+                          </label>
+                        </Tooltip>
                       )}
                       <input
                         type="number"
@@ -1069,17 +1066,18 @@ const ObjectModal = ({ object, onSave, onDelete, onClose, isAuthenticated = fals
                           autoFocus
                         />
                       ) : (
-                        <label
-                          className={isAuthenticated ? "smr-label smr-label-editable" : "smr-label"}
-                          onDoubleClick={isAuthenticated ? (e) => {
-                            e.stopPropagation();
-                            handleSMRDoubleClick(smr.id, smr.name, 'rejected');
-                          } : undefined}
-                          title={isAuthenticated ? "Двойной клик для переименования, Delete для удаления" : ""}
-                          style={{ cursor: isAuthenticated ? 'pointer' : 'default' }}
-                        >
-                          {smr.name}
-                        </label>
+                        <Tooltip text={isAuthenticated ? "Двойной клик для переименования, Delete для удаления" : ""}>
+                          <label
+                            className={isAuthenticated ? "smr-label smr-label-editable" : "smr-label"}
+                            onDoubleClick={isAuthenticated ? (e) => {
+                              e.stopPropagation();
+                              handleSMRDoubleClick(smr.id, smr.name, 'rejected');
+                            } : undefined}
+                            style={{ cursor: isAuthenticated ? 'pointer' : 'default' }}
+                          >
+                            {smr.name}
+                          </label>
+                        </Tooltip>
                       )}
                       <input
                         type="number"
@@ -1141,17 +1139,18 @@ const ObjectModal = ({ object, onSave, onDelete, onClose, isAuthenticated = fals
                           autoFocus
                         />
                       ) : (
-                        <label
-                          className={isAuthenticated ? "smr-label smr-label-editable" : "smr-label"}
-                          onDoubleClick={isAuthenticated ? (e) => {
-                            e.stopPropagation();
-                            handleSMRDoubleClick(smr.id, smr.name, 'signed');
-                          } : undefined}
-                          title={isAuthenticated ? "Двойной клик для переименования, Delete для удаления" : ""}
-                          style={{ cursor: isAuthenticated ? 'pointer' : 'default' }}
-                        >
-                          {smr.name}
-                        </label>
+                        <Tooltip text={isAuthenticated ? "Двойной клик для переименования, Delete для удаления" : ""}>
+                          <label
+                            className={isAuthenticated ? "smr-label smr-label-editable" : "smr-label"}
+                            onDoubleClick={isAuthenticated ? (e) => {
+                              e.stopPropagation();
+                              handleSMRDoubleClick(smr.id, smr.name, 'signed');
+                            } : undefined}
+                            style={{ cursor: isAuthenticated ? 'pointer' : 'default' }}
+                          >
+                            {smr.name}
+                          </label>
+                        </Tooltip>
                       )}
                       <input
                         type="number"
@@ -1239,14 +1238,11 @@ const ObjectModal = ({ object, onSave, onDelete, onClose, isAuthenticated = fals
                           e.preventDefault();
                           const employeeName = newEmployeeName.trim();
                           if (employeeName) {
-                            console.log('Adding employee via Enter:', employeeName);
-                            console.log('Current blockingFactors before add:', formData.blockingFactors);
                             setFormData(prev => {
                               const updated = {
                                 ...prev,
                                 blockingFactors: [...(prev.blockingFactors || []), employeeName]
                               };
-                              console.log('Updated blockingFactors after add:', updated.blockingFactors);
                               return updated;
                             });
                             setNewEmployeeName('');
@@ -1261,14 +1257,11 @@ const ObjectModal = ({ object, onSave, onDelete, onClose, isAuthenticated = fals
                       onClick={() => {
                         const employeeName = newEmployeeName.trim();
                         if (employeeName) {
-                          console.log('Adding employee via button:', employeeName);
-                          console.log('Current blockingFactors before add:', formData.blockingFactors);
                           setFormData(prev => {
                             const updated = {
                               ...prev,
                               blockingFactors: [...(prev.blockingFactors || []), employeeName]
                             };
-                            console.log('Updated blockingFactors after add:', updated.blockingFactors);
                             return updated;
                           });
                           setNewEmployeeName('');
