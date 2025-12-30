@@ -4,12 +4,40 @@ import axios from 'axios';
 // В development можно использовать прокси из package.json или установить REACT_APP_API_URL
 const API_BASE_URL = process.env.REACT_APP_API_URL || '/api';
 
+// Получить токен из localStorage
+const getAuthToken = () => {
+  return localStorage.getItem('authToken');
+};
+
+// Получить заголовки с авторизацией
+const getAuthHeaders = () => {
+  const token = getAuthToken();
+  return {
+    'Content-Type': 'application/json',
+    ...(token && { 'Authorization': `Bearer ${token}` })
+  };
+};
+
 const api = axios.create({
   baseURL: API_BASE_URL,
   headers: {
     'Content-Type': 'application/json'
   }
 });
+
+// Добавляем interceptor для добавления токена к каждому запросу
+api.interceptors.request.use(
+  (config) => {
+    const token = getAuthToken();
+    if (token) {
+      config.headers.Authorization = `Bearer ${token}`;
+    }
+    return config;
+  },
+  (error) => {
+    return Promise.reject(error);
+  }
+);
 
 // Tasks API
 export const fetchTasks = async () => {
@@ -18,13 +46,23 @@ export const fetchTasks = async () => {
 };
 
 export const createTask = async (taskData) => {
+  console.log('api-tasks: Creating task with data:', taskData);
   const response = await api.post('/tasks', taskData);
+  console.log('api-tasks: Task created successfully:', response.data);
   return response.data;
 };
 
 export const updateTask = async (taskId, taskData) => {
-  const response = await api.put(`/tasks/${taskId}`, taskData);
-  return response.data;
+  console.log(`api-tasks: Updating task ${taskId} with data:`, taskData);
+  try {
+    const response = await api.put(`/tasks/${taskId}`, taskData);
+    console.log('api-tasks: Task updated successfully:', response.data);
+    return response.data;
+  } catch (error) {
+    console.error('api-tasks: Error updating task:', error);
+    console.error('api-tasks: Error response:', error.response);
+    throw error;
+  }
 };
 
 export const deleteTask = async (taskId) => {

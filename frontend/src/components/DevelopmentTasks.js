@@ -442,15 +442,17 @@ const TaskModal = ({ task, onSave, onClose }) => {
     }));
   };
 
-  const handleSubmit = (e) => {
+  const handleSubmit = async (e) => {
     e.preventDefault();
     const taskData = {
       ...formData,
       taskNumber: formData.taskNumber ? parseInt(formData.taskNumber) : null,
       plannedFixMonth: formData.plannedFixMonth || null,
-      plannedFixYear: formData.plannedFixYear ? parseInt(formData.plannedFixYear) : null
+      plannedFixYear: formData.plannedFixYear ? parseInt(formData.plannedFixYear) : null,
+      taskManagerLink: formData.taskManagerLink || null
     };
-    onSave(taskData);
+    console.log('TaskModal: Submitting task data:', taskData);
+    await onSave(taskData);
   };
 
   const currentYear = new Date().getFullYear();

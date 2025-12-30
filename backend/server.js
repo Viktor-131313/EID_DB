@@ -1184,12 +1184,15 @@ app.post('/api/tasks', async (req, res) => {
 // PUT /api/tasks/:taskId - обновить задачу
 app.put('/api/tasks/:taskId', async (req, res) => {
     try {
+        console.log(`[PUT /api/tasks/${req.params.taskId}] Request body:`, JSON.stringify(req.body, null, 2));
         const tasks = await dataAdapter.readTasks();
         const index = tasks.findIndex(t => t.id === parseInt(req.params.taskId));
         if (index === -1) {
+            console.log(`[PUT /api/tasks/${req.params.taskId}] Task not found`);
             return res.status(404).json({ error: 'Task not found' });
         }
 
+        console.log(`[PUT /api/tasks/${req.params.taskId}] Current task:`, JSON.stringify(tasks[index], null, 2));
         const updatedTask = {
             ...tasks[index],
             taskNumber: req.body.taskNumber !== undefined ? req.body.taskNumber : tasks[index].taskNumber,
@@ -1206,9 +1209,12 @@ app.put('/api/tasks/:taskId', async (req, res) => {
         };
 
         tasks[index] = updatedTask;
+        console.log(`[PUT /api/tasks/${req.params.taskId}] Updated task:`, JSON.stringify(updatedTask, null, 2));
         if (await dataAdapter.writeTasks(tasks)) {
+            console.log(`[PUT /api/tasks/${req.params.taskId}] Task saved successfully`);
             res.json(updatedTask);
         } else {
+            console.error(`[PUT /api/tasks/${req.params.taskId}] Failed to save task`);
             res.status(500).json({ error: 'Failed to update task' });
         }
     } catch (error) {
