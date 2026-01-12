@@ -7,3 +7,4 @@ ADD COLUMN IF NOT EXISTS aikona_object_id INTEGER;
 -- Комментарий к полю
 COMMENT ON COLUMN objects.aikona_object_id IS 'ID объекта в системе Айкона для синхронизации данных';
 
+

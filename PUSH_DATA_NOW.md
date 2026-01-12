@@ -82,3 +82,4 @@ git push https://ВАШ_ТОКЕН@github.com/Viktor-131313/EID_DB.git main
 - Откройте: https://github.com/Viktor-131313/EID_DB/blob/main/backend/data/objects.json
 - Если файл содержит ваши данные (271 акт) → всё хорошо!
 - Если файл пустой или старый → push не сработал, попробуйте снова
+

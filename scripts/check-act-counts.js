@@ -82,3 +82,4 @@ if (totalGeneratedActs === 0 && totalSentActs === 0 && totalApprovedActs === 0 &
   console.log('\n✅ ЕСТЬ ДАННЫЕ С АКТАМИ!');
 }
 
+

@@ -61,3 +61,4 @@ ALTER TABLE tasks ADD COLUMN IF NOT EXISTS task_manager_link TEXT;
 
 **После перезапуска сервера на Render все должно заработать!**
 
+

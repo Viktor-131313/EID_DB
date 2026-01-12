@@ -95,3 +95,4 @@ Start Command: npm start --prefix backend
 Если проблемы продолжаются, можно создать корневой package.json с скриптами для сборки всего проекта.
 
 
+

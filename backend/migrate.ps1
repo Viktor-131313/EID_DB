@@ -3,3 +3,4 @@ Set-Location backend
 node scripts/migrate-local-data.js
 Read-Host "Нажмите Enter для выхода"
 
+

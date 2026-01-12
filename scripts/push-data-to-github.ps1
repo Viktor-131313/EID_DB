@@ -70,3 +70,4 @@ if ($LASTEXITCODE -eq 0) {
     Write-Host '  git push https://ВАШ_ТОКЕН@github.com/Viktor-131313/EID_DB.git main' -ForegroundColor Cyan
     Write-Host "`nСоздайте токен: https://github.com/settings/tokens" -ForegroundColor White
 }
+

@@ -89,3 +89,4 @@ AIKONA_API_KEY = f48941fd-ab51-4edd-b1f2-f202597c9920
 
 Пример: `MySecurePass123!@#`
 
+
