@@ -1280,6 +1280,118 @@ app.get('/api/aikona-sync-log', (req, res) => {
     }
 });
 
+// GET /api/debug-aikona - временный диагностический endpoint для проверки API Айконы
+app.get('/api/debug-aikona', async (req, res) => {
+    const axios = require('axios');
+    const objectId = req.query.objectId || '511';
+    const apiKey = process.env.AIKONA_API_KEY;
+    
+    if (!apiKey) {
+        return res.status(500).json({ error: 'AIKONA_API_KEY не настроен' });
+    }
+    
+    const url = `https://icona.setl.ru/rest_api/api/IntegrationObjectInfo?ObjectId=${objectId}&ApiKey=${apiKey}`;
+    
+    const result = {
+        timestamp: new Date().toISOString(),
+        url: url.replace(apiKey, '***'),
+        objectId: objectId,
+        attempts: []
+    };
+    
+    // Пробуем несколько способов запроса
+    try {
+        // Способ 1: axios с responseType: 'text' (чтобы увидеть сырой ответ)
+        console.log('[DEBUG] Попытка 1: axios с responseType text');
+        try {
+            const response1 = await axios.get(url, {
+                timeout: 30000,
+                responseType: 'text', // Читаем как текст, не парсим JSON
+                headers: {
+                    'Accept': '*/*',
+                    'User-Agent': 'Praktis-ID-Dashboard/1.0'
+                },
+                validateStatus: () => true // Принимаем любой статус
+            });
+            
+            result.attempts.push({
+                method: 'axios-text',
+                status: response1.status,
+                statusText: response1.statusText,
+                headers: response1.headers,
+                dataLength: response1.data ? response1.data.length : 0,
+                dataPreview: response1.data ? response1.data.substring(0, 1000) : null,
+                isJson: (() => {
+                    try {
+                        JSON.parse(response1.data);
+                        return true;
+                    } catch {
+                        return false;
+                    }
+                })()
+            });
+        } catch (error1) {
+            result.attempts.push({
+                method: 'axios-text',
+                error: error1.message,
+                code: error1.code,
+                response: error1.response ? {
+                    status: error1.response.status,
+                    statusText: error1.response.statusText,
+                    headers: error1.response.headers,
+                    dataPreview: error1.response.data ? String(error1.response.data).substring(0, 500) : null
+                } : null
+            });
+        }
+        
+        // Способ 2: axios с responseType: 'arraybuffer' (если это бинарные данные)
+        console.log('[DEBUG] Попытка 2: axios с responseType arraybuffer');
+        try {
+            const response2 = await axios.get(url, {
+                timeout: 30000,
+                responseType: 'arraybuffer',
+                headers: {
+                    'Accept': '*/*',
+                    'User-Agent': 'Praktis-ID-Dashboard/1.0'
+                },
+                validateStatus: () => true
+            });
+            
+            const buffer = Buffer.from(response2.data);
+            const text = buffer.toString('utf8');
+            
+            result.attempts.push({
+                method: 'axios-arraybuffer',
+                status: response2.status,
+                statusText: response2.statusText,
+                headers: response2.headers,
+                dataLength: buffer.length,
+                dataPreview: text.substring(0, 1000),
+                isJson: (() => {
+                    try {
+                        JSON.parse(text);
+                        return true;
+                    } catch {
+                        return false;
+                    }
+                })()
+            });
+        } catch (error2) {
+            result.attempts.push({
+                method: 'axios-arraybuffer',
+                error: error2.message,
+                code: error2.code
+            });
+        }
+        
+    } catch (error) {
+        result.error = error.message;
+        result.errorStack = error.stack;
+    }
+    
+    res.json(result);
+});
+
 // Раздача статических файлов React в production (должно быть ПОСЛЕ всех API routes)
 if (process.env.NODE_ENV === 'production') {
     const frontendBuildPath = path.join(__dirname, '..', 'frontend', 'build');
