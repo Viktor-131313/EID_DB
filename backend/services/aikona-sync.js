@@ -41,29 +41,36 @@ async function fetchAikonaObjectData(objectId) {
                     'Accept': 'application/json',
                     'User-Agent': 'Praktis-ID-Dashboard/1.0'
                 },
-                // Axios автоматически парсит JSON
-                responseType: 'json',
-                // Увеличиваем максимальный размер ответа (если нужно)
+                // Читаем как текст, чтобы не падать на невалидном JSON и залогировать тело
+                responseType: 'text',
+                transformResponse: [data => data],
                 maxContentLength: Infinity,
-                maxBodyLength: Infinity
+                maxBodyLength: Infinity,
+                validateStatus: status => status >= 200 && status < 300 // считаем только 2xx успешными
             });
             
             console.log(`[Aikona API] Статус ответа: ${response.status} ${response.statusText || ''}`);
             
-            const data = response.data;
+            // Парсим JSON вручную, чтобы поймать ошибки и залогировать тело
+            let parsed;
+            try {
+                parsed = JSON.parse(response.data);
+            } catch (e) {
+                console.error(`[Aikona API] Не удалось распарсить JSON. Тело (первые 500 символов): ${response.data?.substring?.(0, 500) || ''}`);
+                throw new Error('API_UNAVAILABLE: BAD_JSON');
+            }
+            
             console.log(`[Aikona API] Успешно получены данные для объекта ${objectId}`);
             
-            // API возвращает массив с одним объектом
-            if (!Array.isArray(data) || data.length === 0) {
+            if (!Array.isArray(parsed) || parsed.length === 0) {
                 console.error(`[Aikona API] Пустой ответ или не массив для объекта ${objectId}`);
                 throw new Error('OBJECT_NOT_FOUND');
             }
             
-            return data[0];
+            return parsed[0];
         } catch (error) {
             // Обработка ошибок axios
             if (error.response) {
-                // Сервер ответил с кодом ошибки
                 const status = error.response.status;
                 console.error(`[Aikona API] Ошибка HTTP: ${status} ${error.response.statusText || ''}`);
                 
@@ -72,24 +79,19 @@ async function fetchAikonaObjectData(objectId) {
                     throw new Error('OBJECT_NOT_FOUND');
                 }
                 
-                // Логируем тело ошибки если есть
-                if (error.response.data) {
-                    const errorBody = typeof error.response.data === 'string' 
-                        ? error.response.data 
-                        : JSON.stringify(error.response.data);
-                    console.error(`[Aikona API] Тело ошибки: ${errorBody.substring(0, 500)}`);
-                }
+                const body = error.response.data;
+                const errorBody = typeof body === 'string' ? body : JSON.stringify(body);
+                console.error(`[Aikona API] Тело ошибки: ${errorBody.substring(0, 500)}`);
                 
                 throw new Error(`API_UNAVAILABLE: HTTP ${status}`);
             } else if (error.request) {
-                // Запрос был отправлен, но ответа не получено
                 const isTimeout = error.code === 'ECONNABORTED' || error.message.includes('timeout');
                 const isConnReset = error.code === 'ECONNRESET' || error.code === 'ETIMEDOUT';
                 
                 if (isTimeout) {
                     console.error(`[Aikona API] Таймаут запроса для объекта ${objectId} (попытка ${attempt}/${maxRetries})`);
                     if (attempt < maxRetries) {
-                        await new Promise(r => setTimeout(r, 500 * attempt)); // Увеличиваем задержку
+                        await new Promise(r => setTimeout(r, 500 * attempt));
                         continue;
                     }
                     throw new Error('API_UNAVAILABLE: TIMEOUT');
@@ -98,13 +100,12 @@ async function fetchAikonaObjectData(objectId) {
                 if (isConnReset) {
                     console.error(`[Aikona API] Соединение оборвано (${error.code || error.message}) для объекта ${objectId} (попытка ${attempt}/${maxRetries})`);
                     if (attempt < maxRetries) {
-                        await new Promise(r => setTimeout(r, 500 * attempt)); // Увеличиваем задержку
+                        await new Promise(r => setTimeout(r, 500 * attempt));
                         continue;
                     }
                     throw new Error('API_UNAVAILABLE: CONNECTION_TERMINATED');
                 }
                 
-                // Другая сетевая ошибка
                 console.error(`[Aikona API] Сетевая ошибка для объекта ${objectId}: ${error.code || error.message} (попытка ${attempt}/${maxRetries})`);
                 if (attempt < maxRetries) {
                     await new Promise(r => setTimeout(r, 500 * attempt));
@@ -112,7 +113,6 @@ async function fetchAikonaObjectData(objectId) {
                 }
                 throw new Error(`API_UNAVAILABLE: ${error.code || error.message}`);
             } else {
-                // Ошибка при настройке запроса
                 if (error.message === 'OBJECT_NOT_FOUND' || error.message.startsWith('API_UNAVAILABLE')) {
                     console.error(`[Aikona API] Ошибка: ${error.message}`);
                     throw error;
