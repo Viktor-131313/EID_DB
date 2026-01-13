@@ -178,6 +178,37 @@ async function getAllContainers() {
             }
         }
         
+        // Автоматически добавляем колонки для новой структуры (queue, building, section, buildings)
+        const newColumns = [
+            { name: 'queue', type: 'TEXT' },
+            { name: 'building', type: 'TEXT' },
+            { name: 'section', type: 'TEXT' },
+            { name: 'buildings', type: 'JSONB DEFAULT \'[]\'::jsonb' }
+        ];
+        
+        for (const column of newColumns) {
+            try {
+                await pool.query(`
+                    DO $$ 
+                    BEGIN
+                        IF NOT EXISTS (
+                            SELECT 1 FROM information_schema.columns 
+                            WHERE table_name = 'objects' 
+                            AND column_name = '${column.name}'
+                        ) THEN
+                            ALTER TABLE objects ADD COLUMN ${column.name} ${column.type};
+                            RAISE NOTICE 'Column ${column.name} added to objects table';
+                        END IF;
+                    END $$;
+                `);
+                console.log(`✅ Миграция ${column.name} проверена/выполнена`);
+            } catch (migrationError) {
+                if (!migrationError.message.includes('already exists')) {
+                    console.warn(`⚠️  Предупреждение при миграции ${column.name}:`, migrationError.message);
+                }
+            }
+        }
+        
         // Получаем контейнеры, сортируя по display_order
         const containersResult = await pool.query(
             'SELECT id, name, display_order, created_at, updated_at FROM containers ORDER BY display_order, id'
@@ -189,6 +220,7 @@ async function getAllContainers() {
             // Получаем объекты контейнера
             const objectsResult = await pool.query(
                 `SELECT id, name, description, status, photo, aikona_object_id, blocking_factors, contractors,
+                        queue, building, section, buildings,
                         created_at, updated_at 
                  FROM objects 
                  WHERE container_id = $1 
@@ -255,6 +287,10 @@ async function getAllContainers() {
                     status: objectRow.status || '',
                     photo: objectRow.photo || null,
                     aikonaObjectId: objectRow.aikona_object_id || null,
+                    queue: objectRow.queue || null,
+                    building: objectRow.building || null,
+                    section: objectRow.section || null,
+                    buildings: objectRow.buildings || [],
                     generatedActs: actsByType.generatedActs || [],
                     sentForApproval: actsByType.sentForApproval || [],
                     approvedActs: actsByType.approvedActs || [],
@@ -310,8 +346,8 @@ async function saveContainers(containersData) {
             for (const obj of container.objects || []) {
                 // Вставляем объект
                 const objectResult = await client.query(
-                    `INSERT INTO objects (id, container_id, name, description, status, photo, aikona_object_id, blocking_factors, contractors)
-                     VALUES ($1, $2, $3, $4, $5, $6, $7, $8::jsonb, $9::jsonb)
+                    `INSERT INTO objects (id, container_id, name, description, status, photo, aikona_object_id, blocking_factors, contractors, queue, building, section, buildings)
+                     VALUES ($1, $2, $3, $4, $5, $6, $7, $8::jsonb, $9::jsonb, $10, $11, $12, $13::jsonb)
                      RETURNING id`,
                     [
                         obj.id,
@@ -322,7 +358,11 @@ async function saveContainers(containersData) {
                         obj.photo || null,
                         obj.aikonaObjectId || null,
                         JSON.stringify(obj.blockingFactors || []),
-                        JSON.stringify(obj.contractors || [])
+                        JSON.stringify(obj.contractors || []),
+                        obj.queue || null,
+                        obj.building || null,
+                        obj.section || null,
+                        JSON.stringify(obj.buildings || [])
                     ]
                 );
                 

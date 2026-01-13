@@ -39,8 +39,12 @@ async function updateObject(containerId, objectId, objectData) {
                  aikona_object_id = $5, 
                  blocking_factors = $6::jsonb,
                  contractors = $7::jsonb,
+                 queue = $8,
+                 building = $9,
+                 section = $10,
+                 buildings = $11::jsonb,
                  updated_at = CURRENT_TIMESTAMP
-             WHERE id = $8 AND container_id = $9`,
+             WHERE id = $12 AND container_id = $13`,
             [
                 objectData.name || '',
                 objectData.description || '',
@@ -49,6 +53,10 @@ async function updateObject(containerId, objectId, objectData) {
                 aikonaObjectIdValue,
                 JSON.stringify(objectData.blockingFactors || []),
                 JSON.stringify(objectData.contractors || []),
+                objectData.queue || null,
+                objectData.building || null,
+                objectData.section || null,
+                JSON.stringify(objectData.buildings || []),
                 objectId,
                 containerId
             ]
@@ -154,8 +162,8 @@ async function createObject(containerId, objectData) {
         // Вставляем объект БЕЗ указания ID - PostgreSQL сам сгенерирует через SERIAL
         // Затем получаем сгенерированный ID
         const insertResult = await client.query(
-            `INSERT INTO objects (container_id, name, description, status, photo, aikona_object_id, blocking_factors, contractors)
-             VALUES ($1, $2, $3, $4, $5, $6, $7::jsonb, $8::jsonb)
+            `INSERT INTO objects (container_id, name, description, status, photo, aikona_object_id, blocking_factors, contractors, queue, building, section, buildings)
+             VALUES ($1, $2, $3, $4, $5, $6, $7::jsonb, $8::jsonb, $9, $10, $11, $12::jsonb)
              RETURNING id`,
             [
                 containerId,
@@ -165,7 +173,11 @@ async function createObject(containerId, objectData) {
                 objectData.photo || null,
                 objectData.aikonaObjectId || null,
                 JSON.stringify(objectData.blockingFactors || []),
-                JSON.stringify(objectData.contractors || [])
+                JSON.stringify(objectData.contractors || []),
+                objectData.queue || null,
+                objectData.building || null,
+                objectData.section || null,
+                JSON.stringify(objectData.buildings || [])
             ]
         );
         const objectId = insertResult.rows[0].id;
