@@ -38,8 +38,9 @@ async function updateObject(containerId, objectId, objectData) {
                  photo = $4, 
                  aikona_object_id = $5, 
                  blocking_factors = $6::jsonb,
+                 contractors = $7::jsonb,
                  updated_at = CURRENT_TIMESTAMP
-             WHERE id = $7 AND container_id = $8`,
+             WHERE id = $8 AND container_id = $9`,
             [
                 objectData.name || '',
                 objectData.description || '',
@@ -47,6 +48,7 @@ async function updateObject(containerId, objectId, objectData) {
                 objectData.photo || null,
                 aikonaObjectIdValue,
                 JSON.stringify(objectData.blockingFactors || []),
+                JSON.stringify(objectData.contractors || []),
                 objectId,
                 containerId
             ]
@@ -152,8 +154,8 @@ async function createObject(containerId, objectData) {
         // Вставляем объект БЕЗ указания ID - PostgreSQL сам сгенерирует через SERIAL
         // Затем получаем сгенерированный ID
         const insertResult = await client.query(
-            `INSERT INTO objects (container_id, name, description, status, photo, aikona_object_id, blocking_factors)
-             VALUES ($1, $2, $3, $4, $5, $6, $7::jsonb)
+            `INSERT INTO objects (container_id, name, description, status, photo, aikona_object_id, blocking_factors, contractors)
+             VALUES ($1, $2, $3, $4, $5, $6, $7::jsonb, $8::jsonb)
              RETURNING id`,
             [
                 containerId,
@@ -162,7 +164,8 @@ async function createObject(containerId, objectData) {
                 objectData.status || '',
                 objectData.photo || null,
                 objectData.aikonaObjectId || null,
-                JSON.stringify(objectData.blockingFactors || [])
+                JSON.stringify(objectData.blockingFactors || []),
+                JSON.stringify(objectData.contractors || [])
             ]
         );
         const objectId = insertResult.rows[0].id;

@@ -100,23 +100,58 @@ function fetchAikonaObjectDataSingle(objectId) {
                     const parsed = JSON.parse(data);
                     console.log(`[Aikona API] Успешно получены данные для объекта ${objectId}`);
                     
-                    // IntegrationObjectInfo возвращает массив СТК для объекта
-                    // Каждый элемент массива - это СТК с Locations
-                    if (!Array.isArray(parsed)) {
-                        console.error(`[Aikona API] Ответ не является массивом для объекта ${objectId}`);
+                    // IntegrationObjectInfo возвращает массив объектов, каждый содержит поле STKs
+                    // Структура: [{ ObjectId, ObjectName, STKs: [{ STKId, STKName, Locations: [...] }, ...] }, ...]
+                    console.log(`[Aikona API] Структура ответа:`, Array.isArray(parsed) ? 'массив' : 'объект');
+                    
+                    let stksArray = [];
+                    
+                    if (Array.isArray(parsed)) {
+                        // Если ответ - массив объектов, каждый объект содержит поле STKs
+                        console.log(`[Aikona API] Ответ - массив из ${parsed.length} элементов`);
+                        
+                        // Собираем все СТК из всех объектов
+                        parsed.forEach((obj, index) => {
+                            console.log(`[Aikona API] Элемент #${index + 1} - ключи:`, Object.keys(obj || {}));
+                            
+                            if (obj && obj.STKs && Array.isArray(obj.STKs)) {
+                                console.log(`[Aikona API] Элемент #${index + 1} содержит ${obj.STKs.length} СТК`);
+                                stksArray = stksArray.concat(obj.STKs);
+                            } else if (obj && obj.STKName) {
+                                // Если элемент сам является СТК (прямо в массиве)
+                                console.log(`[Aikona API] Элемент #${index + 1} - это СТК: "${obj.STKName}"`);
+                                stksArray.push(obj);
+                            }
+                        });
+                        
+                        console.log(`[Aikona API] Всего собрано ${stksArray.length} СТК из массива`);
+                    } else if (parsed && parsed.STKs && Array.isArray(parsed.STKs)) {
+                        // Если ответ - объект с полем STKs
+                        stksArray = parsed.STKs;
+                        console.log(`[Aikona API] Ответ - объект с полем STKs, извлечено ${stksArray.length} СТК`);
+                    } else {
+                        console.error(`[Aikona API] Неожиданная структура ответа для объекта ${objectId}`);
+                        console.error(`[Aikona API] Тип:`, typeof parsed, `Ключи:`, Object.keys(parsed || {}));
                         reject(new Error('OBJECT_NOT_FOUND'));
                         return;
                     }
                     
-                    if (parsed.length === 0) {
-                        console.error(`[Aikona API] Пустой ответ для объекта ${objectId}`);
+                    if (stksArray.length === 0) {
+                        console.error(`[Aikona API] Пустой массив СТК для объекта ${objectId}`);
                         reject(new Error('OBJECT_NOT_FOUND'));
                         return;
                     }
                     
-                    // Возвращаем весь массив СТК - обработаем его в syncObjectFromAikona
-                    // Структура: [{ STKId, STKName, Locations: [...] }, ...]
-                    resolve({ STKs: parsed });
+                    // Логируем первый СТК для отладки
+                    const firstSTK = stksArray[0];
+                    if (firstSTK) {
+                        console.log(`[Aikona API] Первый СТК - ключи:`, Object.keys(firstSTK || {}));
+                        console.log(`[Aikona API] Первый СТК - STKName: "${firstSTK.STKName || firstSTK.stkName || 'НЕТ'}"`);
+                        console.log(`[Aikona API] Первый СТК - Locations: ${Array.isArray(firstSTK.Locations) ? firstSTK.Locations.length : 'НЕТ'} локаций`);
+                    }
+                    
+                    // Возвращаем массив СТК
+                    resolve({ STKs: stksArray });
                 } catch (parseError) {
                     console.error(`[Aikona API] Ошибка парсинга JSON для объекта ${objectId}:`, parseError.message);
                     console.error(`[Aikona API] Первые 500 символов ответа:`, data.substring(0, 500));
@@ -159,16 +194,45 @@ function fetchAikonaObjectDataSingle(objectId) {
  * @returns {Object|null} Найденный СТК или null
  */
 function findMatchingSTK(smrName, stks) {
+    if (!stks || !Array.isArray(stks) || stks.length === 0) {
+        console.log(`[Aikona Sync] findMatchingSTK: stks пустой или не массив`);
+        return null;
+    }
+    
     // Нормализуем название СМР (убираем лишние пробелы, учитываем экранированные кавычки)
     const normalizedSmrName = smrName.trim();
     
-    for (const stk of stks) {
+    console.log(`[Aikona Sync] findMatchingSTK: ищем СТК "${normalizedSmrName}" среди ${stks.length} СТК`);
+    
+    // Логируем первые несколько СТК для отладки
+    const stksToLog = stks.slice(0, 5);
+    stksToLog.forEach((stk, index) => {
+        const stkName = stk.STKName || stk.stkName || stk.name || stk.name_stk || '';
+        console.log(`[Aikona Sync] findMatchingSTK: СТК #${index + 1}: "${stkName}"`);
+    });
+    if (stks.length > 5) {
+        console.log(`[Aikona Sync] findMatchingSTK: ... и еще ${stks.length - 5} СТК`);
+    }
+    
+    for (let i = 0; i < stks.length; i++) {
+        const stk = stks[i];
+        
+        // Логируем структуру первого СТК для отладки
+        if (i === 0) {
+            console.log(`[Aikona Sync] findMatchingSTK: Структура первого СТК:`, Object.keys(stk || {}));
+        }
+        
         // IntegrationObjectInfo использует STKName (с большой буквы)
         const stkName = stk.STKName || stk.stkName || stk.name || stk.name_stk || '';
         const normalizedStkName = stkName.trim();
         
+        if (i < 3) {
+            console.log(`[Aikona Sync] findMatchingSTK: СТК #${i + 1}: STKName="${stk.STKName}", stkName="${stk.stkName}", name="${stk.name}", name_stk="${stk.name_stk}", итого: "${normalizedStkName}"`);
+        }
+        
         // Точное совпадение
         if (normalizedSmrName === normalizedStkName) {
+            console.log(`[Aikona Sync] findMatchingSTK: ✓ ТОЧНОЕ СОВПАДЕНИЕ! "${normalizedSmrName}" === "${normalizedStkName}"`);
             return stk;
         }
         
@@ -178,54 +242,168 @@ function findMatchingSTK(smrName, stks) {
         const stkNameUnescaped = normalizedStkName.replace(/\\"/g, '"');
         
         if (smrNameUnescaped === stkNameUnescaped) {
+            console.log(`[Aikona Sync] findMatchingSTK: ✓ СОВПАДЕНИЕ после удаления экранированных кавычек! "${smrNameUnescaped}" === "${stkNameUnescaped}"`);
+            return stk;
+        }
+        
+        // Дополнительная проверка: сравниваем без учета регистра и лишних пробелов
+        const smrNameNormalized = normalizedSmrName.toLowerCase().replace(/\s+/g, ' ').trim();
+        const stkNameNormalized = normalizedStkName.toLowerCase().replace(/\s+/g, ' ').trim();
+        
+        if (smrNameNormalized === stkNameNormalized) {
+            console.log(`[Aikona Sync] findMatchingSTK: ✓ СОВПАДЕНИЕ после нормализации! "${smrNameNormalized}" === "${stkNameNormalized}"`);
             return stk;
         }
     }
     
+    console.log(`[Aikona Sync] findMatchingSTK: ✗ СТК "${normalizedSmrName}" НЕ НАЙДЕН среди ${stks.length} СТК`);
     return null;
 }
 
 /**
- * Подсчитать количество выполненных локаций (SZCompletion === 100)
- * Или использовать fact_sz из ER32 API
- * @param {Array} locations - Массив локаций (если есть)
- * @param {number|string} factSz - Процент выполнения из fact_sz (для ER32)
- * @returns {number} Количество выполненных локаций
+ * Парсить LocationName для извлечения корпуса и секции
+ * Формат: "Корпус 8.2_Секция 2_Этаж 4"
+ * @param {string} locationName - Название локации из Айконы
+ * @returns {Object|null} { building: "8.2", section: "2" } или null
  */
-function countCompletedLocations(locations, factSz) {
-    // Если есть fact_sz из ER32, используем его для расчета
-    // fact_sz - это процент выполнения (0-100), нужно пересчитать в количество
-    // Но так как мы не знаем общее количество, используем fact_sz как приблизительный показатель
-    // Для точного подсчета нужны Locations
-    
-    if (factSz !== undefined && factSz !== null) {
-        // Если fact_sz = 100, значит все выполнено
-        // Если fact_sz < 100, нужно пересчитать, но без общего количества это сложно
-        // Пока возвращаем округленное значение fact_sz как количество
-        // Это временное решение, пока не будет точной информации о количестве локаций
-        return Math.round(parseFloat(factSz));
+function parseLocationName(locationName) {
+    if (!locationName || typeof locationName !== 'string') {
+        console.log(`[Aikona Sync] parseLocationName: пустое или не строка: ${locationName}`);
+        return null;
     }
     
-    // Старый способ - подсчет по Locations
+    // Разделяем по подчеркиваниям
+    const parts = locationName.split('_');
+    if (parts.length < 2) {
+        console.log(`[Aikona Sync] parseLocationName: недостаточно частей в "${locationName}" (ожидается минимум 2, получено ${parts.length})`);
+        return null;
+    }
+    
+    // Первая часть: "Корпус 8.2" -> извлекаем "8.2"
+    const buildingPart = parts[0].trim();
+    const buildingMatch = buildingPart.match(/корпус\s+(.+)/i);
+    const building = buildingMatch ? buildingMatch[1].trim() : null;
+    
+    if (!building) {
+        console.log(`[Aikona Sync] parseLocationName: не удалось извлечь корпус из "${buildingPart}"`);
+    }
+    
+    // Вторая часть: "Секция 2" -> извлекаем "2"
+    const sectionPart = parts[1].trim();
+    const sectionMatch = sectionPart.match(/секция\s+(.+)/i);
+    const section = sectionMatch ? sectionMatch[1].trim() : null;
+    
+    if (!section) {
+        console.log(`[Aikona Sync] parseLocationName: не удалось извлечь секцию из "${sectionPart}"`);
+    }
+    
+    if (!building || !section) {
+        console.log(`[Aikona Sync] parseLocationName: результат null для "${locationName}" (building: ${building}, section: ${section})`);
+        return null;
+    }
+    
+    console.log(`[Aikona Sync] parseLocationName: "${locationName}" -> building: "${building}", section: "${section}"`);
+    return { building, section };
+}
+
+/**
+ * Подсчитать количество выполненных локаций (SZCompletion === 100) для конкретной комбинации корпус/секция
+ * @param {Array} locations - Массив локаций из Айконы
+ * @param {string} targetBuilding - Название корпуса (например, "8.2")
+ * @param {string} targetSection - Название секции (например, "2")
+ * @returns {Object} { count: количество с SZCompletion=100, total: общее количество }
+ */
+function countLocationsForBuildingSection(locations, targetBuilding, targetSection) {
     if (!Array.isArray(locations)) {
-        return 0;
+        console.log(`[Aikona Sync] countLocationsForBuildingSection: locations не массив`);
+        return { count: 0, total: 0 };
     }
     
-    return locations.filter(location => {
-        // Проверяем, что SZCompletion равен 100 (может быть как число, так и строка)
+    // Нормализуем названия для сравнения (убираем лишние пробелы, приводим к строке)
+    const normalizedTargetBuilding = String(targetBuilding || '').trim();
+    const normalizedTargetSection = String(targetSection || '').trim();
+    
+    console.log(`[Aikona Sync] Ищем локации для корпуса "${normalizedTargetBuilding}", секции "${normalizedTargetSection}"`);
+    console.log(`[Aikona Sync] Всего локаций для проверки: ${locations.length}`);
+    
+    // ШАГ 1: Фильтруем локации по корпусу (сначала корпус!)
+    const buildingMatches = locations.filter(location => {
+        const locationName = location.LocationName || location.locationName || '';
+        const parsed = parseLocationName(locationName);
+        
+        if (!parsed) {
+            return false;
+        }
+        
+        // Нормализуем извлеченные значения
+        const normalizedParsedBuilding = String(parsed.building || '').trim();
+        
+        // Сравниваем корпус
+        const buildingMatch = normalizedParsedBuilding === normalizedTargetBuilding;
+        
+        if (buildingMatch) {
+            console.log(`[Aikona Sync] ✓ Найден корпус "${normalizedParsedBuilding}" в локации: "${locationName}"`);
+        }
+        
+        return buildingMatch;
+    });
+    
+    console.log(`[Aikona Sync] После фильтрации по корпусу: ${buildingMatches.length} локаций`);
+    
+    // ШАГ 2: Фильтруем по секции (только среди локаций с нужным корпусом)
+    const matchingLocations = buildingMatches.filter(location => {
+        const locationName = location.LocationName || location.locationName || '';
+        const parsed = parseLocationName(locationName);
+        
+        if (!parsed) {
+            return false;
+        }
+        
+        // Нормализуем извлеченные значения
+        const normalizedParsedSection = String(parsed.section || '').trim();
+        
+        // Сравниваем секцию
+        const sectionMatch = normalizedParsedSection === normalizedTargetSection;
+        
+        if (sectionMatch) {
+            console.log(`[Aikona Sync] ✓ Найдена секция "${normalizedParsedSection}" в локации: "${locationName}"`);
+        }
+        
+        return sectionMatch;
+    });
+    
+    console.log(`[Aikona Sync] После фильтрации по корпусу и секции: ${matchingLocations.length} локаций`);
+    
+    // Считаем общее количество локаций для этой комбинации
+    const total = matchingLocations.length;
+    
+    // ШАГ 3: Считаем количество локаций с SZCompletion = 100 (это и есть количество актов)
+    const count = matchingLocations.filter(location => {
         const completion = location.SZCompletion !== undefined 
             ? location.SZCompletion 
             : location.szCompletion;
         
         // Проверяем точное равенство 100 (с учетом разных типов данных)
-        return completion === 100 || completion === '100' || completion === 100.0 || parseFloat(completion) === 100;
+        const isCompleted = completion === 100 || completion === '100' || completion === 100.0 || parseFloat(completion) === 100;
+        
+        if (isCompleted) {
+            const locationName = location.LocationName || location.locationName || '';
+            console.log(`[Aikona Sync] ✓ Завершенная локация (SZCompletion=100): "${locationName}"`);
+        }
+        
+        return isCompleted;
     }).length;
+    
+    console.log(`[Aikona Sync] ИТОГО: count = ${count} (этажей с SZCompletion=100), total = ${total} (всего этажей)`);
+    
+    return { count, total };
 }
 
 /**
  * Синхронизировать данные объекта из Айконы
+ * Обновляет generatedActs для каждого СТК у каждого подрядчика в каждой секции каждого корпуса
  * @param {Object} object - Объект из нашей системы
- * @returns {Promise<Object>} Обновленный объект с новыми значениями total для СМР
+ * @returns {Promise<Object>} Обновленный объект с новыми значениями count и total для СМР
  */
 async function syncObjectFromAikona(object) {
     if (!object.aikonaObjectId) {
@@ -239,20 +417,128 @@ async function syncObjectFromAikona(object) {
     let stks = [];
     if (Array.isArray(aikonaData)) {
         stks = aikonaData;
+        console.log(`[Aikona Sync] Получен массив СТК напрямую: ${stks.length} СТК`);
     } else if (aikonaData.STKs) {
         stks = aikonaData.STKs;
+        console.log(`[Aikona Sync] Получены СТК из поля STKs: ${stks.length} СТК`);
     } else if (aikonaData.stks) {
         stks = aikonaData.stks;
+        console.log(`[Aikona Sync] Получены СТК из поля stks: ${stks.length} СТК`);
     } else if (aikonaData.stk) {
         stks = Array.isArray(aikonaData.stk) ? aikonaData.stk : [aikonaData.stk];
+        console.log(`[Aikona Sync] Получены СТК из поля stk: ${stks.length} СТК`);
+    } else {
+        console.log(`[Aikona Sync] ⚠ Не удалось извлечь СТК из ответа. Структура ответа:`, Object.keys(aikonaData || {}));
     }
     
     if (stks.length === 0) {
+        console.log(`[Aikona Sync] ⚠ Нет СТК в ответе Айконы`);
         // Нет СТК в ответе
         return object;
     }
     
-    // Обновляем total для каждого СМР
+    console.log(`[Aikona Sync] ✓ Успешно извлечено ${stks.length} СТК из ответа Айконы`);
+    
+    // Новая структура: buildings -> sections -> contractors[]
+    if (object.buildings && Array.isArray(object.buildings) && object.buildings.length > 0) {
+        const updatedBuildings = object.buildings.map(building => {
+            if (!building.sections || !Array.isArray(building.sections)) {
+                return building;
+            }
+            
+            const updatedSections = building.sections.map(section => {
+                if (!section.contractors || !Array.isArray(section.contractors)) {
+                    return section;
+                }
+                
+                const updatedContractors = section.contractors.map(contractor => {
+                    if (!contractor.generatedActs || !Array.isArray(contractor.generatedActs)) {
+                        return contractor;
+                    }
+                    
+                    // Обновляем каждый СТК у подрядчика
+                    const updatedGeneratedActs = contractor.generatedActs.map(smr => {
+                        const buildingName = building.name || building.id?.toString() || '';
+                        const sectionName = section.name || section.id?.toString() || '';
+                        
+                        console.log(`\n[Aikona Sync] ========================================`);
+                        console.log(`[Aikona Sync] Синхронизация СТК: "${smr.name}"`);
+                        console.log(`[Aikona Sync] Подрядчик: "${contractor.name || 'Не указан'}"`);
+                        console.log(`[Aikona Sync] Корпус: "${buildingName}", Секция: "${sectionName}"`);
+                        
+                        // ШАГ 1: Ищем соответствующий СТК в ответе Айконы по названию
+                        const matchingSTK = findMatchingSTK(smr.name, stks);
+                        
+                        if (!matchingSTK) {
+                            console.log(`[Aikona Sync] СТК "${smr.name}" НЕ НАЙДЕН в ответе Айконы`);
+                            // СТК не найден в Айконе - оставляем как есть
+                            return smr;
+                        }
+                        
+                        console.log(`[Aikona Sync] ✓ СТК найден в Айконе: "${matchingSTK.STKName || matchingSTK.stkName || 'Без названия'}"`);
+                        
+                        // ШАГ 2: Получаем Locations для этого СТК
+                        const locations = matchingSTK.Locations || matchingSTK.locations || [];
+                        
+                        if (locations.length === 0) {
+                            console.log(`[Aikona Sync] ⚠ Нет локаций в этом СТК`);
+                            // Нет локаций - обнуляем только total (для "СЗ ICONA")
+                            // count не трогаем - оно для "PRAKTIS ID"
+                            return {
+                                ...smr,
+                                total: 0  // Обнуляем только total (СЗ ICONA)
+                            };
+                        }
+                        
+                        console.log(`[Aikona Sync] Всего локаций в СТК: ${locations.length}`);
+                        
+                        // ШАГ 3: Фильтруем локации по корпусу и секции
+                        // ШАГ 4: Считаем этажи с SZCompletion = 100
+                        const { count, total } = countLocationsForBuildingSection(
+                            locations,
+                            buildingName,
+                            sectionName
+                        );
+                        
+                        console.log(`[Aikona Sync] ✓ Результат: aikonaCount = ${count} (этажей с SZCompletion=100), total = ${total} (всего этажей)`);
+                        console.log(`[Aikona Sync] ========================================\n`);
+                        
+                        // Обновляем только total (для "СЗ ICONA") - это количество этажей с SZCompletion=100
+                        // count (для "PRAKTIS ID") не трогаем - оно заполняется вручную или из другого интерфейса
+                        return {
+                            ...smr,
+                            // count не обновляем - оно для "PRAKTIS ID" (фактически сгенерированные акты)
+                            total: count  // total для "СЗ ICONA" = количество этажей с SZCompletion=100
+                        };
+                    });
+                    
+                    return {
+                        ...contractor,
+                        generatedActs: updatedGeneratedActs
+                    };
+                });
+                
+                return {
+                    ...section,
+                    contractors: updatedContractors
+                };
+            });
+            
+            return {
+                ...building,
+                sections: updatedSections
+            };
+        });
+        
+        // Возвращаем обновленный объект с новой структурой
+        return {
+            ...object,
+            buildings: updatedBuildings
+        };
+    }
+    
+    // Старая структура: contractors (массив подрядчиков) или прямые поля объекта
+    // Для обратной совместимости оставляем старую логику
     const updatedGeneratedActs = (object.generatedActs || []).map(smr => {
         const matchingSTK = findMatchingSTK(smr.name, stks);
         
@@ -260,38 +546,52 @@ async function syncObjectFromAikona(object) {
             // IntegrationObjectInfo возвращает Locations массив
             // Подсчитываем выполненные локации (где SZCompletion === 100)
             let completedCount = 0;
+            let totalCount = 0;
             
             // Приоритет: Locations (IntegrationObjectInfo) > fact_sz (ER32, если используется)
             if (matchingSTK.Locations || matchingSTK.locations) {
                 const locations = matchingSTK.Locations || matchingSTK.locations || [];
-                completedCount = countCompletedLocations(locations);
+                totalCount = locations.length;
+                completedCount = locations.filter(location => {
+                    const completion = location.SZCompletion !== undefined 
+                        ? location.SZCompletion 
+                        : location.szCompletion;
+                    return completion === 100 || completion === '100' || completion === 100.0 || parseFloat(completion) === 100;
+                }).length;
             } else if (matchingSTK.fact_sz !== undefined && matchingSTK.fact_sz !== null) {
                 // Fallback для ER32: используем fact_sz если Locations нет
                 const factSz = parseFloat(matchingSTK.fact_sz);
                 if (smr.total && smr.total > 0) {
                     completedCount = Math.round((factSz / 100) * smr.total);
+                    totalCount = smr.total;
                 } else {
                     completedCount = Math.round(factSz);
+                    totalCount = completedCount;
                 }
             }
             
+            // Для старой структуры: обновляем только total (для "СЗ ICONA")
+            // count не трогаем - оно для "PRAKTIS ID"
             return {
                 ...smr,
-                total: completedCount
+                // count не обновляем - оно для "PRAKTIS ID" (фактически сгенерированные акты)
+                total: completedCount  // total для "СЗ ICONA" = количество этажей с SZCompletion=100
             };
         }
         
-        // Если не найден - оставляем total = 0 (или существующее значение, если оно было)
+        // Если не найден - оставляем как есть
         return {
             ...smr,
+            count: smr.count || 0,
             total: smr.total || 0
         };
     });
     
-    // Возвращаем обновленный объект
+    // Возвращаем обновленный объект, сохраняя подрядчиков
     return {
         ...object,
-        generatedActs: updatedGeneratedActs
+        generatedActs: updatedGeneratedActs,
+        contractors: object.contractors || [] // Сохраняем подрядчиков при синхронизации
     };
 }
 

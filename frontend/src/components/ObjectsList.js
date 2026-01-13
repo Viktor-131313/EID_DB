@@ -1,7 +1,7 @@
 import React from 'react';
 import './ObjectsList.css';
 import Tooltip from './Tooltip';
-import { calculatePerformanceMetrics } from '../utils/performanceMetrics';
+import { calculatePerformanceMetrics, calculateDetailedLag } from '../utils/performanceMetrics';
 
 const ObjectsList = ({ objects, onEditObject }) => {
   if (objects.length === 0) {
@@ -17,6 +17,7 @@ const ObjectsList = ({ objects, onEditObject }) => {
     <div className="objects-grid">
       {objects.map(obj => {
         const metrics = calculatePerformanceMetrics(obj);
+        const lagDetails = calculateDetailedLag(obj);
         const status = { class: metrics.statusClass, text: metrics.statusText };
         
         // Используем данные из метрик
@@ -24,31 +25,92 @@ const ObjectsList = ({ objects, onEditObject }) => {
         const generatedTotal = metrics.generatedTotal;
         
         let sent = 0;
-        if (Array.isArray(obj.sentForApproval)) {
-          sent = obj.sentForApproval.reduce((sum, smr) => sum + (smr.count || 0), 0);
-        } else if (typeof obj.sentForApproval === 'number') {
-          sent = obj.sentForApproval;
-        }
-        
         let approved = 0;
-        if (Array.isArray(obj.approvedActs)) {
-          approved = obj.approvedActs.reduce((sum, smr) => sum + (smr.count || 0), 0);
-        } else if (typeof obj.approvedActs === 'number') {
-          approved = obj.approvedActs;
-        }
-        
         let rejected = 0;
-        if (Array.isArray(obj.rejectedActs)) {
-          rejected = obj.rejectedActs.reduce((sum, smr) => sum + (smr.count || 0), 0);
-        } else if (typeof obj.rejectedActs === 'number') {
-          rejected = obj.rejectedActs;
-        }
-
         let signed = 0;
-        if (Array.isArray(obj.signedActs)) {
-          signed = obj.signedActs.reduce((sum, smr) => sum + (smr.count || 0), 0);
-        } else if (typeof obj.signedActs === 'number') {
-          signed = obj.signedActs;
+        
+        // Новая структура: buildings -> sections -> contractors[]
+        if (obj.buildings && Array.isArray(obj.buildings) && obj.buildings.length > 0) {
+          obj.buildings.forEach(building => {
+            if (building.sections && Array.isArray(building.sections)) {
+              building.sections.forEach(section => {
+                if (section.contractors && Array.isArray(section.contractors)) {
+                  section.contractors.forEach(contractor => {
+                    if (contractor.sentForApproval && Array.isArray(contractor.sentForApproval)) {
+                      sent += contractor.sentForApproval.reduce((sum, smr) => sum + (smr.count || 0), 0);
+                    }
+                    if (contractor.approvedActs && Array.isArray(contractor.approvedActs)) {
+                      approved += contractor.approvedActs.reduce((sum, smr) => sum + (smr.count || 0), 0);
+                    }
+                    if (contractor.rejectedActs && Array.isArray(contractor.rejectedActs)) {
+                      rejected += contractor.rejectedActs.reduce((sum, smr) => sum + (smr.count || 0), 0);
+                    }
+                    if (contractor.signedActs && Array.isArray(contractor.signedActs)) {
+                      signed += contractor.signedActs.reduce((sum, smr) => sum + (smr.count || 0), 0);
+                    }
+                  });
+                }
+                // Обратная совместимость: если есть contractor (единственный)
+                else if (section.contractor) {
+                  if (section.contractor.sentForApproval && Array.isArray(section.contractor.sentForApproval)) {
+                    sent += section.contractor.sentForApproval.reduce((sum, smr) => sum + (smr.count || 0), 0);
+                  }
+                  if (section.contractor.approvedActs && Array.isArray(section.contractor.approvedActs)) {
+                    approved += section.contractor.approvedActs.reduce((sum, smr) => sum + (smr.count || 0), 0);
+                  }
+                  if (section.contractor.rejectedActs && Array.isArray(section.contractor.rejectedActs)) {
+                    rejected += section.contractor.rejectedActs.reduce((sum, smr) => sum + (smr.count || 0), 0);
+                  }
+                  if (section.contractor.signedActs && Array.isArray(section.contractor.signedActs)) {
+                    signed += section.contractor.signedActs.reduce((sum, smr) => sum + (smr.count || 0), 0);
+                  }
+                }
+              });
+            }
+          });
+        }
+        // Старая структура: contractors (массив подрядчиков)
+        else if (obj.contractors && Array.isArray(obj.contractors) && obj.contractors.length > 0) {
+          obj.contractors.forEach(contractor => {
+            if (contractor.sentForApproval && Array.isArray(contractor.sentForApproval)) {
+              sent += contractor.sentForApproval.reduce((sum, smr) => sum + (smr.count || 0), 0);
+            }
+            if (contractor.approvedActs && Array.isArray(contractor.approvedActs)) {
+              approved += contractor.approvedActs.reduce((sum, smr) => sum + (smr.count || 0), 0);
+            }
+            if (contractor.rejectedActs && Array.isArray(contractor.rejectedActs)) {
+              rejected += contractor.rejectedActs.reduce((sum, smr) => sum + (smr.count || 0), 0);
+            }
+            if (contractor.signedActs && Array.isArray(contractor.signedActs)) {
+              signed += contractor.signedActs.reduce((sum, smr) => sum + (smr.count || 0), 0);
+            }
+          });
+        } 
+        // Очень старая структура: поля объекта напрямую
+        else {
+          if (Array.isArray(obj.sentForApproval)) {
+            sent = obj.sentForApproval.reduce((sum, smr) => sum + (smr.count || 0), 0);
+          } else if (typeof obj.sentForApproval === 'number') {
+            sent = obj.sentForApproval;
+          }
+          
+          if (Array.isArray(obj.approvedActs)) {
+            approved = obj.approvedActs.reduce((sum, smr) => sum + (smr.count || 0), 0);
+          } else if (typeof obj.approvedActs === 'number') {
+            approved = obj.approvedActs;
+          }
+          
+          if (Array.isArray(obj.rejectedActs)) {
+            rejected = obj.rejectedActs.reduce((sum, smr) => sum + (smr.count || 0), 0);
+          } else if (typeof obj.rejectedActs === 'number') {
+            rejected = obj.rejectedActs;
+          }
+
+          if (Array.isArray(obj.signedActs)) {
+            signed = obj.signedActs.reduce((sum, smr) => sum + (smr.count || 0), 0);
+          } else if (typeof obj.signedActs === 'number') {
+            signed = obj.signedActs;
+          }
         }
 
         const generatedPercent = generatedTotal > 0 ? Math.round((generated / generatedTotal) * 100) : 0;
@@ -78,8 +140,8 @@ const ObjectsList = ({ objects, onEditObject }) => {
               <div className="object-name">{obj.name || 'Без названия'}</div>
               <div className={`object-status ${status.class}`}>{status.text}</div>
             </div>
-            {obj.description && (
-              <div className="object-description">{obj.description}</div>
+            {obj.queue && (
+              <div className="object-description">Очередь: {obj.queue}</div>
             )}
             {obj.status && (
               <div className="object-status-container">
@@ -142,6 +204,42 @@ const ObjectsList = ({ objects, onEditObject }) => {
                     </span>
                   </div>
                 )}
+              </div>
+            )}
+
+            {/* Детали отставания */}
+            {lagDetails.length > 0 && (
+              <div className="lag-details-card">
+                <div className="lag-details-title">
+                  <i className="fas fa-exclamation-circle"></i> Детали отставания
+                </div>
+                <div className="lag-details-list">
+                  {lagDetails.map((detail, index) => (
+                    <Tooltip 
+                      key={index}
+                      text={`${detail.contractorName} (${detail.contractorWorkType || 'Без типа работ'}): ${detail.generated} из ${detail.generatedTotal} актов`}
+                    >
+                      <div className="lag-detail-item">
+                        <span className="lag-detail-marker">
+                          <i className="fas fa-map-marker-alt"></i>
+                        </span>
+                        <span className="lag-detail-info">
+                          {detail.buildingName && (
+                            <span className="lag-building">Корпус {detail.buildingName}</span>
+                          )}
+                          {detail.sectionName && (
+                            <span className="lag-section"> → Секция {detail.sectionName}</span>
+                          )}
+                          <span className="lag-contractor"> → {detail.contractorName}</span>
+                          {detail.contractorWorkType && (
+                            <span className="lag-worktype"> ({detail.contractorWorkType})</span>
+                          )}
+                        </span>
+                        <span className="lag-detail-count">{detail.lag} актов</span>
+                      </div>
+                    </Tooltip>
+                  ))}
+                </div>
               </div>
             )}
 

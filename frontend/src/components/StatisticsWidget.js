@@ -402,6 +402,9 @@ const ChangesTable = ({ changes }) => {
               <thead>
                 <tr>
                   <th>Объект</th>
+                  {group.changes.some(c => c.buildingName) && <th>Корпус</th>}
+                  {group.changes.some(c => c.sectionName) && <th>Секция</th>}
+                  {group.changes.some(c => c.contractorName) && <th>Подрядчик</th>}
                   <th>СМР</th>
                   <th>Согласовано</th>
                   <th>Отклонено</th>
@@ -412,8 +415,24 @@ const ChangesTable = ({ changes }) => {
               </thead>
               <tbody>
                 {group.changes.map((change, index) => (
-                  <tr key={`${change.objectId}-${change.smrId}-${index}`}>
+                  <tr key={`${change.objectId}-${change.buildingId || ''}-${change.sectionId || ''}-${change.contractorId || ''}-${change.smrId}-${index}`}>
                     <td>{change.objectName}</td>
+                    {group.changes.some(c => c.buildingName) && (
+                      <td>{change.buildingName ? `Корпус ${change.buildingName}` : '-'}</td>
+                    )}
+                    {group.changes.some(c => c.sectionName) && (
+                      <td>{change.sectionName ? `Секция ${change.sectionName}` : '-'}</td>
+                    )}
+                    {group.changes.some(c => c.contractorName) && (
+                      <td>
+                        {change.contractorName || '-'}
+                        {change.contractorWorkType && (
+                          <span style={{ fontSize: '0.9em', color: '#666', marginLeft: '4px' }}>
+                            ({change.contractorWorkType})
+                          </span>
+                        )}
+                      </td>
+                    )}
                     <td>{change.smrName}</td>
                     <td className={change.deltas.approvedActs > 0 ? 'positive' : change.deltas.approvedActs < 0 ? 'negative' : ''}>
                       {change.deltas.approvedActs > 0 ? '+' : ''}{change.deltas.approvedActs}
@@ -434,7 +453,7 @@ const ChangesTable = ({ changes }) => {
                 ))}
                 {/* Строка итогов */}
                 <tr className="totals-row">
-                  <td colSpan="2" style={{ fontWeight: 'bold', textAlign: 'right', paddingRight: '10px' }}>Итого:</td>
+                  <td colSpan={1 + (group.changes.some(c => c.buildingName) ? 1 : 0) + (group.changes.some(c => c.sectionName) ? 1 : 0) + (group.changes.some(c => c.contractorName) ? 1 : 0) + 1} style={{ fontWeight: 'bold', textAlign: 'right', paddingRight: '10px' }}>Итого:</td>
                   <td className={totals.approvedActs > 0 ? 'positive' : totals.approvedActs < 0 ? 'negative' : ''} style={{ fontWeight: 'bold' }}>
                     {totals.approvedActs > 0 ? '+' : ''}{totals.approvedActs}
                   </td>

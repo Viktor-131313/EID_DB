@@ -126,47 +126,113 @@ async function createSnapshot() {
 function extractSMRsFromObject(obj) {
     const smrsMap = new Map();
     
-    // Собираем все уникальные СМР из всех секций
-    const sections = [
-        { name: 'generatedActs', data: obj.generatedActs || [] },
-        { name: 'sentForApproval', data: obj.sentForApproval || [] },
-        { name: 'approvedActs', data: obj.approvedActs || [] },
-        { name: 'rejectedActs', data: obj.rejectedActs || [] },
-        { name: 'signedActs', data: obj.signedActs || [] }
-    ];
-    
-    sections.forEach(section => {
-        if (Array.isArray(section.data)) {
-            section.data.forEach(smr => {
-                if (smr && smr.id) {
-                    if (!smrsMap.has(smr.id)) {
-                        smrsMap.set(smr.id, {
-                            id: smr.id,
-                            name: smr.name || 'Без названия',
-                            generatedActs: 0,
-                            sentForApproval: 0,
-                            approvedActs: 0,
-                            rejectedActs: 0,
-                            signedActs: 0
+    // Новая структура: buildings -> sections -> contractors[]
+    if (obj.buildings && Array.isArray(obj.buildings) && obj.buildings.length > 0) {
+        obj.buildings.forEach(building => {
+            if (building.sections && Array.isArray(building.sections)) {
+                building.sections.forEach(section => {
+                    if (section.contractors && Array.isArray(section.contractors)) {
+                        section.contractors.forEach(contractor => {
+                            // Собираем СМР из подрядчика
+                            const smrSections = [
+                                { name: 'generatedActs', data: contractor.generatedActs || [] },
+                                { name: 'sentForApproval', data: contractor.sentForApproval || [] },
+                                { name: 'approvedActs', data: contractor.approvedActs || [] },
+                                { name: 'rejectedActs', data: contractor.rejectedActs || [] },
+                                { name: 'signedActs', data: contractor.signedActs || [] }
+                            ];
+                            
+                            smrSections.forEach(smrSection => {
+                                if (Array.isArray(smrSection.data)) {
+                                    smrSection.data.forEach(smr => {
+                                        if (smr && smr.id) {
+                                            // Ключ: buildingId-sectionId-contractorId-smrId
+                                            const key = `${building.id}-${section.id}-${contractor.id}-${smr.id}`;
+                                            if (!smrsMap.has(key)) {
+                                                smrsMap.set(key, {
+                                                    id: smr.id,
+                                                    name: smr.name || 'Без названия',
+                                                    buildingId: building.id,
+                                                    buildingName: building.name,
+                                                    sectionId: section.id,
+                                                    sectionName: section.name,
+                                                    contractorId: contractor.id,
+                                                    contractorName: contractor.name,
+                                                    contractorWorkType: contractor.workType,
+                                                    generatedActs: 0,
+                                                    sentForApproval: 0,
+                                                    approvedActs: 0,
+                                                    rejectedActs: 0,
+                                                    signedActs: 0
+                                                });
+                                            }
+                                            const smrData = smrsMap.get(key);
+                                            if (smrSection.name === 'generatedActs') {
+                                                smrData.generatedActs = smr.count || 0;
+                                                smrData.generatedTotal = smr.total || 0;
+                                            } else if (smrSection.name === 'sentForApproval') {
+                                                smrData.sentForApproval = smr.count || 0;
+                                            } else if (smrSection.name === 'approvedActs') {
+                                                smrData.approvedActs = smr.count || 0;
+                                            } else if (smrSection.name === 'rejectedActs') {
+                                                smrData.rejectedActs = smr.count || 0;
+                                            } else if (smrSection.name === 'signedActs') {
+                                                smrData.signedActs = smr.count || 0;
+                                            }
+                                        }
+                                    });
+                                }
+                            });
                         });
                     }
-                    const smrData = smrsMap.get(smr.id);
-                    if (section.name === 'generatedActs') {
-                        smrData.generatedActs = smr.count || 0;
-                        smrData.generatedTotal = smr.total || 0;
-                    } else if (section.name === 'sentForApproval') {
-                        smrData.sentForApproval = smr.count || 0;
-                    } else if (section.name === 'approvedActs') {
-                        smrData.approvedActs = smr.count || 0;
-                    } else if (section.name === 'rejectedActs') {
-                        smrData.rejectedActs = smr.count || 0;
-                    } else if (section.name === 'signedActs') {
-                        smrData.signedActs = smr.count || 0;
+                });
+            }
+        });
+    }
+    // Старая структура: contractors (массив подрядчиков) или прямые поля объекта
+    else {
+        // Собираем все уникальные СМР из всех секций
+        const sections = [
+            { name: 'generatedActs', data: obj.generatedActs || [] },
+            { name: 'sentForApproval', data: obj.sentForApproval || [] },
+            { name: 'approvedActs', data: obj.approvedActs || [] },
+            { name: 'rejectedActs', data: obj.rejectedActs || [] },
+            { name: 'signedActs', data: obj.signedActs || [] }
+        ];
+        
+        sections.forEach(section => {
+            if (Array.isArray(section.data)) {
+                section.data.forEach(smr => {
+                    if (smr && smr.id) {
+                        if (!smrsMap.has(smr.id)) {
+                            smrsMap.set(smr.id, {
+                                id: smr.id,
+                                name: smr.name || 'Без названия',
+                                generatedActs: 0,
+                                sentForApproval: 0,
+                                approvedActs: 0,
+                                rejectedActs: 0,
+                                signedActs: 0
+                            });
+                        }
+                        const smrData = smrsMap.get(smr.id);
+                        if (section.name === 'generatedActs') {
+                            smrData.generatedActs = smr.count || 0;
+                            smrData.generatedTotal = smr.total || 0;
+                        } else if (section.name === 'sentForApproval') {
+                            smrData.sentForApproval = smr.count || 0;
+                        } else if (section.name === 'approvedActs') {
+                            smrData.approvedActs = smr.count || 0;
+                        } else if (section.name === 'rejectedActs') {
+                            smrData.rejectedActs = smr.count || 0;
+                        } else if (section.name === 'signedActs') {
+                            smrData.signedActs = smr.count || 0;
+                        }
                     }
-                }
-            });
-        }
-    });
+                });
+            }
+        });
+    }
     
     return Array.from(smrsMap.values());
 }
@@ -199,13 +265,20 @@ function compareSnapshots(oldSnapshot, newSnapshot) {
             
             if (oldData) {
                 // Объект существует в обоих снимках - сравниваем СМР
+                // Используем составной ключ: buildingId-sectionId-contractorId-smrId
                 const oldSMRs = new Map();
                 (oldData.object.smrs || []).forEach(smr => {
-                    oldSMRs.set(smr.id, smr);
+                    const smrKey = smr.buildingId !== undefined && smr.sectionId !== undefined && smr.contractorId !== undefined
+                        ? `${smr.buildingId}-${smr.sectionId}-${smr.contractorId}-${smr.id}`
+                        : `${smr.id}`;
+                    oldSMRs.set(smrKey, smr);
                 });
                 
                 (obj.smrs || []).forEach(smr => {
-                    const oldSMR = oldSMRs.get(smr.id);
+                    const smrKey = smr.buildingId !== undefined && smr.sectionId !== undefined && smr.contractorId !== undefined
+                        ? `${smr.buildingId}-${smr.sectionId}-${smr.contractorId}-${smr.id}`
+                        : `${smr.id}`;
+                    const oldSMR = oldSMRs.get(smrKey);
                     
                     if (oldSMR) {
                         // СМР существует в обоих снимках - вычисляем изменения
@@ -247,6 +320,13 @@ function compareSnapshots(oldSnapshot, newSnapshot) {
                                 objectName: obj.name,
                                 smrId: smr.id,
                                 smrName: smr.name,
+                                buildingId: smr.buildingId || null,
+                                buildingName: smr.buildingName || null,
+                                sectionId: smr.sectionId || null,
+                                sectionName: smr.sectionName || null,
+                                contractorId: smr.contractorId || null,
+                                contractorName: smr.contractorName || null,
+                                contractorWorkType: smr.contractorWorkType || null,
                                 oldValues: {
                                     generatedActs: oldSMR.generatedActs || 0,
                                     sentForApproval: oldSMR.sentForApproval || 0,
@@ -266,6 +346,22 @@ function compareSnapshots(oldSnapshot, newSnapshot) {
                         }
                     } else {
                         // Новый СМР - добавляем как новое
+                        // Обновляем summary для новых СМР
+                        summary.generatedActs.new += smr.generatedActs || 0;
+                        summary.generatedActs.delta += smr.generatedActs || 0;
+                        
+                        summary.sentForApproval.new += smr.sentForApproval || 0;
+                        summary.sentForApproval.delta += smr.sentForApproval || 0;
+                        
+                        summary.approvedActs.new += smr.approvedActs || 0;
+                        summary.approvedActs.delta += smr.approvedActs || 0;
+                        
+                        summary.rejectedActs.new += smr.rejectedActs || 0;
+                        summary.rejectedActs.delta += smr.rejectedActs || 0;
+                        
+                        summary.signedActs.new += smr.signedActs || 0;
+                        summary.signedActs.delta += smr.signedActs || 0;
+                        
                         changes.push({
                             containerId: container.id,
                             containerName: container.name,
@@ -273,6 +369,13 @@ function compareSnapshots(oldSnapshot, newSnapshot) {
                             objectName: obj.name,
                             smrId: smr.id,
                             smrName: smr.name,
+                            buildingId: smr.buildingId || null,
+                            buildingName: smr.buildingName || null,
+                            sectionId: smr.sectionId || null,
+                            sectionName: smr.sectionName || null,
+                            contractorId: smr.contractorId || null,
+                            contractorName: smr.contractorName || null,
+                            contractorWorkType: smr.contractorWorkType || null,
                             oldValues: null,
                             newValues: {
                                 generatedActs: smr.generatedActs,
@@ -292,9 +395,53 @@ function compareSnapshots(oldSnapshot, newSnapshot) {
                         });
                     }
                 });
+                
+                // Обрабатываем удаленные СМР (есть в старом, но нет в новом)
+                oldSMRs.forEach((oldSMR, smrKey) => {
+                    const foundInNew = Array.from(obj.smrs || []).some(smr => {
+                        const newSmrKey = smr.buildingId !== undefined && smr.sectionId !== undefined && smr.contractorId !== undefined
+                            ? `${smr.buildingId}-${smr.sectionId}-${smr.contractorId}-${smr.id}`
+                            : `${smr.id}`;
+                        return newSmrKey === smrKey;
+                    });
+                    
+                    if (!foundInNew) {
+                        // СМР был удален - учитываем в summary
+                        summary.generatedActs.old += oldSMR.generatedActs || 0;
+                        summary.generatedActs.delta -= oldSMR.generatedActs || 0;
+                        
+                        summary.sentForApproval.old += oldSMR.sentForApproval || 0;
+                        summary.sentForApproval.delta -= oldSMR.sentForApproval || 0;
+                        
+                        summary.approvedActs.old += oldSMR.approvedActs || 0;
+                        summary.approvedActs.delta -= oldSMR.approvedActs || 0;
+                        
+                        summary.rejectedActs.old += oldSMR.rejectedActs || 0;
+                        summary.rejectedActs.delta -= oldSMR.rejectedActs || 0;
+                        
+                        summary.signedActs.old += oldSMR.signedActs || 0;
+                        summary.signedActs.delta -= oldSMR.signedActs || 0;
+                    }
+                });
             } else {
                 // Новый объект - добавляем все его СМР как новые
                 (obj.smrs || []).forEach(smr => {
+                    // Обновляем summary для новых объектов
+                    summary.generatedActs.new += smr.generatedActs || 0;
+                    summary.generatedActs.delta += smr.generatedActs || 0;
+                    
+                    summary.sentForApproval.new += smr.sentForApproval || 0;
+                    summary.sentForApproval.delta += smr.sentForApproval || 0;
+                    
+                    summary.approvedActs.new += smr.approvedActs || 0;
+                    summary.approvedActs.delta += smr.approvedActs || 0;
+                    
+                    summary.rejectedActs.new += smr.rejectedActs || 0;
+                    summary.rejectedActs.delta += smr.rejectedActs || 0;
+                    
+                    summary.signedActs.new += smr.signedActs || 0;
+                    summary.signedActs.delta += smr.signedActs || 0;
+                    
                     changes.push({
                         containerId: container.id,
                         containerName: container.name,
@@ -302,6 +449,13 @@ function compareSnapshots(oldSnapshot, newSnapshot) {
                         objectName: obj.name,
                         smrId: smr.id,
                         smrName: smr.name,
+                        buildingId: smr.buildingId || null,
+                        buildingName: smr.buildingName || null,
+                        sectionId: smr.sectionId || null,
+                        sectionName: smr.sectionName || null,
+                        contractorId: smr.contractorId || null,
+                        contractorName: smr.contractorName || null,
+                        contractorWorkType: smr.contractorWorkType || null,
                         oldValues: null,
                         newValues: {
                             generatedActs: smr.generatedActs,
@@ -563,7 +717,10 @@ app.post('/api/containers/:containerId/objects', async (req, res) => {
         const newObject = {
             // id не устанавливаем - будет сгенерирован автоматически
             name: req.body.name || '',
-            description: req.body.description || '',
+            queue: req.body.queue || '',
+            building: req.body.building || req.body.description || '', // Для обратной совместимости
+            section: req.body.section || '',
+            description: req.body.building || req.body.description || '', // Сохраняем для обратной совместимости
             status: req.body.status || '',
             photo: req.body.photo || null,
             aikonaObjectId: aikonaObjectIdValue,
@@ -573,6 +730,8 @@ app.post('/api/containers/:containerId/objects', async (req, res) => {
             rejectedActs: Array.isArray(req.body.rejectedActs) ? req.body.rejectedActs : [],
             signedActs: Array.isArray(req.body.signedActs) ? req.body.signedActs : [],
             blockingFactors: Array.isArray(req.body.blockingFactors) ? req.body.blockingFactors : [],
+            contractors: Array.isArray(req.body.contractors) ? req.body.contractors : [],
+            buildings: Array.isArray(req.body.buildings) ? req.body.buildings : [], // Новая структура
             createdAt: new Date().toISOString(),
             updatedAt: new Date().toISOString()
         };
@@ -663,7 +822,10 @@ app.put('/api/containers/:containerId/objects/:objectId', async (req, res) => {
         const updatedObject = {
             ...container.objects[objectIndex],
             name: req.body.name !== undefined ? req.body.name : container.objects[objectIndex].name,
-            description: req.body.description !== undefined ? req.body.description : container.objects[objectIndex].description,
+            queue: req.body.queue !== undefined ? req.body.queue : (container.objects[objectIndex].queue || ''),
+            building: req.body.building !== undefined ? req.body.building : (container.objects[objectIndex].building || container.objects[objectIndex].description || ''),
+            section: req.body.section !== undefined ? req.body.section : (container.objects[objectIndex].section || ''),
+            description: req.body.building !== undefined ? req.body.building : (req.body.description !== undefined ? req.body.description : container.objects[objectIndex].description || ''), // Для обратной совместимости
             status: req.body.status !== undefined ? req.body.status : container.objects[objectIndex].status || '',
             photo: req.body.photo !== undefined ? req.body.photo : container.objects[objectIndex].photo || null,
             aikonaObjectId: aikonaObjectIdValue,
@@ -673,6 +835,8 @@ app.put('/api/containers/:containerId/objects/:objectId', async (req, res) => {
             rejectedActs: Array.isArray(req.body.rejectedActs) ? req.body.rejectedActs : (container.objects[objectIndex].rejectedActs || []),
             signedActs: Array.isArray(req.body.signedActs) ? req.body.signedActs : (container.objects[objectIndex].signedActs || []),
             blockingFactors: Array.isArray(req.body.blockingFactors) ? req.body.blockingFactors : (container.objects[objectIndex].blockingFactors || []),
+            contractors: Array.isArray(req.body.contractors) ? req.body.contractors : (container.objects[objectIndex].contractors || []),
+            buildings: Array.isArray(req.body.buildings) ? req.body.buildings : (container.objects[objectIndex].buildings || []), // Новая структура
             updatedAt: new Date().toISOString()
         };
 
@@ -752,12 +916,19 @@ app.post('/api/containers/:containerId/objects/:objectId/sync-aikona', async (re
         // Синхронизируем данные из Айконы
         const updatedObject = await syncObjectFromAikona(object);
 
+        console.log(`[Server] sync-aikona: Обновленный объект содержит buildings: ${updatedObject.buildings ? updatedObject.buildings.length : 0} корпусов`);
+
         // Обновляем объект в данных
         const objectIndex = container.objects.findIndex(o => o.id === parseInt(req.params.objectId));
+        
+        // Сохраняем обновленный объект с новой структурой buildings
         container.objects[objectIndex] = {
             ...updatedObject,
+            // Сохраняем все поля из обновленного объекта (включая buildings)
             updatedAt: new Date().toISOString()
         };
+        
+        console.log(`[Server] sync-aikona: Объект сохранен. Buildings в сохраненном объекте: ${container.objects[objectIndex].buildings ? container.objects[objectIndex].buildings.length : 0} корпусов`);
 
         if (await dataAdapter.writeData(data)) {
             res.json(updatedObject);
@@ -887,30 +1058,61 @@ app.get('/api/containers/:containerId/stats', async (req, res) => {
         let signedActs = 0;
 
         container.objects.forEach(obj => {
-            const totalGenerated = Array.isArray(obj.generatedActs) 
-                ? obj.generatedActs.reduce((sum, smr) => sum + (smr.count || 0), 0)
-                : 0;
-            const totalSent = Array.isArray(obj.sentForApproval)
-                ? obj.sentForApproval.reduce((sum, smr) => sum + (smr.count || 0), 0)
-                : 0;
+            // Новая структура: buildings -> sections -> contractors[]
+            if (obj.buildings && Array.isArray(obj.buildings) && obj.buildings.length > 0) {
+                obj.buildings.forEach(building => {
+                    if (building.sections && Array.isArray(building.sections)) {
+                        building.sections.forEach(section => {
+                            if (section.contractors && Array.isArray(section.contractors)) {
+                                section.contractors.forEach(contractor => {
+                                    if (contractor.generatedActs && Array.isArray(contractor.generatedActs)) {
+                                        generatedActs += contractor.generatedActs.reduce((sum, smr) => sum + (smr.count || 0), 0);
+                                    }
+                                    if (contractor.sentForApproval && Array.isArray(contractor.sentForApproval)) {
+                                        sentActs += contractor.sentForApproval.reduce((sum, smr) => sum + (smr.count || 0), 0);
+                                    }
+                                    if (contractor.approvedActs && Array.isArray(contractor.approvedActs)) {
+                                        approvedActs += contractor.approvedActs.reduce((sum, smr) => sum + (smr.count || 0), 0);
+                                    }
+                                    if (contractor.rejectedActs && Array.isArray(contractor.rejectedActs)) {
+                                        rejectedActs += contractor.rejectedActs.reduce((sum, smr) => sum + (smr.count || 0), 0);
+                                    }
+                                    if (contractor.signedActs && Array.isArray(contractor.signedActs)) {
+                                        signedActs += contractor.signedActs.reduce((sum, smr) => sum + (smr.count || 0), 0);
+                                    }
+                                });
+                            }
+                        });
+                    }
+                });
+            }
+            // Старая структура: прямые поля объекта
+            else {
+                const totalGenerated = Array.isArray(obj.generatedActs) 
+                    ? obj.generatedActs.reduce((sum, smr) => sum + (smr.count || 0), 0)
+                    : 0;
+                const totalSent = Array.isArray(obj.sentForApproval)
+                    ? obj.sentForApproval.reduce((sum, smr) => sum + (smr.count || 0), 0)
+                    : 0;
 
-            generatedActs += totalGenerated;
-            sentActs += totalSent;
-            
-            const totalApproved = Array.isArray(obj.approvedActs) 
-                ? obj.approvedActs.reduce((sum, smr) => sum + (smr.count || 0), 0)
-                : 0;
-            const totalRejected = Array.isArray(obj.rejectedActs)
-                ? obj.rejectedActs.reduce((sum, smr) => sum + (smr.count || 0), 0)
-                : 0;
-            const totalSigned = Array.isArray(obj.signedActs)
-                ? obj.signedActs.reduce((sum, smr) => sum + (smr.count || 0), 0)
-                : 0;
-            
+                generatedActs += totalGenerated;
+                sentActs += totalSent;
+                
+                const totalApproved = Array.isArray(obj.approvedActs) 
+                    ? obj.approvedActs.reduce((sum, smr) => sum + (smr.count || 0), 0)
+                    : 0;
+                const totalRejected = Array.isArray(obj.rejectedActs)
+                    ? obj.rejectedActs.reduce((sum, smr) => sum + (smr.count || 0), 0)
+                    : 0;
+                const totalSigned = Array.isArray(obj.signedActs)
+                    ? obj.signedActs.reduce((sum, smr) => sum + (smr.count || 0), 0)
+                    : 0;
+                
                 approvedActs += totalApproved;
                 rejectedActs += totalRejected;
                 signedActs += totalSigned;
-            });
+            }
+        });
 
             const stats = {
                 totalObjects: container.objects.length,

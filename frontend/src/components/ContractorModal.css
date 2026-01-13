@@ -1,0 +1,122 @@
+/* Используем стили из ObjectModal.css */
+.contractor-modal-content {
+  background-color: white;
+  padding: 30px;
+  border-radius: 12px;
+  width: 100%;
+  max-width: 700px;
+  max-height: 90vh;
+  overflow-y: auto;
+  box-shadow: 0 10px 30px rgba(0,0,0,0.2);
+}
+
+.work-type-badge {
+  display: inline-block;
+  margin-left: 10px;
+  padding: 4px 12px;
+  background: #e3f2fd;
+  color: #1976d2;
+  border-radius: 12px;
+  font-size: 14px;
+  font-weight: 500;
+}
+
+.location-badge {
+  display: inline-block;
+  margin-left: 10px;
+  padding: 4px 12px;
+  background: #fff3cd;
+  color: #856404;
+  border-radius: 12px;
+  font-size: 13px;
+  font-weight: 500;
+  margin-top: 5px;
+}
+
+/* Дополнительные стили для ContractorModal */
+.add-smr-section {
+  display: flex;
+  gap: 10px;
+  margin-top: 15px;
+  padding-top: 15px;
+  border-top: 1px solid #e0e0e0;
+}
+
+.new-smr-input {
+  flex: 1;
+  padding: 10px;
+  border: 1px solid #ddd;
+  border-radius: 6px;
+  font-size: 14px;
+}
+
+.btn-add-smr {
+  background: #28a745;
+  color: white;
+  border: none;
+  padding: 10px 20px;
+  border-radius: 6px;
+  cursor: pointer;
+  font-size: 14px;
+  transition: background 0.2s;
+}
+
+.btn-add-smr:hover {
+  background: #218838;
+}
+
+.modal-footer {
+  display: flex;
+  justify-content: flex-end;
+  gap: 10px;
+  margin-top: 20px;
+  padding-top: 20px;
+  border-top: 1px solid #e0e0e0;
+}
+
+.btn-cancel {
+  background: #6c757d;
+  color: white;
+  border: none;
+  padding: 10px 20px;
+  border-radius: 6px;
+  cursor: pointer;
+  font-size: 14px;
+  transition: background 0.2s;
+}
+
+.btn-cancel:hover {
+  background: #5a6268;
+}
+
+.btn-save {
+  background: #007bff;
+  color: white;
+  border: none;
+  padding: 10px 20px;
+  border-radius: 6px;
+  cursor: pointer;
+  font-size: 14px;
+  transition: background 0.2s;
+}
+
+.btn-save:hover {
+  background: #0056b3;
+}
+
+.add-blocking-factor {
+  display: flex;
+  gap: 10px;
+  margin-top: 10px;
+}
+
+.new-employee-input {
+  flex: 1;
+  padding: 10px;
+  border: 1px solid #ddd;
+  border-radius: 6px;
+  font-size: 14px;
+}
+
+/* Остальные стили наследуются из ObjectModal.css через классы modal, form-section и т.д. */
+

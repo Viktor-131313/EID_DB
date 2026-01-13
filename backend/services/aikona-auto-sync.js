@@ -41,7 +41,7 @@ async function syncAllObjectsFromAikona() {
                     // Синхронизируем объект
                     const updatedObject = await syncObjectFromAikona(object);
                     
-                    // Обновляем объект в данных
+                    // Обновляем объект в данных, сохраняя подрядчиков
                     const containerIndex = containers.findIndex(c => c.id === container.id);
                     if (containerIndex !== -1) {
                         const objectIndex = containers[containerIndex].objects.findIndex(o => o.id === object.id);
@@ -49,6 +49,7 @@ async function syncAllObjectsFromAikona() {
                             containers[containerIndex].objects[objectIndex] = {
                                 ...containers[containerIndex].objects[objectIndex],
                                 ...updatedObject,
+                                contractors: containers[containerIndex].objects[objectIndex].contractors || [], // Сохраняем подрядчиков
                                 updatedAt: new Date().toISOString()
                             };
                         }

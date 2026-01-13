@@ -157,6 +157,27 @@ async function getAllContainers() {
             }
         }
         
+        // Автоматически добавляем колонку contractors, если её нет (миграция)
+        try {
+            await pool.query(`
+                DO $$ 
+                BEGIN
+                    IF NOT EXISTS (
+                        SELECT 1 FROM information_schema.columns 
+                        WHERE table_name = 'objects' 
+                        AND column_name = 'contractors'
+                    ) THEN
+                        ALTER TABLE objects ADD COLUMN contractors JSONB DEFAULT '[]'::jsonb;
+                        RAISE NOTICE 'Column contractors added to objects table';
+                    END IF;
+                END $$;
+            `);
+        } catch (migrationError) {
+            if (!migrationError.message.includes('already exists')) {
+                console.warn('⚠️  Предупреждение при миграции contractors:', migrationError.message);
+            }
+        }
+        
         // Получаем контейнеры, сортируя по display_order
         const containersResult = await pool.query(
             'SELECT id, name, display_order, created_at, updated_at FROM containers ORDER BY display_order, id'
@@ -167,7 +188,7 @@ async function getAllContainers() {
         for (const containerRow of containersResult.rows) {
             // Получаем объекты контейнера
             const objectsResult = await pool.query(
-                `SELECT id, name, description, status, photo, aikona_object_id, blocking_factors, 
+                `SELECT id, name, description, status, photo, aikona_object_id, blocking_factors, contractors,
                         created_at, updated_at 
                  FROM objects 
                  WHERE container_id = $1 
@@ -240,6 +261,7 @@ async function getAllContainers() {
                     rejectedActs: actsByType.rejectedActs || [],
                     signedActs: actsByType.signedActs || [],
                     blockingFactors: objectRow.blocking_factors || [],
+                    contractors: objectRow.contractors || [],
                     createdAt: objectRow.created_at.toISOString(),
                     updatedAt: objectRow.updated_at.toISOString()
                 });
@@ -288,8 +310,8 @@ async function saveContainers(containersData) {
             for (const obj of container.objects || []) {
                 // Вставляем объект
                 const objectResult = await client.query(
-                    `INSERT INTO objects (id, container_id, name, description, status, photo, aikona_object_id, blocking_factors)
-                     VALUES ($1, $2, $3, $4, $5, $6, $7, $8::jsonb)
+                    `INSERT INTO objects (id, container_id, name, description, status, photo, aikona_object_id, blocking_factors, contractors)
+                     VALUES ($1, $2, $3, $4, $5, $6, $7, $8::jsonb, $9::jsonb)
                      RETURNING id`,
                     [
                         obj.id,
@@ -299,7 +321,8 @@ async function saveContainers(containersData) {
                         obj.status || '',
                         obj.photo || null,
                         obj.aikonaObjectId || null,
-                        JSON.stringify(obj.blockingFactors || [])
+                        JSON.stringify(obj.blockingFactors || []),
+                        JSON.stringify(obj.contractors || [])
                     ]
                 );
                 

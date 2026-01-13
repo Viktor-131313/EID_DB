@@ -2,6 +2,8 @@ import React, { useState, useEffect, useCallback } from 'react';
 import './Container.css';
 import ObjectsList from './ObjectsList';
 import ObjectModal from './ObjectModal';
+import ContractorSelectionModal from './ContractorSelectionModal';
+import ContractorModal from './ContractorModal';
 import Tooltip from './Tooltip';
 import SummaryCards from './SummaryCards';
 import ConfirmModal from './ConfirmModal';
@@ -26,7 +28,10 @@ const Container = ({ container, onUpdate, isAuthenticated = false, openObjectId 
   });
   const [loading, setLoading] = useState(true);
   const [modalOpen, setModalOpen] = useState(false);
+  const [contractorSelectionModalOpen, setContractorSelectionModalOpen] = useState(false);
+  const [contractorModalOpen, setContractorModalOpen] = useState(false);
   const [editingObject, setEditingObject] = useState(null);
+  const [selectedContractor, setSelectedContractor] = useState(null);
   const [statsExpanded, setStatsExpanded] = useState(false);
   const [isEditingName, setIsEditingName] = useState(false);
   const [editingName, setEditingName] = useState(container.name);
@@ -45,7 +50,7 @@ const Container = ({ container, onUpdate, isAuthenticated = false, openObjectId 
       const objectToOpen = objects.find(obj => obj.id === openObjectId);
       if (objectToOpen) {
         setEditingObject({ ...objectToOpen, containerId: container.id, id: objectToOpen.id });
-        setModalOpen(true);
+        setContractorSelectionModalOpen(true);
         setHighlightCritical(highlightCriticalOnOpen);
         if (onObjectOpened) {
           onObjectOpened();
@@ -100,7 +105,7 @@ const Container = ({ container, onUpdate, isAuthenticated = false, openObjectId 
 
   const handleEditObject = (object) => {
     setEditingObject({ ...object, containerId: container.id, id: object.id });
-    setModalOpen(true);
+    setContractorSelectionModalOpen(true);
     setHighlightCritical(false); // Обычное открытие - без подсветки
   };
 
@@ -143,8 +148,155 @@ const Container = ({ container, onUpdate, isAuthenticated = false, openObjectId 
 
   const handleCloseModal = () => {
     setModalOpen(false);
+    setContractorSelectionModalOpen(false);
+    setContractorModalOpen(false);
     setEditingObject(null);
+    setSelectedContractor(null);
     setHighlightCritical(false);
+  };
+
+  const handleCloseContractorSelection = () => {
+    setContractorSelectionModalOpen(false);
+    setEditingObject(null);
+  };
+
+  const handleSelectContractor = (contractor) => {
+    setSelectedContractor(contractor);
+    setContractorSelectionModalOpen(false);
+    setContractorModalOpen(true);
+  };
+
+  const handleAddContractor = async (updatedContractors) => {
+    // Обновляем объект с новыми подрядчиками
+    if (editingObject) {
+      const updatedObject = {
+        ...editingObject,
+        contractors: updatedContractors
+      };
+      setEditingObject(updatedObject);
+      
+      // Обновляем объект в списке, чтобы карточка показывала актуальную статистику
+      setObjects(prevObjects => 
+        prevObjects.map(obj => 
+          obj.id === editingObject.id ? updatedObject : obj
+        )
+      );
+    }
+  };
+
+  const handleSaveObjectFromSelection = async (objectData) => {
+    if (!editingObject || !editingObject.id) return;
+    
+    try {
+      const savedObject = await updateContainerObject(container.id, editingObject.id, objectData);
+      // Обновляем объект в состоянии, чтобы модальное окно показывало актуальные данные
+      setEditingObject(savedObject);
+      // Обновляем объект в списке, чтобы карточка показывала актуальную статистику
+      setObjects(prevObjects => 
+        prevObjects.map(obj => 
+          obj.id === editingObject.id ? savedObject : obj
+        )
+      );
+      // Не перезагружаем все данные при автосохранении, только при ручном сохранении
+      // await loadData();
+      if (onUpdate) onUpdate();
+      
+      // Возвращаем сохраненный объект, чтобы модальное окно могло обновить свое состояние
+      return savedObject;
+    } catch (error) {
+      console.error('Error saving object:', error);
+      // При автосохранении не показываем alert, чтобы не мешать пользователю
+      throw error; // Пробрасываем ошибку, чтобы вызывающий код мог обработать
+    }
+  };
+
+  const handleObjectUpdated = (updatedObject) => {
+    // Обновляем editingObject после синхронизации с Айконой
+    setEditingObject(updatedObject);
+    // Обновляем объект в списке
+    setObjects(prevObjects => 
+      prevObjects.map(obj => 
+        obj.id === updatedObject.id ? updatedObject : obj
+      )
+    );
+    // Перезагружаем данные для обновления статистики
+    loadData();
+    if (onUpdate) onUpdate();
+  };
+
+  const handleSaveContractor = async (contractorData) => {
+    if (!editingObject || !selectedContractor) return;
+
+    try {
+      // Обновляем подрядчика в новой структуре (buildings -> sections -> contractors[])
+      const buildingId = selectedContractor._buildingId;
+      const sectionId = selectedContractor._sectionId;
+      const contractorId = selectedContractor.id;
+
+      let updatedBuildings;
+      if (editingObject.buildings && Array.isArray(editingObject.buildings)) {
+        updatedBuildings = editingObject.buildings.map(building => {
+          if (building.id === buildingId) {
+            return {
+              ...building,
+              sections: building.sections.map(section => {
+                if (section.id === sectionId) {
+                  return {
+                    ...section,
+                    contractors: (section.contractors || []).map(contractor => 
+                      contractor.id === contractorId 
+                        ? { ...contractor, ...contractorData }
+                        : contractor
+                    )
+                  };
+                }
+                return section;
+              })
+            };
+          }
+          return building;
+        });
+      } else {
+        // Миграция старой структуры
+        updatedBuildings = [{
+          id: 1,
+          name: editingObject.building || '1',
+          sections: (editingObject.contractors || []).map((contractor, index) => ({
+            id: index + 1,
+            name: contractor.workType || `Секция ${index + 1}`,
+            contractors: contractor.id === selectedContractor.id 
+              ? [{ ...contractor, ...contractorData }]
+              : [contractor]
+          }))
+        }];
+      }
+
+      const updatedObject = {
+        ...editingObject,
+        buildings: updatedBuildings
+      };
+
+      // Сохраняем объект
+      await updateContainerObject(container.id, editingObject.id, updatedObject);
+      
+      // Обновляем editingObject для отображения
+      setEditingObject(updatedObject);
+      
+      setContractorModalOpen(false);
+      setSelectedContractor(null);
+      await loadData();
+      if (onUpdate) onUpdate();
+    } catch (error) {
+      console.error('Error saving contractor:', error);
+      alert('Ошибка сохранения подрядчика');
+    }
+  };
+
+  const handleCloseContractorModal = () => {
+    setContractorModalOpen(false);
+    setSelectedContractor(null);
+    // Возвращаемся к выбору подрядчика
+    setContractorSelectionModalOpen(true);
   };
 
   const handleDoubleClickName = () => {
@@ -288,6 +440,31 @@ const Container = ({ container, onUpdate, isAuthenticated = false, openObjectId 
         <ObjectsList objects={objects} onEditObject={handleEditObject} />
       )}
 
+      {/* Модальное окно выбора подрядчика */}
+      {contractorSelectionModalOpen && editingObject && (
+        <ContractorSelectionModal
+          object={editingObject}
+          onSelectContractor={handleSelectContractor}
+          onClose={handleCloseContractorSelection}
+          isAuthenticated={isAuthenticated}
+          onAddContractor={handleAddContractor}
+          onSaveObject={handleSaveObjectFromSelection}
+          onObjectUpdated={handleObjectUpdated}
+        />
+      )}
+
+      {/* Модальное окно подрядчика */}
+      {contractorModalOpen && selectedContractor && editingObject && (
+        <ContractorModal
+          contractor={selectedContractor}
+          object={editingObject}
+          onSave={handleSaveContractor}
+          onClose={handleCloseContractorModal}
+          isAuthenticated={isAuthenticated}
+        />
+      )}
+
+      {/* Старое модальное окно объекта (для создания новых объектов) */}
       {modalOpen && (
         <ObjectModal
           object={editingObject}

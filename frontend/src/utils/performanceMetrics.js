@@ -10,12 +10,47 @@
 export const calculatePerformanceMetrics = (obj) => {
   let generated = 0;
   let generatedTotal = 0;
-  if (Array.isArray(obj.generatedActs)) {
-    generated = obj.generatedActs.reduce((sum, smr) => sum + (smr.count || 0), 0);
-    generatedTotal = obj.generatedActs.reduce((sum, smr) => sum + (smr.total || 0), 0);
-  } else if (typeof obj.generatedActs === 'number') {
-    generated = obj.generatedActs;
-    generatedTotal = obj.generatedActs;
+  
+  // Новая структура: buildings -> sections -> contractors[]
+  if (obj.buildings && Array.isArray(obj.buildings) && obj.buildings.length > 0) {
+    obj.buildings.forEach(building => {
+      if (building.sections && Array.isArray(building.sections)) {
+        building.sections.forEach(section => {
+          if (section.contractors && Array.isArray(section.contractors)) {
+            section.contractors.forEach(contractor => {
+              if (contractor.generatedActs && Array.isArray(contractor.generatedActs)) {
+                generated += contractor.generatedActs.reduce((sum, smr) => sum + (smr.count || 0), 0);
+                generatedTotal += contractor.generatedActs.reduce((sum, smr) => sum + (smr.total || 0), 0);
+              }
+            });
+          }
+          // Обратная совместимость: если есть contractor (единственный)
+          else if (section.contractor && section.contractor.generatedActs && Array.isArray(section.contractor.generatedActs)) {
+            generated += section.contractor.generatedActs.reduce((sum, smr) => sum + (smr.count || 0), 0);
+            generatedTotal += section.contractor.generatedActs.reduce((sum, smr) => sum + (smr.total || 0), 0);
+          }
+        });
+      }
+    });
+  }
+  // Старая структура: contractors (массив подрядчиков)
+  else if (obj.contractors && Array.isArray(obj.contractors) && obj.contractors.length > 0) {
+    obj.contractors.forEach(contractor => {
+      if (contractor.generatedActs && Array.isArray(contractor.generatedActs)) {
+        generated += contractor.generatedActs.reduce((sum, smr) => sum + (smr.count || 0), 0);
+        generatedTotal += contractor.generatedActs.reduce((sum, smr) => sum + (smr.total || 0), 0);
+      }
+    });
+  } 
+  // Очень старая структура: поля объекта напрямую
+  else {
+    if (Array.isArray(obj.generatedActs)) {
+      generated = obj.generatedActs.reduce((sum, smr) => sum + (smr.count || 0), 0);
+      generatedTotal = obj.generatedActs.reduce((sum, smr) => sum + (smr.total || 0), 0);
+    } else if (typeof obj.generatedActs === 'number') {
+      generated = obj.generatedActs;
+      generatedTotal = obj.generatedActs;
+    }
   }
 
   // Процент готовности: сколько актов создано от принятых работ
@@ -119,6 +154,95 @@ export const calculateCriticalObjects = (containers) => {
     totalObjects,
     criticalPercent: totalObjects > 0 ? Math.round((totalCritical / totalObjects) * 100) : 0
   };
+};
+
+/**
+ * Детальный анализ отставания по корпусам, секциям и подрядчикам
+ * @param {Object} obj - Объект с данными об актах
+ * @returns {Array} Массив объектов с информацией об отставании
+ */
+export const calculateDetailedLag = (obj) => {
+  const lagDetails = [];
+  
+  // Новая структура: buildings -> sections -> contractors[]
+  if (obj.buildings && Array.isArray(obj.buildings) && obj.buildings.length > 0) {
+    obj.buildings.forEach(building => {
+      if (building.sections && Array.isArray(building.sections)) {
+        building.sections.forEach(section => {
+          if (section.contractors && Array.isArray(section.contractors)) {
+            section.contractors.forEach(contractor => {
+              if (contractor.generatedActs && Array.isArray(contractor.generatedActs)) {
+                let contractorGenerated = 0;
+                let contractorGeneratedTotal = 0;
+                
+                contractor.generatedActs.forEach(smr => {
+                  contractorGenerated += smr.count || 0;
+                  contractorGeneratedTotal += smr.total || 0;
+                });
+                
+                const contractorLag = contractorGeneratedTotal - contractorGenerated;
+                if (contractorLag > 0) {
+                  lagDetails.push({
+                    buildingId: building.id,
+                    buildingName: building.name,
+                    sectionId: section.id,
+                    sectionName: section.name,
+                    contractorId: contractor.id,
+                    contractorName: contractor.name,
+                    contractorWorkType: contractor.workType,
+                    lag: contractorLag,
+                    generated: contractorGenerated,
+                    generatedTotal: contractorGeneratedTotal,
+                    readinessPercent: contractorGeneratedTotal > 0 
+                      ? Math.round((contractorGenerated / contractorGeneratedTotal) * 100) 
+                      : 0
+                  });
+                }
+              }
+            });
+          }
+        });
+      }
+    });
+  }
+  // Старая структура: contractors (массив подрядчиков)
+  else if (obj.contractors && Array.isArray(obj.contractors) && obj.contractors.length > 0) {
+    obj.contractors.forEach(contractor => {
+      if (contractor.generatedActs && Array.isArray(contractor.generatedActs)) {
+        let contractorGenerated = 0;
+        let contractorGeneratedTotal = 0;
+        
+        contractor.generatedActs.forEach(smr => {
+          contractorGenerated += smr.count || 0;
+          contractorGeneratedTotal += smr.total || 0;
+        });
+        
+        const contractorLag = contractorGeneratedTotal - contractorGenerated;
+        if (contractorLag > 0) {
+          lagDetails.push({
+            buildingId: null,
+            buildingName: obj.building || obj.description || 'Не указан',
+            sectionId: null,
+            sectionName: contractor.workType || 'Не указана',
+            contractorId: contractor.id,
+            contractorName: contractor.name,
+            contractorWorkType: contractor.workType,
+            lag: contractorLag,
+            generated: contractorGenerated,
+            generatedTotal: contractorGeneratedTotal,
+            readinessPercent: contractorGeneratedTotal > 0 
+              ? Math.round((contractorGenerated / contractorGeneratedTotal) * 100) 
+              : 0
+          });
+        }
+      }
+    });
+  }
+  
+  // Сортируем по убыванию отставания
+  lagDetails.sort((a, b) => b.lag - a.lag);
+  
+  return lagDetails;
 };
 
 
