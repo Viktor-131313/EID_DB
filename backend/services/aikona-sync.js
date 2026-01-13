@@ -70,7 +70,7 @@ function fetchAikonaObjectDataSingle(objectId) {
                 'User-Agent': 'Praktis-ID-Dashboard/1.0',
                 'Connection': 'close' // Отключаем keep-alive для избежания проблем
             },
-            timeout: 120000 // 120 секунд таймаут для больших ответов ER32
+            timeout: 180000 // 180 секунд (3 минуты) таймаут для больших ответов IntegrationObjectInfo
         };
         
         const req = https.request(options, (res) => {
@@ -147,7 +147,7 @@ function fetchAikonaObjectDataSingle(objectId) {
             reject(new Error('API_UNAVAILABLE: TIMEOUT'));
         });
         
-        req.setTimeout(120000); // 120 секунд для больших ответов
+        req.setTimeout(180000); // 180 секунд (3 минуты) для больших ответов
         req.end();
     });
 }

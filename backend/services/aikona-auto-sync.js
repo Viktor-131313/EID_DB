@@ -33,6 +33,11 @@ async function syncAllObjectsFromAikona() {
                 }
                 
                 try {
+                    // Добавляем задержку между запросами (2 секунды), чтобы не перегружать API Айконы
+                    if (syncedCount > 0 || errorCount > 0) {
+                        await new Promise(resolve => setTimeout(resolve, 2000));
+                    }
+                    
                     // Синхронизируем объект
                     const updatedObject = await syncObjectFromAikona(object);
                     
