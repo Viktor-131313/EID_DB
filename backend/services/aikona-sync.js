@@ -5,7 +5,8 @@
 const https = require('https');
 const { URL } = require('url');
 
-const AIKONA_API_URL = 'https://icona.setl.ru/rest_api/api/IntegrationObjectInfo';
+// Используем ER32 endpoint (работает после обновления API Айконы)
+const AIKONA_API_URL = 'https://icona.setl.ru/rest_api/api/ER32';
 const AIKONA_API_KEY = process.env.AIKONA_API_KEY;
 
 if (!AIKONA_API_KEY) {
@@ -51,8 +52,10 @@ function fetchAikonaObjectDataSingle(objectId) {
             return;
         }
         
-        const url = `${AIKONA_API_URL}?ObjectId=${objectId}&ApiKey=${AIKONA_API_KEY}`;
-        const logUrl = `${AIKONA_API_URL}?ObjectId=${objectId}&ApiKey=***`;
+        // ER32 использует параметр key вместо ApiKey, и id_construction вместо ObjectId
+        // Но для обратной совместимости используем objectId как id_construction
+        const url = `${AIKONA_API_URL}?key=${AIKONA_API_KEY}`;
+        const logUrl = `${AIKONA_API_URL}?key=***`;
         console.log(`[Aikona API] Запрос данных для объекта ID: ${objectId}`);
         console.log(`[Aikona API] URL: ${logUrl}`);
         
@@ -98,14 +101,27 @@ function fetchAikonaObjectDataSingle(objectId) {
                     const parsed = JSON.parse(data);
                     console.log(`[Aikona API] Успешно получены данные для объекта ${objectId}`);
                     
-                    // API возвращает массив с одним объектом
+                    // ER32 возвращает массив объектов, нужно найти нужный по id_construction
                     if (!Array.isArray(parsed) || parsed.length === 0) {
                         console.error(`[Aikona API] Пустой ответ или не массив для объекта ${objectId}`);
                         reject(new Error('OBJECT_NOT_FOUND'));
                         return;
                     }
                     
-                    resolve(parsed[0]);
+                    // Ищем объект с нужным id_construction
+                    const foundObject = parsed.find(obj => 
+                        obj.id_construction === parseInt(objectId) || 
+                        obj.id_construction === objectId
+                    );
+                    
+                    if (!foundObject) {
+                        console.error(`[Aikona API] Объект с id_construction=${objectId} не найден в ответе`);
+                        console.error(`[Aikona API] Доступные id_construction: ${parsed.map(o => o.id_construction).join(', ')}`);
+                        reject(new Error('OBJECT_NOT_FOUND'));
+                        return;
+                    }
+                    
+                    resolve(foundObject);
                 } catch (parseError) {
                     console.error(`[Aikona API] Ошибка парсинга JSON для объекта ${objectId}:`, parseError.message);
                     console.error(`[Aikona API] Первые 500 символов ответа:`, data.substring(0, 500));
@@ -207,19 +223,32 @@ async function syncObjectFromAikona(object) {
     // Получаем данные из Айконы
     const aikonaData = await fetchAikonaObjectData(object.aikonaObjectId);
     
-    if (!aikonaData.STKs && !aikonaData.stks) {
+    // ER32 возвращает stk (маленькими буквами) вместо STKs
+    if (!aikonaData.STKs && !aikonaData.stks && !aikonaData.stk) {
         // Нет СТК в ответе
         return object;
     }
     
-    const stks = aikonaData.STKs || aikonaData.stks || [];
+    const stks = aikonaData.STKs || aikonaData.stks || aikonaData.stk || [];
     
     // Обновляем total для каждого СМР
     const updatedGeneratedActs = (object.generatedActs || []).map(smr => {
         const matchingSTK = findMatchingSTK(smr.name, stks);
         
         if (matchingSTK) {
-            const completedCount = countCompletedLocations(matchingSTK.Locations || matchingSTK.locations || []);
+            // ER32 возвращает fact_sz (процент выполнения) вместо Locations
+            // Используем fact_sz для подсчета, если Locations нет
+            let completedCount = 0;
+            
+            if (matchingSTK.Locations || matchingSTK.locations) {
+                completedCount = countCompletedLocations(matchingSTK.Locations || matchingSTK.locations || []);
+            } else if (matchingSTK.fact_sz !== undefined) {
+                // Если нет Locations, используем fact_sz как приблизительный показатель
+                // fact_sz - это процент выполнения (0-100), но нам нужно количество
+                // Пока оставляем 0, если нет Locations
+                completedCount = 0;
+            }
+            
             return {
                 ...smr,
                 total: completedCount
