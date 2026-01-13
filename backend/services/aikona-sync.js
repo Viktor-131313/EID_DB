@@ -71,7 +71,7 @@ function fetchAikonaObjectDataSingle(objectId) {
                 'User-Agent': 'Praktis-ID-Dashboard/1.0',
                 'Connection': 'close' // Отключаем keep-alive для избежания проблем
             },
-            timeout: 30000 // 30 секунд таймаут
+            timeout: 120000 // 120 секунд таймаут для больших ответов ER32
         };
         
         const req = https.request(options, (res) => {
@@ -152,7 +152,7 @@ function fetchAikonaObjectDataSingle(objectId) {
             reject(new Error('API_UNAVAILABLE: TIMEOUT'));
         });
         
-        req.setTimeout(30000);
+        req.setTimeout(120000); // 120 секунд для больших ответов
         req.end();
     });
 }
@@ -191,10 +191,26 @@ function findMatchingSTK(smrName, stks) {
 
 /**
  * Подсчитать количество выполненных локаций (SZCompletion === 100)
- * @param {Array} locations - Массив локаций
+ * Или использовать fact_sz из ER32 API
+ * @param {Array} locations - Массив локаций (если есть)
+ * @param {number|string} factSz - Процент выполнения из fact_sz (для ER32)
  * @returns {number} Количество выполненных локаций
  */
-function countCompletedLocations(locations) {
+function countCompletedLocations(locations, factSz) {
+    // Если есть fact_sz из ER32, используем его для расчета
+    // fact_sz - это процент выполнения (0-100), нужно пересчитать в количество
+    // Но так как мы не знаем общее количество, используем fact_sz как приблизительный показатель
+    // Для точного подсчета нужны Locations
+    
+    if (factSz !== undefined && factSz !== null) {
+        // Если fact_sz = 100, значит все выполнено
+        // Если fact_sz < 100, нужно пересчитать, но без общего количества это сложно
+        // Пока возвращаем округленное значение fact_sz как количество
+        // Это временное решение, пока не будет точной информации о количестве локаций
+        return Math.round(parseFloat(factSz));
+    }
+    
+    // Старый способ - подсчет по Locations
     if (!Array.isArray(locations)) {
         return 0;
     }
@@ -237,16 +253,31 @@ async function syncObjectFromAikona(object) {
         
         if (matchingSTK) {
             // ER32 возвращает fact_sz (процент выполнения) вместо Locations
-            // Используем fact_sz для подсчета, если Locations нет
+            // fact_sz - это процент выполнения СТК (0-100)
+            // Для подсчета количества актов используем fact_sz напрямую
+            // Если fact_sz = 100, значит все выполнено (total = 100)
+            // Если fact_sz < 100, это процент от общего количества
+            
             let completedCount = 0;
             
+            // Приоритет: Locations (старый API) > fact_sz (ER32)
             if (matchingSTK.Locations || matchingSTK.locations) {
                 completedCount = countCompletedLocations(matchingSTK.Locations || matchingSTK.locations || []);
-            } else if (matchingSTK.fact_sz !== undefined) {
-                // Если нет Locations, используем fact_sz как приблизительный показатель
-                // fact_sz - это процент выполнения (0-100), но нам нужно количество
-                // Пока оставляем 0, если нет Locations
-                completedCount = 0;
+            } else if (matchingSTK.fact_sz !== undefined && matchingSTK.fact_sz !== null) {
+                // ER32: используем fact_sz как количество выполненных актов
+                // fact_sz уже в процентах, но нам нужно абсолютное значение
+                // Если у нас есть smr.total (общее количество), то можно пересчитать
+                // Но пока используем fact_sz напрямую как приблизительное значение
+                const factSz = parseFloat(matchingSTK.fact_sz);
+                
+                // Если есть общее количество в smr.total, пересчитываем
+                if (smr.total && smr.total > 0) {
+                    completedCount = Math.round((factSz / 100) * smr.total);
+                } else {
+                    // Если нет общего количества, используем fact_sz как есть
+                    // (это будет процент, но лучше чем ничего)
+                    completedCount = Math.round(factSz);
+                }
             }
             
             return {
