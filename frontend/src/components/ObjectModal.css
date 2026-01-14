@@ -196,7 +196,6 @@
 .smr-columns-header {
   display: flex;
   align-items: center;
-  justify-content: space-between;
   padding: 8px 10px;
   background-color: #f8f9fa;
   border-bottom: 2px solid #e1e5eb;
@@ -209,38 +208,64 @@
   text-transform: uppercase;
 }
 
+/* Заголовок "СМР" занимает оставшееся пространство */
 .smr-column-header-name {
   flex: 1;
+  margin-right: auto;
+}
+
+.smr-column-header-name {
+  flex: 1;
+  margin-right: auto;
 }
 
 .smr-column-header-count {
-  width: 100px;
+  width: 80px;
+  min-width: 80px;
+  max-width: 80px;
   text-align: right;
+  flex-shrink: 0;
+  margin-left: auto; /* Прижимаем группу заголовков справа к правому краю */
 }
 
 .smr-column-header-separator {
   width: 30px;
+  min-width: 30px;
+  max-width: 30px;
   text-align: center;
   color: transparent;
   user-select: none;
+  flex-shrink: 0;
 }
 
 .smr-column-header-total {
-  width: 100px;
+  width: 80px;
+  min-width: 80px;
+  max-width: 80px;
   text-align: right;
+  flex-shrink: 0;
 }
 
 /* СМР элементы */
 .smr-item {
   display: flex;
   align-items: center;
-  justify-content: space-between;
   padding: 10px;
   border-bottom: 1px solid #f0f0f0;
   gap: 10px;
   border-radius: 6px;
   cursor: pointer;
   transition: background-color 0.2s;
+}
+
+/* Группа элементов справа (PRAKTIS ID, "из", СЗ Icona) */
+.smr-item > .smr-label ~ * {
+  margin-left: 0;
+}
+
+/* Прижимаем группу справа к правому краю */
+.smr-item > input.smr-input:first-of-type {
+  margin-left: auto;
 }
 
 .smr-item:hover {
@@ -254,6 +279,32 @@
 
 .smr-item:last-child {
   border-bottom: none;
+}
+
+/* Фиксируем ширину для колонок в строках СМР */
+.smr-item > .smr-label {
+  flex: 1;
+  min-width: 0;
+  overflow: hidden;
+  text-overflow: ellipsis;
+}
+
+.smr-item > input.smr-input {
+  flex-shrink: 0;
+}
+
+/* Первый инпут (PRAKTIS ID) - прижимаем группу справа к правому краю */
+.smr-item > input.smr-input:first-of-type {
+  margin-left: auto;
+}
+
+.smr-item > .smr-input-separator {
+  flex-shrink: 0;
+  white-space: nowrap;
+  width: 30px;
+  min-width: 30px;
+  max-width: 30px;
+  text-align: center;
 }
 
 .smr-label {
@@ -285,12 +336,16 @@
 }
 
 .smr-input {
-  width: 100px;
-  padding: 8px;
+  width: 80px;
+  min-width: 80px;
+  max-width: 80px;
+  padding: 6px 8px;
   border: 1px solid #ddd;
   border-radius: 6px;
   font-size: 14px;
   text-align: right;
+  flex-shrink: 0;
+  box-sizing: border-box;
 }
 
 .smr-input-separator {
