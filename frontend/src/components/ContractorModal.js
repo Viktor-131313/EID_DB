@@ -120,10 +120,40 @@ const ContractorModal = ({ contractor, object, onSave, onClose, isAuthenticated 
   const updateSentCount = (id, count) => {
     setFormData(prev => {
       if (!Array.isArray(prev.sentForApproval)) return prev;
+      
+      const newSentCount = parseInt(count) || 0;
+      
+      // Находим текущие значения approved и rejected для этого СМР
+      const approvedSMR = prev.approvedActs.find(s => s.id === id);
+      const approvedCount = approvedSMR?.count || 0;
+      const rejectedSMR = prev.rejectedActs.find(s => s.id === id);
+      const rejectedCount = rejectedSMR?.count || 0;
+      
+      // Если новое значение sent меньше, чем approved + rejected, нужно скорректировать
+      let adjustedApproved = approvedCount;
+      let adjustedRejected = rejectedCount;
+      
+      if (approvedCount + rejectedCount > newSentCount) {
+        // Если сумма превышает новое значение sent, пропорционально уменьшаем
+        // Сначала пытаемся сохранить пропорции, но если не получается - приоритет у approved
+        if (approvedCount <= newSentCount) {
+          adjustedRejected = Math.max(0, newSentCount - approvedCount);
+        } else {
+          adjustedApproved = newSentCount;
+          adjustedRejected = 0;
+        }
+      }
+      
       return {
         ...prev,
         sentForApproval: prev.sentForApproval.map(smr =>
-          smr.id === id ? { ...smr, count: parseInt(count) || 0 } : smr
+          smr.id === id ? { ...smr, count: newSentCount } : smr
+        ),
+        approvedActs: prev.approvedActs.map(smr =>
+          smr.id === id ? { ...smr, count: adjustedApproved } : smr
+        ),
+        rejectedActs: prev.rejectedActs.map(smr =>
+          smr.id === id ? { ...smr, count: adjustedRejected } : smr
         )
       };
     });
@@ -132,10 +162,35 @@ const ContractorModal = ({ contractor, object, onSave, onClose, isAuthenticated 
   const updateApprovedCount = (id, count) => {
     setFormData(prev => {
       if (!Array.isArray(prev.approvedActs)) return prev;
+      
+      const newCount = parseInt(count) || 0;
+      
+      // Находим количество отправленных на согласование для этого СМР
+      const sentSMR = prev.sentForApproval.find(s => s.id === id);
+      const sentCount = sentSMR?.count || 0;
+      
+      // Находим текущее количество отклоненных для этого СМР
+      const rejectedSMR = prev.rejectedActs.find(s => s.id === id);
+      const rejectedCount = rejectedSMR?.count || 0;
+      
+      // Валидация: approved + rejected не может быть больше, чем sent
+      const maxApproved = Math.max(0, sentCount - rejectedCount);
+      const validatedCount = Math.min(newCount, maxApproved);
+      
+      // Находим текущее количество подписанных для этого СМР
+      const signedSMR = prev.signedActs.find(s => s.id === id);
+      const signedCount = signedSMR?.count || 0;
+      
+      // Если новое значение approved меньше, чем signed, нужно скорректировать signed
+      const adjustedSigned = Math.min(signedCount, validatedCount);
+      
       return {
         ...prev,
         approvedActs: prev.approvedActs.map(smr =>
-          smr.id === id ? { ...smr, count: parseInt(count) || 0 } : smr
+          smr.id === id ? { ...smr, count: validatedCount } : smr
+        ),
+        signedActs: prev.signedActs.map(smr =>
+          smr.id === id ? { ...smr, count: adjustedSigned } : smr
         )
       };
     });
@@ -144,10 +199,25 @@ const ContractorModal = ({ contractor, object, onSave, onClose, isAuthenticated 
   const updateRejectedCount = (id, count) => {
     setFormData(prev => {
       if (!Array.isArray(prev.rejectedActs)) return prev;
+      
+      const newCount = parseInt(count) || 0;
+      
+      // Находим количество отправленных на согласование для этого СМР
+      const sentSMR = prev.sentForApproval.find(s => s.id === id);
+      const sentCount = sentSMR?.count || 0;
+      
+      // Находим текущее количество согласованных для этого СМР
+      const approvedSMR = prev.approvedActs.find(s => s.id === id);
+      const approvedCount = approvedSMR?.count || 0;
+      
+      // Валидация: approved + rejected не может быть больше, чем sent
+      const maxRejected = Math.max(0, sentCount - approvedCount);
+      const validatedCount = Math.min(newCount, maxRejected);
+      
       return {
         ...prev,
         rejectedActs: prev.rejectedActs.map(smr =>
-          smr.id === id ? { ...smr, count: parseInt(count) || 0 } : smr
+          smr.id === id ? { ...smr, count: validatedCount } : smr
         )
       };
     });
@@ -156,10 +226,20 @@ const ContractorModal = ({ contractor, object, onSave, onClose, isAuthenticated 
   const updateSignedCount = (id, count) => {
     setFormData(prev => {
       if (!Array.isArray(prev.signedActs)) return prev;
+      
+      const newCount = parseInt(count) || 0;
+      
+      // Находим количество согласованных для этого СМР
+      const approvedSMR = prev.approvedActs.find(s => s.id === id);
+      const approvedCount = approvedSMR?.count || 0;
+      
+      // Валидация: signed не может быть больше, чем approved
+      const validatedCount = Math.min(newCount, approvedCount);
+      
       return {
         ...prev,
         signedActs: prev.signedActs.map(smr =>
-          smr.id === id ? { ...smr, count: parseInt(count) || 0 } : smr
+          smr.id === id ? { ...smr, count: validatedCount } : smr
         )
       };
     });
@@ -514,7 +594,34 @@ const ContractorModal = ({ contractor, object, onSave, onClose, isAuthenticated 
                     onChange={(e) => updateCountFn(smr.id, e.target.value)}
                     onClick={(e) => e.stopPropagation()}
                     min="0"
-                    max={listType === 'sent' ? formData.generatedActs.find(s => s.id === smr.id)?.count || 0 : undefined}
+                    max={(() => {
+                      // Для "отправлено на согласование" - ограничение по сгенерированным
+                      if (listType === 'sent') {
+                        return formData.generatedActs.find(s => s.id === smr.id)?.count || 0;
+                      }
+                      // Для "согласовано" - ограничение: sent - rejected
+                      if (listType === 'approved') {
+                        const sentSMR = formData.sentForApproval.find(s => s.id === smr.id);
+                        const sentCount = sentSMR?.count || 0;
+                        const rejectedSMR = formData.rejectedActs.find(s => s.id === smr.id);
+                        const rejectedCount = rejectedSMR?.count || 0;
+                        return Math.max(0, sentCount - rejectedCount);
+                      }
+                      // Для "отклонено" - ограничение: sent - approved
+                      if (listType === 'rejected') {
+                        const sentSMR = formData.sentForApproval.find(s => s.id === smr.id);
+                        const sentCount = sentSMR?.count || 0;
+                        const approvedSMR = formData.approvedActs.find(s => s.id === smr.id);
+                        const approvedCount = approvedSMR?.count || 0;
+                        return Math.max(0, sentCount - approvedCount);
+                      }
+                      // Для "подписано" - ограничение по согласованным
+                      if (listType === 'signed') {
+                        const approvedSMR = formData.approvedActs.find(s => s.id === smr.id);
+                        return approvedSMR?.count || 0;
+                      }
+                      return undefined;
+                    })()}
                     disabled={!isAuthenticated}
                     readOnly={!isAuthenticated}
                   />
