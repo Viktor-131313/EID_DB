@@ -949,6 +949,37 @@ const createSingleObjectPage = async (container) => {
       card.style.overflow = 'visible'; // Изменено с 'hidden' на 'visible' для видимости всей информации
       card.style.flexShrink = '0';
       card.style.display = 'inline-block';
+      
+      // Скрываем готовность актов и отставание
+      const performanceMetrics = card.querySelector('.performance-metrics');
+      if (performanceMetrics) {
+        performanceMetrics.style.display = 'none';
+      }
+      
+      const lagDetailsCard = card.querySelector('.lag-details-card');
+      if (lagDetailsCard) {
+        lagDetailsCard.style.display = 'none';
+      }
+      
+      // Убираем проценты из прогресс-баров
+      const progressLabels = card.querySelectorAll('.progress-label span:last-child');
+      progressLabels.forEach(label => {
+        if (label.textContent.includes('%')) {
+          label.style.display = 'none';
+        }
+      });
+      
+      // Убираем проценты из всех статистических строк, но оставляем все строки
+      const statsRow = card.querySelector('.stats-row');
+      if (statsRow) {
+        const statItems = statsRow.querySelectorAll('.stat-item');
+        statItems.forEach(item => {
+          // Убираем проценты из текста, но оставляем все строки
+          const textContent = item.textContent;
+          // Удаляем проценты в скобках, например "(50%)"
+          item.textContent = textContent.replace(/\s*\(\d+%\)/g, '');
+        });
+      }
     });
 
     clone.style.width = '100%';
