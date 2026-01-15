@@ -178,13 +178,66 @@ export const exportDashboardToPDF = async (
       // 4. Лист с задачами для разработки - с НОВОГО ЛИСТА
       // Задачи могут быть разбиты на несколько страниц
       if (tasks && tasks.length > 0) {
+        // Группируем задачи по приоритету для правильной нумерации
+        const criticalTasks = tasks.filter(t => t.priority === 'critical');
+        const nonCriticalTasks = tasks.filter(t => t.priority === 'non-critical' || !t.priority);
+        const userRequestTasks = tasks.filter(t => t.priority === 'user-request');
+        
+        // Объединяем все задачи в правильном порядке для разбиения на страницы
+        const allTasksOrdered = [...criticalTasks, ...nonCriticalTasks, ...userRequestTasks];
+        
         const rowsPerPage = 16;
-        const totalTasksPages = Math.ceil(tasks.length / rowsPerPage);
+        const totalTasksPages = Math.ceil(allTasksOrdered.length / rowsPerPage);
         for (let pageIndex = 0; pageIndex < totalTasksPages; pageIndex++) {
           const startIndex = pageIndex * rowsPerPage;
-          const endIndex = Math.min(startIndex + rowsPerPage, tasks.length);
-          const pageTasks = tasks.slice(startIndex, endIndex);
-          const tasksPage = createSingleTasksPage(pageTasks, pageIndex === 0);
+          const endIndex = Math.min(startIndex + rowsPerPage, allTasksOrdered.length);
+          const pageTasks = allTasksOrdered.slice(startIndex, endIndex);
+          
+          // Вычисляем начальные номера для каждой группы на этой странице
+          // Находим первую задачу каждой группы на странице и вычисляем её глобальный номер в группе
+          let pageCriticalStart = -1;
+          let pageNonCriticalStart = -1;
+          let pageUserRequestStart = -1;
+          
+          // Находим первую задачу каждой группы на этой странице
+          const firstCriticalOnPage = pageTasks.findIndex(t => t.priority === 'critical');
+          const firstNonCriticalOnPage = pageTasks.findIndex(t => t.priority === 'non-critical' || !t.priority);
+          const firstUserRequestOnPage = pageTasks.findIndex(t => t.priority === 'user-request');
+          
+          if (firstCriticalOnPage !== -1) {
+            // Вычисляем глобальный индекс первой критичной задачи на странице
+            const globalCriticalIndex = startIndex + firstCriticalOnPage;
+            if (globalCriticalIndex < criticalTasks.length) {
+              pageCriticalStart = globalCriticalIndex + 1;
+            }
+          }
+          
+          if (firstNonCriticalOnPage !== -1) {
+            // Вычисляем глобальный индекс первой некритичной задачи на странице
+            const globalNonCriticalIndex = startIndex + firstNonCriticalOnPage;
+            if (globalNonCriticalIndex >= criticalTasks.length && 
+                globalNonCriticalIndex < criticalTasks.length + nonCriticalTasks.length) {
+              pageNonCriticalStart = (globalNonCriticalIndex - criticalTasks.length) + 1;
+            }
+          }
+          
+          if (firstUserRequestOnPage !== -1) {
+            // Вычисляем глобальный индекс первой задачи-пожелания на странице
+            const globalUserRequestIndex = startIndex + firstUserRequestOnPage;
+            if (globalUserRequestIndex >= criticalTasks.length + nonCriticalTasks.length) {
+              pageUserRequestStart = (globalUserRequestIndex - criticalTasks.length - nonCriticalTasks.length) + 1;
+            }
+          }
+          
+          const tasksPage = createSingleTasksPage(
+            pageTasks, 
+            pageIndex === 0,
+            {
+              criticalStart: pageCriticalStart,
+              nonCriticalStart: pageNonCriticalStart,
+              userRequestStart: pageUserRequestStart
+            }
+          );
           tasksPage.style.pageBreakBefore = 'always';
           allPagesContainer.appendChild(tasksPage);
           currentPage++;
@@ -1015,7 +1068,8 @@ const createTasksPages = (tasks) => {
 
 // Создание страницы с задачами
 // showTitle - показывать ли заголовок (только на первой странице)
-const createSingleTasksPage = (tasks, showTitle = true) => {
+// numberingStart - объект с начальными номерами для каждой группы { criticalStart, nonCriticalStart, userRequestStart }
+const createSingleTasksPage = (tasks, showTitle = true, numberingStart = { criticalStart: 1, nonCriticalStart: 1, userRequestStart: 1 }) => {
   const page = document.createElement('div');
   page.style.width = '1400px';
   page.style.padding = '20px 10px 40px 10px'; // Минимальные боковые отступы
@@ -1116,6 +1170,7 @@ const createSingleTasksPage = (tasks, showTitle = true) => {
     const tbody = document.createElement('tbody');
     
     // Функция для создания строки задачи
+    // rowNumber - номер строки в блоке (начинается с numberingStart для соответствующей группы)
     const createTaskRow = (task, rowNumber, isEven) => {
       const row = document.createElement('tr');
       row.style.borderBottom = '1px solid #ddd';
@@ -1293,9 +1348,11 @@ const createSingleTasksPage = (tasks, showTitle = true) => {
     };
     
     // Критичные задачи
+    let criticalCounter = numberingStart.criticalStart > 0 ? numberingStart.criticalStart : 1;
     criticalTasks.forEach((task, index) => {
-      const row = createTaskRow(task, index + 1, index % 2 === 0);
+      const row = createTaskRow(task, criticalCounter, index % 2 === 0);
       tbody.appendChild(row);
+      criticalCounter++;
     });
     
     // Пустая строка между критичными и некритичными
@@ -1304,9 +1361,11 @@ const createSingleTasksPage = (tasks, showTitle = true) => {
     }
     
     // Некритичные задачи
+    let nonCriticalCounter = numberingStart.nonCriticalStart > 0 ? numberingStart.nonCriticalStart : 1;
     nonCriticalTasks.forEach((task, index) => {
-      const row = createTaskRow(task, index + 1, (criticalTasks.length + index) % 2 === 0);
+      const row = createTaskRow(task, nonCriticalCounter, (criticalTasks.length + index) % 2 === 0);
       tbody.appendChild(row);
+      nonCriticalCounter++;
     });
     
     // Пустая строка между некритичными и пожеланиями пользователей
@@ -1315,9 +1374,11 @@ const createSingleTasksPage = (tasks, showTitle = true) => {
     }
     
     // Пожелания пользователей
+    let userRequestCounter = numberingStart.userRequestStart > 0 ? numberingStart.userRequestStart : 1;
     userRequestTasks.forEach((task, index) => {
-      const row = createTaskRow(task, index + 1, (criticalTasks.length + nonCriticalTasks.length + index) % 2 === 0);
+      const row = createTaskRow(task, userRequestCounter, (criticalTasks.length + nonCriticalTasks.length + index) % 2 === 0);
       tbody.appendChild(row);
+      userRequestCounter++;
     });
     
     table.appendChild(tbody);
