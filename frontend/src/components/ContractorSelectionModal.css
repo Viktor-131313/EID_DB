@@ -68,6 +68,63 @@
   border-top: 1px solid #e0e0e0;
   display: flex;
   justify-content: flex-end;
+  gap: 10px;
+}
+
+/* Модальное окно добавления подрядчика */
+.add-contractor-modal {
+  background: white;
+  border-radius: 8px;
+  width: 90%;
+  max-width: 500px;
+  box-shadow: 0 4px 20px rgba(0, 0, 0, 0.15);
+  z-index: 10001;
+}
+
+.add-contractor-modal .modal-header {
+  padding: 20px;
+  border-bottom: 1px solid #e0e0e0;
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+}
+
+.add-contractor-modal .modal-header h3 {
+  margin: 0;
+  font-size: 20px;
+  color: #333;
+}
+
+.add-contractor-modal .modal-body {
+  padding: 20px;
+}
+
+.add-contractor-modal .modal-footer {
+  padding: 20px;
+  border-top: 1px solid #e0e0e0;
+  display: flex;
+  justify-content: flex-end;
+  gap: 10px;
+}
+
+.close-modal {
+  background: none;
+  border: none;
+  font-size: 28px;
+  color: #999;
+  cursor: pointer;
+  padding: 0;
+  width: 32px;
+  height: 32px;
+  line-height: 1;
+  transition: color 0.2s;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+}
+
+.close-modal:hover {
+  color: #333;
 }
 
 .contractor-selection-modal-header {
@@ -518,9 +575,9 @@
 }
 
 .sections-list {
-  display: grid;
-  grid-template-columns: repeat(auto-fill, minmax(300px, 1fr));
-  gap: 15px;
+  display: flex;
+  flex-direction: column;
+  gap: 10px;
   margin-top: 15px;
 }
 
@@ -529,8 +586,36 @@
   background: white;
   border: 2px solid #e0e0e0;
   border-radius: 8px;
-  cursor: pointer;
   transition: all 0.2s;
+}
+
+.section-card-content {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  gap: 10px;
+}
+
+.section-name {
+  flex: 1;
+  font-size: 15px;
+  font-weight: 500;
+  color: #333;
+}
+
+.section-edit-form {
+  display: flex;
+  gap: 8px;
+  align-items: center;
+  width: 100%;
+}
+
+.section-edit-form input {
+  flex: 1;
+  padding: 8px 12px;
+  border: 1px solid #ddd;
+  border-radius: 4px;
+  font-size: 14px;
 }
 
 .section-card:hover {
@@ -689,6 +774,21 @@
 .building-actions {
   display: flex;
   gap: 8px;
+}
+
+.building-edit-form {
+  display: flex;
+  gap: 8px;
+  align-items: center;
+  width: 100%;
+}
+
+.building-edit-form input {
+  flex: 1;
+  padding: 8px 12px;
+  border: 1px solid #ddd;
+  border-radius: 4px;
+  font-size: 14px;
 }
 
 .building-sections-count {

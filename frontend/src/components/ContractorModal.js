@@ -685,7 +685,7 @@ const ContractorModal = ({ contractor, object, onSave, onClose, isAuthenticated 
               name="name"
               value={formData.name}
               onChange={handleChange}
-              placeholder="Например: ООО «СК-Монолит»"
+              placeholder="Например: ООО «СетлТех»"
               required
               disabled={!isAuthenticated}
               readOnly={!isAuthenticated}

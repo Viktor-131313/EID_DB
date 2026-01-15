@@ -1,6 +1,9 @@
-import React, { useState, useEffect } from 'react';
+import React, { useState, useEffect, useRef } from 'react';
+import { createPortal } from 'react-dom';
 import './ContractorSelectionModal.css';
 import Tooltip from './Tooltip';
+import ConfirmModal from './ConfirmModal';
+import ToastNotification from './ToastNotification';
 import { syncObjectFromAikona } from '../services/api-containers';
 import { calculateDetailedLag } from '../utils/performanceMetrics';
 
@@ -12,9 +15,86 @@ const ContractorSelectionModal = ({ object, onSelectContractor, onClose, isAuthe
   const [showAddBuilding, setShowAddBuilding] = useState(false);
   const [newSectionName, setNewSectionName] = useState('');
   const [showAddSection, setShowAddSection] = useState(false);
+  const [editingSectionId, setEditingSectionId] = useState(null);
+  const [editingSectionName, setEditingSectionName] = useState('');
+  const [editingBuildingId, setEditingBuildingId] = useState(null);
+  const [editingBuildingName, setEditingBuildingName] = useState('');
   const [syncingAikona, setSyncingAikona] = useState(false);
   const [hasUnsavedChanges, setHasUnsavedChanges] = useState(false);
   const [initialBuildings, setInitialBuildings] = useState([]);
+  const [confirmModal, setConfirmModal] = useState(null);
+  const [toast, setToast] = useState(null);
+  const [showAddContractorModal, setShowAddContractorModal] = useState(false);
+  const [newContractorName, setNewContractorName] = useState('');
+  const [newContractorWorkType, setNewContractorWorkType] = useState('');
+  const [pendingContractorData, setPendingContractorData] = useState(null);
+  const [showCopyContractorModal, setShowCopyContractorModal] = useState(false);
+  const [contractorToCopy, setContractorToCopy] = useState(null);
+  const [copyTargetBuildingId, setCopyTargetBuildingId] = useState(null);
+  const [copyTargetSectionId, setCopyTargetSectionId] = useState(null);
+  const justSavedRef = useRef(false); // Ref для защиты от закрытия сразу после сохранения (не вызывает ререндер)
+  const saveInProgressRef = useRef(false); // Ref для отслеживания процесса сохранения
+  
+  // Перехватываем onClose, чтобы всегда проверять флаг перед закрытием
+  const originalOnCloseRef = useRef(onClose);
+  useEffect(() => {
+    originalOnCloseRef.current = onClose;
+  }, [onClose]);
+  
+  // Отслеживаем изменения объекта - если объект исчез, возможно модальное окно закрывается извне
+  const prevObjectRef = useRef(object);
+  useEffect(() => {
+    if (prevObjectRef.current && !object && (justSavedRef.current || saveInProgressRef.current)) {
+      console.warn('[ContractorSelectionModal] КРИТИЧЕСКОЕ ПРЕДУПРЕЖДЕНИЕ: объект исчез, но только что сохранили!', {
+        justSaved: justSavedRef.current,
+        saveInProgress: saveInProgressRef.current,
+        prevObject: prevObjectRef.current,
+        currentObject: object
+      });
+      // Попытка предотвратить закрытие - но это может не сработать, если родитель уже обновил состояние
+    }
+    prevObjectRef.current = object;
+  }, [object]);
+  
+  // Логируем все попытки закрытия и состояние toast
+  useEffect(() => {
+    if (toast) {
+      console.log('[ContractorSelectionModal] Toast установлен, проверяю видимость через 100ms');
+      setTimeout(() => {
+        const toastElement = document.querySelector('.toast-notification');
+        if (toastElement) {
+          console.log('[ContractorSelectionModal] Toast элемент найден в DOM:', {
+            visible: toastElement.offsetParent !== null,
+            zIndex: window.getComputedStyle(toastElement).zIndex,
+            display: window.getComputedStyle(toastElement).display
+          });
+        } else {
+          console.error('[ContractorSelectionModal] Toast элемент НЕ найден в DOM!');
+        }
+      }, 100);
+    }
+  }, [toast]);
+
+  // Вспомогательная функция для показа модального окна подтверждения
+  const showConfirm = (title, message, confirmText = 'Да', cancelText = 'Отмена', type = 'warning') => {
+    return new Promise((resolve) => {
+      setConfirmModal({
+        title,
+        message,
+        confirmText,
+        cancelText,
+        type,
+        onConfirm: () => {
+          setConfirmModal(null);
+          resolve(true);
+        },
+        onCancel: () => {
+          setConfirmModal(null);
+          resolve(false);
+        }
+      });
+    });
+  };
   
   // Состояния для редактирования объекта
   const [objectData, setObjectData] = useState({
@@ -135,7 +215,7 @@ const ContractorSelectionModal = ({ object, onSelectContractor, onClose, isAuthe
 
   const handleAddBuilding = () => {
     if (!newBuildingName.trim()) {
-      alert('Пожалуйста, введите название корпуса');
+      setToast({ message: 'Пожалуйста, введите название корпуса', type: 'error' });
       return;
     }
 
@@ -153,8 +233,15 @@ const ContractorSelectionModal = ({ object, onSelectContractor, onClose, isAuthe
     setHasUnsavedChanges(true);
   };
 
-  const handleDeleteBuilding = (buildingId) => {
-    if (!window.confirm('Вы уверены, что хотите удалить этот корпус? Все секции и подрядчики в нем будут удалены.')) {
+  const handleDeleteBuilding = async (buildingId) => {
+    const confirmed = await showConfirm(
+      'Удаление корпуса',
+      'Вы уверены, что хотите удалить этот корпус? Все секции и подрядчики в нем будут удалены.',
+      'Да, удалить',
+      'Отмена',
+      'danger'
+    );
+    if (!confirmed) {
       return;
     }
 
@@ -170,9 +257,42 @@ const ContractorSelectionModal = ({ object, onSelectContractor, onClose, isAuthe
     setHasUnsavedChanges(true);
   };
 
+  const handleEditBuilding = (buildingId, currentName) => {
+    setEditingBuildingId(buildingId);
+    setEditingBuildingName(currentName);
+  };
+
+  const handleSaveBuildingName = () => {
+    if (!editingBuildingId || !editingBuildingName.trim()) {
+      setEditingBuildingId(null);
+      setEditingBuildingName('');
+      return;
+    }
+
+    const updatedBuildings = buildings.map(building => {
+      if (building.id === editingBuildingId) {
+        return {
+          ...building,
+          name: editingBuildingName.trim()
+        };
+      }
+      return building;
+    });
+
+    setBuildings(updatedBuildings);
+    setEditingBuildingId(null);
+    setEditingBuildingName('');
+    setHasUnsavedChanges(true);
+  };
+
+  const handleCancelBuildingEdit = () => {
+    setEditingBuildingId(null);
+    setEditingBuildingName('');
+  };
+
   const handleAddSection = () => {
     if (!selectedBuildingId || !newSectionName.trim()) {
-      alert('Пожалуйста, выберите корпус и введите название секции');
+      setToast({ message: 'Пожалуйста, выберите корпус и введите название секции', type: 'error' });
       return;
     }
 
@@ -197,8 +317,15 @@ const ContractorSelectionModal = ({ object, onSelectContractor, onClose, isAuthe
     setHasUnsavedChanges(true);
   };
 
-  const handleDeleteContractor = (buildingId, sectionId, contractorId) => {
-    if (!window.confirm('Вы уверены, что хотите удалить этого подрядчика?')) {
+  const handleDeleteContractor = async (buildingId, sectionId, contractorId) => {
+    const confirmed = await showConfirm(
+      'Удаление подрядчика',
+      'Вы уверены, что хотите удалить этого подрядчика?',
+      'Да, удалить',
+      'Отмена',
+      'danger'
+    );
+    if (!confirmed) {
       return;
     }
 
@@ -224,8 +351,92 @@ const ContractorSelectionModal = ({ object, onSelectContractor, onClose, isAuthe
     setHasUnsavedChanges(true);
   };
 
-  const handleDeleteSection = (buildingId, sectionId) => {
-    if (!window.confirm('Вы уверены, что хотите удалить эту секцию? Все подрядчики в ней будут удалены.')) {
+  const handleCopyContractor = (buildingId, sectionId, contractor) => {
+    setContractorToCopy({ ...contractor, sourceBuildingId: buildingId, sourceSectionId: sectionId });
+    setCopyTargetBuildingId(null);
+    setCopyTargetSectionId(null);
+    setShowCopyContractorModal(true);
+  };
+
+  const handleConfirmCopyContractor = () => {
+    if (!contractorToCopy || !copyTargetBuildingId || !copyTargetSectionId) {
+      setToast({ message: 'Пожалуйста, выберите целевую секцию', type: 'error' });
+      return;
+    }
+
+    // Находим целевую секцию
+    const targetBuilding = buildings.find(b => b.id === copyTargetBuildingId);
+    const targetSection = targetBuilding?.sections.find(s => s.id === copyTargetSectionId);
+
+    if (!targetSection) {
+      setToast({ message: 'Целевая секция не найдена', type: 'error' });
+      return;
+    }
+
+    // Проверяем, не копируем ли в ту же секцию
+    if (contractorToCopy.sourceBuildingId === copyTargetBuildingId && 
+        contractorToCopy.sourceSectionId === copyTargetSectionId) {
+      setToast({ message: 'Нельзя копировать подрядчика в ту же секцию', type: 'error' });
+      return;
+    }
+
+    // Создаем глубокую копию подрядчика со всеми данными
+    const copiedContractor = {
+      id: Date.now(), // Новый ID
+      name: contractorToCopy.name,
+      workType: contractorToCopy.workType,
+      generatedActs: contractorToCopy.generatedActs ? JSON.parse(JSON.stringify(contractorToCopy.generatedActs)) : [],
+      sentForApproval: contractorToCopy.sentForApproval ? JSON.parse(JSON.stringify(contractorToCopy.sentForApproval)) : [],
+      approvedActs: contractorToCopy.approvedActs ? JSON.parse(JSON.stringify(contractorToCopy.approvedActs)) : [],
+      rejectedActs: contractorToCopy.rejectedActs ? JSON.parse(JSON.stringify(contractorToCopy.rejectedActs)) : [],
+      signedActs: contractorToCopy.signedActs ? JSON.parse(JSON.stringify(contractorToCopy.signedActs)) : [],
+      blockingFactors: contractorToCopy.blockingFactors ? JSON.parse(JSON.stringify(contractorToCopy.blockingFactors)) : []
+    };
+
+    // Добавляем подрядчика в целевую секцию
+    const updatedBuildings = buildings.map(building => {
+      if (building.id === copyTargetBuildingId) {
+        return {
+          ...building,
+          sections: building.sections.map(section => {
+            if (section.id === copyTargetSectionId) {
+              return {
+                ...section,
+                contractors: [...(section.contractors || []), copiedContractor]
+              };
+            }
+            return section;
+          })
+        };
+      }
+      return building;
+    });
+
+    setBuildings(updatedBuildings);
+    setHasUnsavedChanges(true);
+    setShowCopyContractorModal(false);
+    setContractorToCopy(null);
+    setCopyTargetBuildingId(null);
+    setCopyTargetSectionId(null);
+    setToast({ message: `Подрядчик "${copiedContractor.name}" скопирован в секцию "${targetSection.name}"`, type: 'success' });
+  };
+
+  const handleCancelCopyContractor = () => {
+    setShowCopyContractorModal(false);
+    setContractorToCopy(null);
+    setCopyTargetBuildingId(null);
+    setCopyTargetSectionId(null);
+  };
+
+  const handleDeleteSection = async (buildingId, sectionId) => {
+    const confirmed = await showConfirm(
+      'Удаление секции',
+      'Вы уверены, что хотите удалить эту секцию? Все подрядчики в ней будут удалены.',
+      'Да, удалить',
+      'Отмена',
+      'danger'
+    );
+    if (!confirmed) {
       return;
     }
 
@@ -249,17 +460,66 @@ const ContractorSelectionModal = ({ object, onSelectContractor, onClose, isAuthe
     setHasUnsavedChanges(true);
   };
 
-  const handleAddContractorToSection = (buildingId, sectionId) => {
-    const contractorName = prompt('Введите название подрядчика:');
-    if (!contractorName || !contractorName.trim()) return;
+  const handleEditSection = (buildingId, sectionId, currentName) => {
+    setEditingSectionId(sectionId);
+    setEditingSectionName(currentName);
+  };
 
-    const workType = prompt('Введите вид работ:');
-    if (!workType || !workType.trim()) return;
+  const handleSaveSectionName = () => {
+    if (!editingSectionId || !editingSectionName.trim()) {
+      setEditingSectionId(null);
+      setEditingSectionName('');
+      return;
+    }
+
+    const updatedBuildings = buildings.map(building => {
+      return {
+        ...building,
+        sections: building.sections.map(section => {
+          if (section.id === editingSectionId) {
+            return {
+              ...section,
+              name: editingSectionName.trim()
+            };
+          }
+          return section;
+        })
+      };
+    });
+
+    setBuildings(updatedBuildings);
+    setEditingSectionId(null);
+    setEditingSectionName('');
+    setHasUnsavedChanges(true);
+  };
+
+  const handleCancelSectionEdit = () => {
+    setEditingSectionId(null);
+    setEditingSectionName('');
+  };
+
+  const handleAddContractorToSection = (buildingId, sectionId) => {
+    // Сохраняем данные для добавления подрядчика
+    setPendingContractorData({ buildingId, sectionId });
+    setNewContractorName('');
+    setNewContractorWorkType('');
+    setShowAddContractorModal(true);
+  };
+
+  const handleConfirmAddContractor = () => {
+    if (!newContractorName.trim() || !newContractorWorkType.trim()) {
+      setToast({ message: 'Пожалуйста, заполните все поля', type: 'error' });
+      return;
+    }
+
+    if (!pendingContractorData) return;
+
+    const { buildingId, sectionId } = pendingContractorData;
 
     const newContractor = {
       id: Date.now(),
-      name: contractorName.trim(),
-      workType: workType.trim(),
+      name: newContractorName.trim(),
+      workType: newContractorWorkType.trim(),
       generatedActs: [],
       sentForApproval: [],
       approvedActs: [],
@@ -288,6 +548,17 @@ const ContractorSelectionModal = ({ object, onSelectContractor, onClose, isAuthe
 
     setBuildings(updatedBuildings);
     setHasUnsavedChanges(true);
+    setShowAddContractorModal(false);
+    setPendingContractorData(null);
+    setNewContractorName('');
+    setNewContractorWorkType('');
+  };
+
+  const handleCancelAddContractor = () => {
+    setShowAddContractorModal(false);
+    setPendingContractorData(null);
+    setNewContractorName('');
+    setNewContractorWorkType('');
   };
 
   const handleSectionClick = (buildingId, sectionId) => {
@@ -309,25 +580,44 @@ const ContractorSelectionModal = ({ object, onSelectContractor, onClose, isAuthe
     // В будущем можно добавить список подрядчиков для выбора
   };
 
-  const handleContractorClick = (buildingId, sectionId, contractor) => {
+  const handleContractorClick = async (buildingId, sectionId, contractor) => {
     // Проверяем наличие несохраненных изменений
     if (hasUnsavedChanges) {
-      const shouldSave = window.confirm('У вас есть несохраненные изменения. Сохранить их перед переходом к подрядчику? Если выберете "Отмена", изменения будут потеряны.');
+      const shouldSave = await showConfirm(
+        'Несохраненные изменения',
+        'У вас есть несохраненные изменения. Сохранить их перед переходом к подрядчику? Если выберете "Отмена", изменения будут потеряны.',
+        'Сохранить',
+        'Отмена',
+        'warning'
+      );
       if (shouldSave) {
         // Сохраняем перед переходом
-        handleSaveObjectClick().then(() => {
+        try {
+          await handleSaveObjectClick();
           proceedToContractor(buildingId, sectionId, contractor);
-        }).catch(() => {
+        } catch {
           // Если сохранение не удалось, спрашиваем еще раз
-          const proceedAnyway = window.confirm('Не удалось сохранить изменения. Перейти к подрядчику без сохранения? Изменения будут потеряны.');
+          const proceedAnyway = await showConfirm(
+            'Ошибка сохранения',
+            'Не удалось сохранить изменения. Перейти к подрядчику без сохранения? Изменения будут потеряны.',
+            'Перейти',
+            'Отмена',
+            'warning'
+          );
           if (proceedAnyway) {
             proceedToContractor(buildingId, sectionId, contractor);
           }
-        });
+        }
         return;
       } else {
         // Пользователь решил не сохранять - предупреждаем
-        const proceedAnyway = window.confirm('Вы уверены? Все несохраненные изменения будут потеряны.');
+        const proceedAnyway = await showConfirm(
+          'Подтверждение',
+          'Вы уверены? Все несохраненные изменения будут потеряны.',
+          'Да, продолжить',
+          'Отмена',
+          'warning'
+        );
         if (!proceedAnyway) {
           return;
         }
@@ -356,30 +646,87 @@ const ContractorSelectionModal = ({ object, onSelectContractor, onClose, isAuthe
     }
   };
 
+  // Обертка для onClose, которая проверяет флаг сохранения
+  const safeOnClose = () => {
+    console.log('[ContractorSelectionModal] safeOnClose вызван', {
+      justSaved: justSavedRef.current,
+      saveInProgress: saveInProgressRef.current,
+      stackTrace: new Error().stack
+    });
+    
+    if (justSavedRef.current || saveInProgressRef.current) {
+      console.log('[ContractorSelectionModal] safeOnClose: БЛОКИРУЮ закрытие, только что сохранили');
+      return;
+    }
+    console.log('[ContractorSelectionModal] safeOnClose: разрешаю закрытие, вызываю onClose');
+    if (originalOnCloseRef.current) {
+      originalOnCloseRef.current();
+    }
+  };
+
   // Обработка закрытия модального окна с проверкой несохраненных изменений
-  const handleClose = () => {
+  const handleClose = async (e) => {
+    // Если только что сохранили или идет процесс сохранения, не закрываем окно
+    if (justSavedRef.current || saveInProgressRef.current) {
+      console.log('[ContractorSelectionModal] handleClose: только что сохранили или идет сохранение, игнорирую закрытие', {
+        justSaved: justSavedRef.current,
+        saveInProgress: saveInProgressRef.current
+      });
+      return;
+    }
+    
+    console.log('[ContractorSelectionModal] handleClose вызван, hasUnsavedChanges:', hasUnsavedChanges);
+    
     if (hasUnsavedChanges) {
-      const shouldSave = window.confirm('У вас есть несохраненные изменения. Сохранить их перед закрытием? Если выберете "Отмена", изменения будут потеряны.');
+      const shouldSave = await showConfirm(
+        'Несохраненные изменения',
+        'У вас есть несохраненные изменения. Сохранить их перед закрытием? Если выберете "Отмена", изменения будут потеряны.',
+        'Сохранить',
+        'Отмена',
+        'warning'
+      );
+      console.log('[ContractorSelectionModal] handleClose: shouldSave =', shouldSave);
+      
       if (shouldSave) {
-        handleSaveObjectClick().then(() => {
-          onClose();
-        }).catch(() => {
+        try {
+          await handleSaveObjectClick();
+          // Не закрываем модальное окно автоматически после сохранения
+          // Пользователь увидит toast и закроет окно сам
+          console.log('[ContractorSelectionModal] handleClose: сохранение успешно, НЕ закрываю модальное окно');
+          return; // ВАЖНО: не вызываем onClose() после сохранения
+        } catch (error) {
+          console.error('[ContractorSelectionModal] handleClose: ошибка сохранения:', error);
           // Если сохранение не удалось, спрашиваем еще раз
-          const closeAnyway = window.confirm('Не удалось сохранить изменения. Закрыть окно без сохранения? Изменения будут потеряны.');
+          const closeAnyway = await showConfirm(
+            'Ошибка сохранения',
+            'Не удалось сохранить изменения. Закрыть окно без сохранения? Изменения будут потеряны.',
+            'Закрыть',
+            'Отмена',
+            'warning'
+          );
           if (closeAnyway) {
-            onClose();
+            console.log('[ContractorSelectionModal] handleClose: пользователь решил закрыть несмотря на ошибку');
+            safeOnClose();
           }
-        });
+        }
         return;
       } else {
         // Пользователь решил не сохранять - предупреждаем
-        const closeAnyway = window.confirm('Вы уверены? Все несохраненные изменения будут потеряны.');
+        const closeAnyway = await showConfirm(
+          'Подтверждение',
+          'Вы уверены? Все несохраненные изменения будут потеряны.',
+          'Да, закрыть',
+          'Отмена',
+          'warning'
+        );
         if (!closeAnyway) {
+          console.log('[ContractorSelectionModal] handleClose: пользователь отменил закрытие');
           return;
         }
       }
     }
-    onClose();
+    console.log('[ContractorSelectionModal] handleClose: закрываю модальное окно');
+    safeOnClose();
   };
 
   const handleObjectFieldChange = (field, value) => {
@@ -390,8 +737,25 @@ const ContractorSelectionModal = ({ object, onSelectContractor, onClose, isAuthe
     setHasUnsavedChanges(true);
   };
 
-  const handleSaveObjectClick = async () => {
+  const handleSaveObjectClick = async (e) => {
+    // Предотвращаем всплытие события, чтобы не закрыть модальное окно
+    if (e) {
+      e.preventDefault();
+      e.stopPropagation();
+    }
+    
     if (!onSaveObject) return;
+    
+    // Блокируем повторные вызовы
+    if (saveInProgressRef.current) {
+      console.log('[ContractorSelectionModal] Сохранение уже в процессе, игнорирую');
+      return;
+    }
+    
+    saveInProgressRef.current = true;
+    justSavedRef.current = true; // Устанавливаем флаг ДО сохранения
+    
+    console.log('[ContractorSelectionModal] handleSaveObjectClick: начинаю сохранение');
     
     try {
       const savedObject = await onSaveObject({
@@ -400,6 +764,8 @@ const ContractorSelectionModal = ({ object, onSelectContractor, onClose, isAuthe
         buildings: buildings
       });
       
+      console.log('[ContractorSelectionModal] handleSaveObjectClick: сохранение успешно');
+      
       // Обновляем начальное состояние после сохранения
       if (savedObject && savedObject.buildings) {
         setInitialBuildings(JSON.parse(JSON.stringify(savedObject.buildings)));
@@ -407,19 +773,33 @@ const ContractorSelectionModal = ({ object, onSelectContractor, onClose, isAuthe
         setInitialBuildings(JSON.parse(JSON.stringify(buildings)));
       }
       setHasUnsavedChanges(false);
-      alert('Объект успешно сохранен');
+      
+      console.log('[ContractorSelectionModal] Показываю toast: Объект успешно сохранен');
+      // Показываем toast сразу, без задержки
+      setToast({ message: 'Объект успешно сохранен', type: 'success' });
+      console.log('[ContractorSelectionModal] Toast установлен, состояние toast:', { message: 'Объект успешно сохранен', type: 'success' });
+      
+      // Снимаем флаг через 2 секунды, чтобы пользователь успел увидеть toast
+      setTimeout(() => {
+        justSavedRef.current = false;
+        saveInProgressRef.current = false;
+        console.log('[ContractorSelectionModal] Флаг justSaved снят, можно закрывать окно');
+      }, 2000);
+      
       return savedObject;
     } catch (error) {
       console.error('Error saving object:', error);
+      justSavedRef.current = false;
+      saveInProgressRef.current = false;
       const errorMessage = error.response?.data?.error || error.message || 'Ошибка сохранения объекта';
-      alert(errorMessage);
+      setToast({ message: errorMessage, type: 'error' });
       throw error;
     }
   };
 
   const handleSyncAikona = async () => {
     if (!object || !object.containerId || !objectData.aikonaObjectId) {
-      alert('Необходимо указать ID объекта в Айконе');
+      setToast({ message: 'Необходимо указать ID объекта в Айконе', type: 'error' });
       return;
     }
 
@@ -460,11 +840,13 @@ const ContractorSelectionModal = ({ object, onSelectContractor, onClose, isAuthe
         });
       }
       
-      alert('Данные успешно синхронизированы из Айконы');
+      console.log('[ContractorSelectionModal] Показываю toast: Данные успешно синхронизированы из Айконы');
+      // Показываем toast сразу, без задержки
+      setToast({ message: 'Данные успешно синхронизированы из Айконы', type: 'success' });
     } catch (error) {
       console.error('Error syncing from Aikona:', error);
       const errorMessage = error.response?.data?.error || error.message || 'Ошибка синхронизации';
-      alert(errorMessage);
+      setToast({ message: errorMessage, type: 'error' });
     } finally {
       setSyncingAikona(false);
     }
@@ -474,7 +856,20 @@ const ContractorSelectionModal = ({ object, onSelectContractor, onClose, isAuthe
   const selectedSection = selectedBuilding?.sections.find(s => s.id === selectedSectionId);
 
   return (
-    <div className="contractor-selection-modal-backdrop" onClick={handleClose}>
+    <div 
+      className="contractor-selection-modal-backdrop" 
+      onClick={(e) => {
+        // Если только что сохранили или идет сохранение, не закрываем окно
+        if (justSavedRef.current || saveInProgressRef.current) {
+          console.log('[ContractorSelectionModal] backdrop click: блокирую закрытие', {
+            justSaved: justSavedRef.current,
+            saveInProgress: saveInProgressRef.current
+          });
+          return;
+        }
+        handleClose(e);
+      }}
+    >
       <div className="contractor-selection-modal" onClick={(e) => e.stopPropagation()}>
         <div className="modal-header">
           <h2>
@@ -485,7 +880,11 @@ const ContractorSelectionModal = ({ object, onSelectContractor, onClose, isAuthe
               </span>
             )}
           </h2>
-          <button className="modal-close" onClick={handleClose}>
+          <button className="modal-close" onClick={(e) => {
+            e.preventDefault();
+            e.stopPropagation();
+            handleClose(e);
+          }}>
             <i className="fas fa-times"></i>
           </button>
         </div>
@@ -668,7 +1067,15 @@ const ContractorSelectionModal = ({ object, onSelectContractor, onClose, isAuthe
 
             {isAuthenticated && (
               <div className="form-group">
-                <button type="button" className="btn-save-object" onClick={handleSaveObjectClick}>
+                <button 
+                  type="button" 
+                  className="btn-save-object" 
+                  onClick={(e) => {
+                    e.preventDefault();
+                    e.stopPropagation();
+                    handleSaveObjectClick(e);
+                  }}
+                >
                   Сохранить изменения объекта
                 </button>
               </div>
@@ -813,20 +1220,70 @@ const ContractorSelectionModal = ({ object, onSelectContractor, onClose, isAuthe
                     style={{ cursor: 'pointer' }}
                   >
                     <div className="building-item-header">
-                      <span className="building-name">Корпус {building.name}</span>
-                      {isAuthenticated && (
-                        <div className="building-actions">
-                          <button
-                            className="btn btn-danger btn-small"
+                      {editingBuildingId === building.id ? (
+                        <div className="building-edit-form">
+                          <input
+                            type="text"
+                            className="form-input"
+                            value={editingBuildingName}
+                            onChange={(e) => setEditingBuildingName(e.target.value)}
+                            onKeyDown={(e) => {
+                              if (e.key === 'Enter') {
+                                handleSaveBuildingName();
+                              } else if (e.key === 'Escape') {
+                                handleCancelBuildingEdit();
+                              }
+                            }}
+                            onClick={(e) => e.stopPropagation()}
+                            autoFocus
+                          />
+                          <button 
+                            className="btn btn-primary btn-small"
                             onClick={(e) => {
                               e.stopPropagation();
-                              handleDeleteBuilding(building.id);
+                              handleSaveBuildingName();
                             }}
-                            title="Удалить корпус"
                           >
-                            <i className="fas fa-trash"></i>
+                            <i className="fas fa-check"></i>
+                          </button>
+                          <button 
+                            className="btn btn-secondary btn-small"
+                            onClick={(e) => {
+                              e.stopPropagation();
+                              handleCancelBuildingEdit();
+                            }}
+                          >
+                            <i className="fas fa-times"></i>
                           </button>
                         </div>
+                      ) : (
+                        <>
+                          <span className="building-name">Корпус {building.name}</span>
+                          {isAuthenticated && (
+                            <div className="building-actions">
+                              <button
+                                className="btn btn-small btn-secondary"
+                                onClick={(e) => {
+                                  e.stopPropagation();
+                                  handleEditBuilding(building.id, building.name);
+                                }}
+                                title="Редактировать название корпуса"
+                              >
+                                <i className="fas fa-edit"></i>
+                              </button>
+                              <button
+                                className="btn btn-danger btn-small"
+                                onClick={(e) => {
+                                  e.stopPropagation();
+                                  handleDeleteBuilding(building.id);
+                                }}
+                                title="Удалить корпус"
+                              >
+                                <i className="fas fa-trash"></i>
+                              </button>
+                            </div>
+                          )}
+                        </>
                       )}
                     </div>
                     {building.sections && building.sections.length > 0 && (
@@ -891,24 +1348,78 @@ const ContractorSelectionModal = ({ object, onSelectContractor, onClose, isAuthe
                   </div>
                 )}
 
-                {/* Выбор секции */}
+                {/* Список секций с возможностью редактирования и удаления */}
                 {selectedBuilding.sections && selectedBuilding.sections.length > 0 && (
-                  <div className="form-group">
-                    <label className="form-label">Выберите секцию</label>
-                    <select
-                      className="form-input"
-                      value={selectedSectionId || ''}
-                      onChange={(e) => {
-                        setSelectedSectionId(e.target.value ? parseInt(e.target.value) : null);
-                      }}
-                    >
-                      <option value="">-- Выберите секцию --</option>
-                      {selectedBuilding.sections.map(section => (
-                        <option key={section.id} value={section.id}>
-                          Секция {section.name} ({section.contractors?.length || 0} подрядчиков)
-                        </option>
-                      ))}
-                    </select>
+                  <div className="sections-list">
+                    <label className="form-label">Секции корпуса {selectedBuilding.name}</label>
+                    {selectedBuilding.sections.map(section => (
+                      <div key={section.id} className="section-card">
+                        {editingSectionId === section.id ? (
+                          <div className="section-edit-form">
+                            <input
+                              type="text"
+                              className="form-input"
+                              value={editingSectionName}
+                              onChange={(e) => setEditingSectionName(e.target.value)}
+                              onKeyDown={(e) => {
+                                if (e.key === 'Enter') {
+                                  handleSaveSectionName();
+                                } else if (e.key === 'Escape') {
+                                  handleCancelSectionEdit();
+                                }
+                              }}
+                              autoFocus
+                            />
+                            <button 
+                              className="btn btn-primary btn-small"
+                              onClick={handleSaveSectionName}
+                            >
+                              <i className="fas fa-check"></i>
+                            </button>
+                            <button 
+                              className="btn btn-secondary btn-small"
+                              onClick={handleCancelSectionEdit}
+                            >
+                              <i className="fas fa-times"></i>
+                            </button>
+                          </div>
+                        ) : (
+                          <div className="section-card-content">
+                            <div 
+                              className="section-name"
+                              onClick={() => setSelectedSectionId(selectedSectionId === section.id ? null : section.id)}
+                              style={{ cursor: 'pointer', flex: 1 }}
+                            >
+                              Секция {section.name} ({section.contractors?.length || 0} подрядчиков)
+                            </div>
+                            {isAuthenticated && (
+                              <div className="section-actions">
+                                <button
+                                  className="btn btn-small btn-secondary"
+                                  onClick={(e) => {
+                                    e.stopPropagation();
+                                    handleEditSection(selectedBuilding.id, section.id, section.name);
+                                  }}
+                                  title="Редактировать название секции"
+                                >
+                                  <i className="fas fa-edit"></i>
+                                </button>
+                                <button
+                                  className="btn btn-small btn-danger"
+                                  onClick={(e) => {
+                                    e.stopPropagation();
+                                    handleDeleteSection(selectedBuilding.id, section.id);
+                                  }}
+                                  title="Удалить секцию"
+                                >
+                                  <i className="fas fa-trash"></i>
+                                </button>
+                              </div>
+                            )}
+                          </div>
+                        )}
+                      </div>
+                    ))}
                   </div>
                 )}
 
@@ -962,16 +1473,29 @@ const ContractorSelectionModal = ({ object, onSelectContractor, onClose, isAuthe
                                 <span className="contractor-name">{contractor.name}</span>
                                 <span className="contractor-work-type">{contractor.workType}</span>
                                 {isAuthenticated && (
-                                  <button
-                                    className="btn btn-danger btn-tiny"
-                                    onClick={(e) => {
-                                      e.stopPropagation();
-                                      handleDeleteContractor(selectedBuilding.id, selectedSection.id, contractor.id);
-                                    }}
-                                    title="Удалить подрядчика"
-                                  >
-                                    <i className="fas fa-times"></i>
-                                  </button>
+                                  <div style={{ display: 'flex', gap: '5px' }}>
+                                    <button
+                                      className="btn btn-primary btn-tiny"
+                                      onClick={(e) => {
+                                        e.stopPropagation();
+                                        handleCopyContractor(selectedBuilding.id, selectedSection.id, contractor);
+                                      }}
+                                      title="Копировать подрядчика"
+                                      style={{ backgroundColor: '#3498db' }}
+                                    >
+                                      <i className="fas fa-copy"></i>
+                                    </button>
+                                    <button
+                                      className="btn btn-danger btn-tiny"
+                                      onClick={(e) => {
+                                        e.stopPropagation();
+                                        handleDeleteContractor(selectedBuilding.id, selectedSection.id, contractor.id);
+                                      }}
+                                      title="Удалить подрядчика"
+                                    >
+                                      <i className="fas fa-times"></i>
+                                    </button>
+                                  </div>
                                 )}
                               </div>
                               <div className="contractor-item-stats">
@@ -1048,7 +1572,11 @@ const ContractorSelectionModal = ({ object, onSelectContractor, onClose, isAuthe
           {hasUnsavedChanges && isAuthenticated && (
             <button 
               className="btn btn-primary"
-              onClick={handleSaveObjectClick}
+              onClick={(e) => {
+                e.preventDefault();
+                e.stopPropagation();
+                handleSaveObjectClick(e);
+              }}
               style={{ backgroundColor: '#ff9800' }}
             >
               <i className="fas fa-save"></i> Сохранить изменения
@@ -1056,6 +1584,185 @@ const ContractorSelectionModal = ({ object, onSelectContractor, onClose, isAuthe
           )}
         </div>
       </div>
+
+      {/* Модальное окно подтверждения */}
+      {confirmModal && (
+        <ConfirmModal
+          isOpen={true}
+          title={confirmModal.title}
+          message={confirmModal.message}
+          onConfirm={confirmModal.onConfirm}
+          onCancel={confirmModal.onCancel}
+          confirmText={confirmModal.confirmText}
+          cancelText={confirmModal.cancelText}
+          type={confirmModal.type}
+        />
+      )}
+
+      {/* Модальное окно добавления подрядчика */}
+      {showAddContractorModal && (
+        <div className="contractor-selection-modal-backdrop" onClick={handleCancelAddContractor}>
+          <div className="add-contractor-modal" onClick={(e) => e.stopPropagation()}>
+            <div className="modal-header">
+              <h3>Добавить подрядчика</h3>
+              <button className="close-modal" onClick={handleCancelAddContractor}>&times;</button>
+            </div>
+            <div className="modal-body">
+              <div className="form-group">
+                <label className="form-label" htmlFor="contractorName">Название подрядчика</label>
+                <input
+                  type="text"
+                  className="form-input"
+                  id="contractorName"
+                  value={newContractorName}
+                  onChange={(e) => setNewContractorName(e.target.value)}
+                  placeholder="Например: ООО «СетлТех»"
+                  onKeyDown={(e) => {
+                    if (e.key === 'Enter') {
+                      e.preventDefault();
+                      const workTypeInput = document.getElementById('contractorWorkType');
+                      if (workTypeInput) {
+                        workTypeInput.focus();
+                      }
+                    } else if (e.key === 'Escape') {
+                      handleCancelAddContractor();
+                    }
+                  }}
+                  autoFocus
+                />
+              </div>
+              <div className="form-group">
+                <label className="form-label" htmlFor="contractorWorkType">Вид работ</label>
+                <input
+                  type="text"
+                  className="form-input"
+                  id="contractorWorkType"
+                  value={newContractorWorkType}
+                  onChange={(e) => setNewContractorWorkType(e.target.value)}
+                  placeholder="Например: ОВ и ВК, Кладка"
+                  onKeyDown={(e) => {
+                    if (e.key === 'Enter') {
+                      e.preventDefault();
+                      handleConfirmAddContractor();
+                    } else if (e.key === 'Escape') {
+                      handleCancelAddContractor();
+                    }
+                  }}
+                />
+              </div>
+            </div>
+            <div className="modal-footer">
+              <button className="btn btn-secondary" onClick={handleCancelAddContractor}>
+                Отмена
+              </button>
+              <button className="btn btn-primary" onClick={handleConfirmAddContractor}>
+                Добавить
+              </button>
+            </div>
+          </div>
+        </div>
+      )}
+
+      {/* Модальное окно копирования подрядчика */}
+      {showCopyContractorModal && contractorToCopy && (
+        <div className="add-contractor-modal-backdrop" onClick={handleCancelCopyContractor}>
+          <div className="add-contractor-modal" onClick={(e) => e.stopPropagation()}>
+            <div className="modal-header">
+              <h3>Копировать подрядчика "{contractorToCopy.name}"</h3>
+              <button className="modal-close" onClick={handleCancelCopyContractor}>
+                <i className="fas fa-times"></i>
+              </button>
+            </div>
+            <div className="modal-body">
+              <div className="form-group">
+                <label className="form-label">Выберите корпус:</label>
+                <select
+                  className="form-input"
+                  value={copyTargetBuildingId || ''}
+                  onChange={(e) => {
+                    setCopyTargetBuildingId(e.target.value ? parseInt(e.target.value) : null);
+                    setCopyTargetSectionId(null); // Сбрасываем выбор секции при смене корпуса
+                  }}
+                >
+                  <option value="">-- Выберите корпус --</option>
+                  {buildings.map(building => (
+                    <option key={building.id} value={building.id}>
+                      {building.name}
+                    </option>
+                  ))}
+                </select>
+              </div>
+
+              {copyTargetBuildingId && (
+                <div className="form-group">
+                  <label className="form-label">Выберите секцию:</label>
+                  <select
+                    className="form-input"
+                    value={copyTargetSectionId || ''}
+                    onChange={(e) => setCopyTargetSectionId(e.target.value ? parseInt(e.target.value) : null)}
+                  >
+                    <option value="">-- Выберите секцию --</option>
+                    {buildings
+                      .find(b => b.id === copyTargetBuildingId)
+                      ?.sections.map(section => (
+                        <option key={section.id} value={section.id}>
+                          {section.name}
+                        </option>
+                      ))}
+                  </select>
+                </div>
+              )}
+
+              {copyTargetBuildingId && copyTargetSectionId && (
+                <div className="form-group" style={{ marginTop: '15px', padding: '10px', background: '#f0f7ff', borderRadius: '6px' }}>
+                  <p style={{ margin: 0, fontSize: '14px', color: '#2c5aa0' }}>
+                    <i className="fas fa-info-circle" style={{ marginRight: '8px' }}></i>
+                    Подрядчик будет скопирован со всеми СТК и данными в секцию "{buildings.find(b => b.id === copyTargetBuildingId)?.sections.find(s => s.id === copyTargetSectionId)?.name}"
+                  </p>
+                </div>
+              )}
+            </div>
+            <div className="modal-footer">
+              <button className="btn btn-secondary" onClick={handleCancelCopyContractor}>
+                Отмена
+              </button>
+              <button 
+                className="btn btn-primary" 
+                onClick={handleConfirmCopyContractor}
+                disabled={!copyTargetBuildingId || !copyTargetSectionId}
+              >
+                Копировать
+              </button>
+            </div>
+          </div>
+        </div>
+      )}
+
+      {/* Уведомления - выносим через Portal за пределы модального окна */}
+      {toast && (() => {
+        console.log('[ContractorSelectionModal] Рендерю toast через Portal:', toast);
+        const toastElement = createPortal(
+          <ToastNotification
+            message={toast.message}
+            type={toast.type}
+            onClose={() => {
+              console.log('[ContractorSelectionModal] Закрываю toast');
+              setToast(null);
+            }}
+          />,
+          document.body
+        );
+        // Проверяем, что Portal действительно создан
+        setTimeout(() => {
+          const renderedToast = document.querySelector('.toast-notification');
+          if (renderedToast) {
+            console.log('[ContractorSelectionModal] Toast успешно отрендерен в DOM');
+          } else {
+            console.error('[ContractorSelectionModal] ОШИБКА: Toast НЕ найден в DOM после рендеринга!');
+          }
+        }, 50);
+        return toastElement;
+      })()}
     </div>
   );
 };
