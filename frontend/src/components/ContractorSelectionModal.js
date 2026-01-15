@@ -30,8 +30,7 @@ const ContractorSelectionModal = ({ object, onSelectContractor, onClose, isAuthe
   const [pendingContractorData, setPendingContractorData] = useState(null);
   const [showCopyContractorModal, setShowCopyContractorModal] = useState(false);
   const [contractorToCopy, setContractorToCopy] = useState(null);
-  const [copyTargetBuildingId, setCopyTargetBuildingId] = useState(null);
-  const [copyTargetSectionId, setCopyTargetSectionId] = useState(null);
+  const [selectedSectionsForCopy, setSelectedSectionsForCopy] = useState(new Set()); // Set для хранения выбранных секций в формате "buildingId-sectionId"
   const justSavedRef = useRef(false); // Ref для защиты от закрытия сразу после сохранения (не вызывает ререндер)
   const saveInProgressRef = useRef(false); // Ref для отслеживания процесса сохранения
   
@@ -353,36 +352,112 @@ const ContractorSelectionModal = ({ object, onSelectContractor, onClose, isAuthe
 
   const handleCopyContractor = (buildingId, sectionId, contractor) => {
     setContractorToCopy({ ...contractor, sourceBuildingId: buildingId, sourceSectionId: sectionId });
-    setCopyTargetBuildingId(null);
-    setCopyTargetSectionId(null);
+    setSelectedSectionsForCopy(new Set()); // Сбрасываем выбор
     setShowCopyContractorModal(true);
   };
 
+  const handleToggleSectionForCopy = (buildingId, sectionId) => {
+    const sectionKey = `${buildingId}-${sectionId}`;
+    
+    // Проверяем, не пытаемся ли скопировать в ту же секцию
+    if (contractorToCopy && 
+        contractorToCopy.sourceBuildingId === buildingId && 
+        contractorToCopy.sourceSectionId === sectionId) {
+      setToast({ message: 'Нельзя выбрать ту же секцию, где находится подрядчик', type: 'error' });
+      return;
+    }
+
+    // Проверяем, не существует ли уже подрядчик с таким же именем и видом работ в целевой секции
+    const targetBuilding = buildings.find(b => b.id === buildingId);
+    const targetSection = targetBuilding?.sections.find(s => s.id === sectionId);
+    
+    if (targetSection && contractorToCopy) {
+      const existingContractor = targetSection.contractors?.find(c => 
+        c.name === contractorToCopy.name && c.workType === contractorToCopy.workType
+      );
+      
+      if (existingContractor) {
+        setToast({ 
+          message: `В секции "${targetSection.name}" уже есть подрядчик "${contractorToCopy.name}" с видом работ "${contractorToCopy.workType}"`, 
+          type: 'error' 
+        });
+        return;
+      }
+    }
+
+    setSelectedSectionsForCopy(prev => {
+      const newSet = new Set(prev);
+      if (newSet.has(sectionKey)) {
+        newSet.delete(sectionKey);
+      } else {
+        newSet.add(sectionKey);
+      }
+      return newSet;
+    });
+  };
+
+  const handleSelectAllSectionsInBuilding = (buildingId) => {
+    const building = buildings.find(b => b.id === buildingId);
+    if (!building) return;
+
+    const allSectionsInBuilding = building.sections
+      .filter(section => {
+        // Исключаем исходную секцию
+        return !(contractorToCopy && 
+                 contractorToCopy.sourceBuildingId === buildingId && 
+                 contractorToCopy.sourceSectionId === section.id);
+      })
+      .map(section => `${buildingId}-${section.id}`);
+
+    setSelectedSectionsForCopy(prev => {
+      const newSet = new Set(prev);
+      // Проверяем, все ли секции корпуса уже выбраны
+      const allSelected = allSectionsInBuilding.length > 0 && allSectionsInBuilding.every(key => newSet.has(key));
+      
+      if (allSelected) {
+        // Если все выбраны, снимаем выбор со всех секций этого корпуса
+        allSectionsInBuilding.forEach(key => newSet.delete(key));
+      } else {
+        // Если не все выбраны, выбираем все секции этого корпуса
+        allSectionsInBuilding.forEach(key => newSet.add(key));
+      }
+      return newSet;
+    });
+  };
+
   const handleConfirmCopyContractor = () => {
-    if (!contractorToCopy || !copyTargetBuildingId || !copyTargetSectionId) {
-      setToast({ message: 'Пожалуйста, выберите целевую секцию', type: 'error' });
+    if (!contractorToCopy || selectedSectionsForCopy.size === 0) {
+      setToast({ message: 'Пожалуйста, выберите хотя бы одну секцию для копирования', type: 'error' });
       return;
     }
 
-    // Находим целевую секцию
-    const targetBuilding = buildings.find(b => b.id === copyTargetBuildingId);
-    const targetSection = targetBuilding?.sections.find(s => s.id === copyTargetSectionId);
+    // Проверяем, нет ли дубликатов в выбранных секциях
+    const sectionsWithDuplicates = [];
+    selectedSectionsForCopy.forEach(sectionKey => {
+      const [buildingId, sectionId] = sectionKey.split('-').map(Number);
+      const building = buildings.find(b => b.id === buildingId);
+      const section = building?.sections.find(s => s.id === sectionId);
+      
+      if (section && contractorToCopy) {
+        const hasDuplicate = section.contractors?.some(c => 
+          c.name === contractorToCopy.name && c.workType === contractorToCopy.workType
+        );
+        if (hasDuplicate) {
+          sectionsWithDuplicates.push(`${building.name} - ${section.name}`);
+        }
+      }
+    });
 
-    if (!targetSection) {
-      setToast({ message: 'Целевая секция не найдена', type: 'error' });
-      return;
-    }
-
-    // Проверяем, не копируем ли в ту же секцию
-    if (contractorToCopy.sourceBuildingId === copyTargetBuildingId && 
-        contractorToCopy.sourceSectionId === copyTargetSectionId) {
-      setToast({ message: 'Нельзя копировать подрядчика в ту же секцию', type: 'error' });
+    if (sectionsWithDuplicates.length > 0) {
+      setToast({ 
+        message: `В следующих секциях уже есть такой подрядчик: ${sectionsWithDuplicates.join(', ')}`, 
+        type: 'error' 
+      });
       return;
     }
 
     // Создаем глубокую копию подрядчика со всеми данными
-    const copiedContractor = {
-      id: Date.now(), // Новый ID
+    const contractorTemplate = {
       name: contractorToCopy.name,
       workType: contractorToCopy.workType,
       generatedActs: contractorToCopy.generatedActs ? JSON.parse(JSON.stringify(contractorToCopy.generatedActs)) : [],
@@ -393,39 +468,49 @@ const ContractorSelectionModal = ({ object, onSelectContractor, onClose, isAuthe
       blockingFactors: contractorToCopy.blockingFactors ? JSON.parse(JSON.stringify(contractorToCopy.blockingFactors)) : []
     };
 
-    // Добавляем подрядчика в целевую секцию
+    let copiedCount = 0;
+    const copiedSections = [];
+
+    // Копируем подрядчика во все выбранные секции
     const updatedBuildings = buildings.map(building => {
-      if (building.id === copyTargetBuildingId) {
-        return {
-          ...building,
-          sections: building.sections.map(section => {
-            if (section.id === copyTargetSectionId) {
-              return {
-                ...section,
-                contractors: [...(section.contractors || []), copiedContractor]
-              };
-            }
-            return section;
-          })
-        };
-      }
-      return building;
+      return {
+        ...building,
+        sections: building.sections.map(section => {
+          const sectionKey = `${building.id}-${section.id}`;
+          if (selectedSectionsForCopy.has(sectionKey)) {
+            const copiedContractor = {
+              ...contractorTemplate,
+              id: Date.now() + copiedCount // Уникальный ID для каждого копирования
+            };
+            copiedCount++;
+            copiedSections.push(`${building.name} - ${section.name}`);
+            return {
+              ...section,
+              contractors: [...(section.contractors || []), copiedContractor]
+            };
+          }
+          return section;
+        })
+      };
     });
 
     setBuildings(updatedBuildings);
     setHasUnsavedChanges(true);
     setShowCopyContractorModal(false);
     setContractorToCopy(null);
-    setCopyTargetBuildingId(null);
-    setCopyTargetSectionId(null);
-    setToast({ message: `Подрядчик "${copiedContractor.name}" скопирован в секцию "${targetSection.name}"`, type: 'success' });
+    setSelectedSectionsForCopy(new Set());
+    
+    const sectionsList = copiedSections.join(', ');
+    setToast({ 
+      message: `Подрядчик "${contractorTemplate.name}" скопирован в ${copiedCount} секцию(и): ${sectionsList}`, 
+      type: 'success' 
+    });
   };
 
   const handleCancelCopyContractor = () => {
     setShowCopyContractorModal(false);
     setContractorToCopy(null);
-    setCopyTargetBuildingId(null);
-    setCopyTargetSectionId(null);
+    setSelectedSectionsForCopy(new Set());
   };
 
   const handleDeleteSection = async (buildingId, sectionId) => {
@@ -1666,7 +1751,7 @@ const ContractorSelectionModal = ({ object, onSelectContractor, onClose, isAuthe
       {/* Модальное окно копирования подрядчика */}
       {showCopyContractorModal && contractorToCopy && (
         <div className="add-contractor-modal-backdrop" onClick={handleCancelCopyContractor}>
-          <div className="add-contractor-modal" onClick={(e) => e.stopPropagation()}>
+          <div className="add-contractor-modal" onClick={(e) => e.stopPropagation()} style={{ maxWidth: '600px', maxHeight: '80vh', overflow: 'auto' }}>
             <div className="modal-header">
               <h3>Копировать подрядчика "{contractorToCopy.name}"</h3>
               <button className="modal-close" onClick={handleCancelCopyContractor}>
@@ -1674,50 +1759,132 @@ const ContractorSelectionModal = ({ object, onSelectContractor, onClose, isAuthe
               </button>
             </div>
             <div className="modal-body">
-              <div className="form-group">
-                <label className="form-label">Выберите корпус:</label>
-                <select
-                  className="form-input"
-                  value={copyTargetBuildingId || ''}
-                  onChange={(e) => {
-                    setCopyTargetBuildingId(e.target.value ? parseInt(e.target.value) : null);
-                    setCopyTargetSectionId(null); // Сбрасываем выбор секции при смене корпуса
-                  }}
-                >
-                  <option value="">-- Выберите корпус --</option>
-                  {buildings.map(building => (
-                    <option key={building.id} value={building.id}>
-                      {building.name}
-                    </option>
-                  ))}
-                </select>
+              <div className="form-group" style={{ marginBottom: '20px' }}>
+                <p style={{ margin: 0, fontSize: '14px', color: '#666' }}>
+                  <i className="fas fa-info-circle" style={{ marginRight: '8px', color: '#2c5aa0' }}></i>
+                  Выберите секции, в которые нужно скопировать подрядчика со всеми СТК и данными
+                </p>
               </div>
 
-              {copyTargetBuildingId && (
-                <div className="form-group">
-                  <label className="form-label">Выберите секцию:</label>
-                  <select
-                    className="form-input"
-                    value={copyTargetSectionId || ''}
-                    onChange={(e) => setCopyTargetSectionId(e.target.value ? parseInt(e.target.value) : null)}
-                  >
-                    <option value="">-- Выберите секцию --</option>
-                    {buildings
-                      .find(b => b.id === copyTargetBuildingId)
-                      ?.sections.map(section => (
-                        <option key={section.id} value={section.id}>
-                          {section.name}
-                        </option>
-                      ))}
-                  </select>
-                </div>
-              )}
+              <div style={{ maxHeight: '400px', overflowY: 'auto', border: '1px solid #e0e0e0', borderRadius: '6px', padding: '10px' }}>
+                {buildings.map(building => {
+                  const buildingSections = building.sections || [];
+                  const availableSections = buildingSections.filter(section => {
+                    // Исключаем исходную секцию
+                    if (contractorToCopy.sourceBuildingId === building.id && 
+                        contractorToCopy.sourceSectionId === section.id) {
+                      return false;
+                    }
+                    // Исключаем секции, где уже есть такой же подрядчик
+                    if (contractorToCopy) {
+                      const hasDuplicate = section.contractors?.some(c => 
+                        c.name === contractorToCopy.name && c.workType === contractorToCopy.workType
+                      );
+                      if (hasDuplicate) {
+                        return false;
+                      }
+                    }
+                    return true;
+                  });
+                  const allSectionsSelected = availableSections.length > 0 && 
+                    availableSections.every(section => selectedSectionsForCopy.has(`${building.id}-${section.id}`));
+                  
+                  return (
+                    <div key={building.id} style={{ marginBottom: '20px' }}>
+                      <div style={{ 
+                        display: 'flex', 
+                        alignItems: 'center', 
+                        marginBottom: '10px',
+                        padding: '8px',
+                        background: '#f0f7ff',
+                        borderRadius: '4px'
+                      }}>
+                        <input
+                          type="checkbox"
+                          checked={allSectionsSelected}
+                          onChange={() => handleSelectAllSectionsInBuilding(building.id)}
+                          disabled={availableSections.length === 0}
+                          style={{ marginRight: '10px', cursor: availableSections.length === 0 ? 'not-allowed' : 'pointer' }}
+                        />
+                        <label style={{ 
+                          fontWeight: 'bold', 
+                          fontSize: '16px', 
+                          color: '#2c5aa0',
+                          cursor: availableSections.length === 0 ? 'not-allowed' : 'pointer',
+                          flex: 1
+                        }} onClick={() => availableSections.length > 0 && handleSelectAllSectionsInBuilding(building.id)}>
+                          Корпус: {building.name}
+                        </label>
+                        <span style={{ fontSize: '12px', color: '#666' }}>
+                          ({availableSections.length} секций)
+                        </span>
+                      </div>
+                      
+                      <div style={{ marginLeft: '20px' }}>
+                        {buildingSections.map(section => {
+                          const sectionKey = `${building.id}-${section.id}`;
+                          const isSourceSection = contractorToCopy.sourceBuildingId === building.id && 
+                                                  contractorToCopy.sourceSectionId === section.id;
+                          const isSelected = selectedSectionsForCopy.has(sectionKey);
+                          
+                          // Проверяем, есть ли уже такой подрядчик в этой секции
+                          const hasDuplicate = contractorToCopy && section.contractors?.some(c => 
+                            c.name === contractorToCopy.name && c.workType === contractorToCopy.workType
+                          );
+                          
+                          const isDisabled = isSourceSection || hasDuplicate;
+                          
+                          return (
+                            <div 
+                              key={section.id} 
+                              style={{ 
+                                display: 'flex', 
+                                alignItems: 'center',
+                                padding: '6px',
+                                marginBottom: '4px',
+                                borderRadius: '4px',
+                                background: isSourceSection ? '#ffe0e0' : (hasDuplicate ? '#fff3cd' : (isSelected ? '#e8f5e9' : 'transparent')),
+                                opacity: isDisabled ? 0.6 : 1
+                              }}
+                            >
+                              <input
+                                type="checkbox"
+                                checked={isSelected}
+                                onChange={() => handleToggleSectionForCopy(building.id, section.id)}
+                                disabled={isDisabled}
+                                style={{ marginRight: '10px', cursor: isDisabled ? 'not-allowed' : 'pointer' }}
+                              />
+                              <label style={{ 
+                                cursor: isDisabled ? 'not-allowed' : 'pointer',
+                                flex: 1,
+                                color: isDisabled ? '#999' : '#333'
+                              }} onClick={() => !isDisabled && handleToggleSectionForCopy(building.id, section.id)}>
+                                Секция: {section.name}
+                                {isSourceSection && (
+                                  <span style={{ marginLeft: '8px', fontSize: '12px', color: '#999' }}>
+                                    (текущая секция)
+                                  </span>
+                                )}
+                                {hasDuplicate && !isSourceSection && (
+                                  <span style={{ marginLeft: '8px', fontSize: '12px', color: '#856404' }}>
+                                    (уже есть такой подрядчик)
+                                  </span>
+                                )}
+                              </label>
+                            </div>
+                          );
+                        })}
+                      </div>
+                    </div>
+                  );
+                })}
+              </div>
 
-              {copyTargetBuildingId && copyTargetSectionId && (
-                <div className="form-group" style={{ marginTop: '15px', padding: '10px', background: '#f0f7ff', borderRadius: '6px' }}>
-                  <p style={{ margin: 0, fontSize: '14px', color: '#2c5aa0' }}>
-                    <i className="fas fa-info-circle" style={{ marginRight: '8px' }}></i>
-                    Подрядчик будет скопирован со всеми СТК и данными в секцию "{buildings.find(b => b.id === copyTargetBuildingId)?.sections.find(s => s.id === copyTargetSectionId)?.name}"
+              {selectedSectionsForCopy.size > 0 && (
+                <div className="form-group" style={{ marginTop: '15px', padding: '10px', background: '#e8f5e9', borderRadius: '6px' }}>
+                  <p style={{ margin: 0, fontSize: '14px', color: '#2e7d32', fontWeight: '500' }}>
+                    <i className="fas fa-check-circle" style={{ marginRight: '8px' }}></i>
+                    Выбрано секций: {selectedSectionsForCopy.size}
                   </p>
                 </div>
               )}
@@ -1729,9 +1896,9 @@ const ContractorSelectionModal = ({ object, onSelectContractor, onClose, isAuthe
               <button 
                 className="btn btn-primary" 
                 onClick={handleConfirmCopyContractor}
-                disabled={!copyTargetBuildingId || !copyTargetSectionId}
+                disabled={selectedSectionsForCopy.size === 0}
               >
-                Копировать
+                Копировать в {selectedSectionsForCopy.size} секцию(и)
               </button>
             </div>
           </div>

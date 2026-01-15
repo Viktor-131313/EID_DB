@@ -143,7 +143,7 @@
           ],
           "blockingFactors": [],
           "createdAt": "2025-12-26T13:42:40.946Z",
-          "updatedAt": "2026-01-15T06:49:20.126Z",
+          "updatedAt": "2026-01-15T08:27:25.130Z",
           "contractors": [
             {
               "id": 1768294029712,
@@ -236,6 +236,17 @@
                       "rejectedActs": [],
                       "signedActs": [],
                       "blockingFactors": []
+                    },
+                    {
+                      "name": "2123",
+                      "workType": "123",
+                      "generatedActs": [],
+                      "sentForApproval": [],
+                      "approvedActs": [],
+                      "rejectedActs": [],
+                      "signedActs": [],
+                      "blockingFactors": [],
+                      "id": 1768465636513
                     }
                   ]
                 },
@@ -254,6 +265,17 @@
                       "rejectedActs": [],
                       "signedActs": [],
                       "blockingFactors": []
+                    },
+                    {
+                      "name": "2123",
+                      "workType": "123",
+                      "generatedActs": [],
+                      "sentForApproval": [],
+                      "approvedActs": [],
+                      "rejectedActs": [],
+                      "signedActs": [],
+                      "blockingFactors": [],
+                      "id": 1768465636515
                     }
                   ]
                 },
@@ -396,6 +418,17 @@
                         }
                       ],
                       "blockingFactors": []
+                    },
+                    {
+                      "name": "2123",
+                      "workType": "123",
+                      "generatedActs": [],
+                      "sentForApproval": [],
+                      "approvedActs": [],
+                      "rejectedActs": [],
+                      "signedActs": [],
+                      "blockingFactors": [],
+                      "id": 1768465636516
                     }
                   ]
                 }
@@ -404,7 +437,25 @@
             {
               "id": 1768458930546,
               "name": "8.1.1",
-              "sections": []
+              "sections": [
+                {
+                  "id": 1768465614843,
+                  "name": "1",
+                  "contractors": [
+                    {
+                      "id": 1768465626815,
+                      "name": "2123",
+                      "workType": "123",
+                      "generatedActs": [],
+                      "sentForApproval": [],
+                      "approvedActs": [],
+                      "rejectedActs": [],
+                      "signedActs": [],
+                      "blockingFactors": []
+                    }
+                  ]
+                }
+              ]
             }
           ]
         },
