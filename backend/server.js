@@ -985,42 +985,84 @@ app.get('/api/stats', async (req, res) => {
         let sentActs = 0;
         let approvedActs = 0;
         let rejectedActs = 0;
+        let signedActs = 0;
 
         data.containers.forEach(container => {
             container.objects.forEach(obj => {
                 totalObjects++;
-                const totalGenerated = Array.isArray(obj.generatedActs) 
-                    ? obj.generatedActs.reduce((sum, smr) => sum + (smr.count || 0), 0)
-                    : 0;
-                const totalSent = Array.isArray(obj.sentForApproval)
-                    ? obj.sentForApproval.reduce((sum, smr) => sum + (smr.count || 0), 0)
-                    : 0;
-
-                generatedActs += totalGenerated;
-                sentActs += totalSent;
                 
-                const totalApproved = Array.isArray(obj.approvedActs) 
-                    ? obj.approvedActs.reduce((sum, smr) => sum + (smr.count || 0), 0)
-                    : 0;
-                const totalRejected = Array.isArray(obj.rejectedActs)
-                    ? obj.rejectedActs.reduce((sum, smr) => sum + (smr.count || 0), 0)
-                    : 0;
-                const totalSigned = Array.isArray(obj.signedActs)
-                    ? obj.signedActs.reduce((sum, smr) => sum + (smr.count || 0), 0)
-                    : 0;
-                
-                approvedActs += totalApproved;
-                rejectedActs += totalRejected;
-            });
-        });
+                // Новая структура: buildings -> sections -> contractors[]
+                if (obj.buildings && Array.isArray(obj.buildings) && obj.buildings.length > 0) {
+                    obj.buildings.forEach(building => {
+                        if (building.sections && Array.isArray(building.sections)) {
+                            building.sections.forEach(section => {
+                                if (section.contractors && Array.isArray(section.contractors)) {
+                                    section.contractors.forEach(contractor => {
+                                        if (contractor.generatedActs && Array.isArray(contractor.generatedActs)) {
+                                            generatedActs += contractor.generatedActs.reduce((sum, smr) => sum + (smr.count || 0), 0);
+                                        }
+                                        if (contractor.sentForApproval && Array.isArray(contractor.sentForApproval)) {
+                                            sentActs += contractor.sentForApproval.reduce((sum, smr) => sum + (smr.count || 0), 0);
+                                        }
+                                        if (contractor.approvedActs && Array.isArray(contractor.approvedActs)) {
+                                            approvedActs += contractor.approvedActs.reduce((sum, smr) => sum + (smr.count || 0), 0);
+                                        }
+                                        if (contractor.rejectedActs && Array.isArray(contractor.rejectedActs)) {
+                                            rejectedActs += contractor.rejectedActs.reduce((sum, smr) => sum + (smr.count || 0), 0);
+                                        }
+                                        if (contractor.signedActs && Array.isArray(contractor.signedActs)) {
+                                            signedActs += contractor.signedActs.reduce((sum, smr) => sum + (smr.count || 0), 0);
+                                        }
+                                    });
+                                }
+                            });
+                        }
+                    });
+                }
+                // Старая структура: contractors (массив подрядчиков)
+                else if (obj.contractors && Array.isArray(obj.contractors) && obj.contractors.length > 0) {
+                    obj.contractors.forEach(contractor => {
+                        if (contractor.generatedActs && Array.isArray(contractor.generatedActs)) {
+                            generatedActs += contractor.generatedActs.reduce((sum, smr) => sum + (smr.count || 0), 0);
+                        }
+                        if (contractor.sentForApproval && Array.isArray(contractor.sentForApproval)) {
+                            sentActs += contractor.sentForApproval.reduce((sum, smr) => sum + (smr.count || 0), 0);
+                        }
+                        if (contractor.approvedActs && Array.isArray(contractor.approvedActs)) {
+                            approvedActs += contractor.approvedActs.reduce((sum, smr) => sum + (smr.count || 0), 0);
+                        }
+                        if (contractor.rejectedActs && Array.isArray(contractor.rejectedActs)) {
+                            rejectedActs += contractor.rejectedActs.reduce((sum, smr) => sum + (smr.count || 0), 0);
+                        }
+                        if (contractor.signedActs && Array.isArray(contractor.signedActs)) {
+                            signedActs += contractor.signedActs.reduce((sum, smr) => sum + (smr.count || 0), 0);
+                        }
+                    });
+                }
+                // Очень старая структура: поля объекта напрямую
+                else {
+                    const totalGenerated = Array.isArray(obj.generatedActs) 
+                        ? obj.generatedActs.reduce((sum, smr) => sum + (smr.count || 0), 0)
+                        : 0;
+                    const totalSent = Array.isArray(obj.sentForApproval)
+                        ? obj.sentForApproval.reduce((sum, smr) => sum + (smr.count || 0), 0)
+                        : 0;
+                    const totalApproved = Array.isArray(obj.approvedActs) 
+                        ? obj.approvedActs.reduce((sum, smr) => sum + (smr.count || 0), 0)
+                        : 0;
+                    const totalRejected = Array.isArray(obj.rejectedActs)
+                        ? obj.rejectedActs.reduce((sum, smr) => sum + (smr.count || 0), 0)
+                        : 0;
+                    const totalSigned = Array.isArray(obj.signedActs)
+                        ? obj.signedActs.reduce((sum, smr) => sum + (smr.count || 0), 0)
+                        : 0;
 
-        let signedActs = 0;
-        data.containers.forEach(container => {
-            container.objects.forEach(obj => {
-                const totalSigned = Array.isArray(obj.signedActs)
-                    ? obj.signedActs.reduce((sum, smr) => sum + (smr.count || 0), 0)
-                    : 0;
-                signedActs += totalSigned;
+                    generatedActs += totalGenerated;
+                    sentActs += totalSent;
+                    approvedActs += totalApproved;
+                    rejectedActs += totalRejected;
+                    signedActs += totalSigned;
+                }
             });
         });
 

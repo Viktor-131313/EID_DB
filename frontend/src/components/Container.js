@@ -197,8 +197,8 @@ const Container = ({ container, onUpdate, isAuthenticated = false, openObjectId 
           obj.id === editingObject.id ? savedObject : obj
         )
       );
-      // Не перезагружаем все данные при автосохранении, только при ручном сохранении
-      // await loadData();
+      // Обновляем статистику контейнера и общую статистику
+      await loadData();
       if (onUpdate) onUpdate();
       
       // Возвращаем сохраненный объект, чтобы модальное окно могло обновить свое состояние
