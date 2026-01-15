@@ -194,6 +194,20 @@
   gap: 6px;
 }
 
+.lag-details-title-clickable {
+  cursor: pointer;
+  user-select: none;
+  transition: opacity 0.2s;
+  padding: 4px;
+  margin: -4px;
+  border-radius: 4px;
+}
+
+.lag-details-title-clickable:hover {
+  opacity: 0.8;
+  background-color: rgba(201, 42, 42, 0.1);
+}
+
 .lag-details-title i {
   font-size: 14px;
 }

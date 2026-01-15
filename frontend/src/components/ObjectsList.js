@@ -1,9 +1,24 @@
-import React from 'react';
+import React, { useState } from 'react';
 import './ObjectsList.css';
 import Tooltip from './Tooltip';
 import { calculatePerformanceMetrics, calculateDetailedLag } from '../utils/performanceMetrics';
 
 const ObjectsList = ({ objects, onEditObject }) => {
+  // Состояние для отслеживания развернутых карточек "Детали отставания"
+  const [expandedLagDetails, setExpandedLagDetails] = useState(new Set());
+
+  const toggleLagDetails = (objectId, e) => {
+    e.stopPropagation(); // Предотвращаем открытие карточки при клике на заголовок
+    setExpandedLagDetails(prev => {
+      const newSet = new Set(prev);
+      if (newSet.has(objectId)) {
+        newSet.delete(objectId);
+      } else {
+        newSet.add(objectId);
+      }
+      return newSet;
+    });
+  };
   if (objects.length === 0) {
     return (
       <div className="empty-state">
@@ -209,37 +224,44 @@ const ObjectsList = ({ objects, onEditObject }) => {
 
             {/* Детали отставания */}
             {lagDetails.length > 0 && (
-              <div className="lag-details-card">
-                <div className="lag-details-title">
-                  <i className="fas fa-exclamation-circle"></i> Детали отставания
+              <div className="lag-details-card" onClick={(e) => e.stopPropagation()}>
+                <div 
+                  className="lag-details-title lag-details-title-clickable"
+                  onClick={(e) => toggleLagDetails(obj.id, e)}
+                >
+                  <i className="fas fa-exclamation-circle"></i> 
+                  <span>Детали отставания</span>
+                  <i className={`fas ${expandedLagDetails.has(obj.id) ? 'fa-chevron-up' : 'fa-chevron-down'}`} style={{ marginLeft: 'auto', fontSize: '12px' }}></i>
                 </div>
-                <div className="lag-details-list">
-                  {lagDetails.map((detail, index) => (
-                    <Tooltip 
-                      key={index}
-                      text={`${detail.contractorName} (${detail.contractorWorkType || 'Без типа работ'}): ${detail.generated} из ${detail.generatedTotal} актов`}
-                    >
-                      <div className="lag-detail-item">
-                        <span className="lag-detail-marker">
-                          <i className="fas fa-map-marker-alt"></i>
-                        </span>
-                        <span className="lag-detail-info">
-                          {detail.buildingName && (
-                            <span className="lag-building">Корпус {detail.buildingName}</span>
-                          )}
-                          {detail.sectionName && (
-                            <span className="lag-section"> → Секция {detail.sectionName}</span>
-                          )}
-                          <span className="lag-contractor"> → {detail.contractorName}</span>
-                          {detail.contractorWorkType && (
-                            <span className="lag-worktype"> ({detail.contractorWorkType})</span>
-                          )}
-                        </span>
-                        <span className="lag-detail-count">{detail.lag} актов</span>
-                      </div>
-                    </Tooltip>
-                  ))}
-                </div>
+                {expandedLagDetails.has(obj.id) && (
+                  <div className="lag-details-list">
+                    {lagDetails.map((detail, index) => (
+                      <Tooltip 
+                        key={index}
+                        text={`${detail.contractorName} (${detail.contractorWorkType || 'Без типа работ'}): ${detail.generated} из ${detail.generatedTotal} актов`}
+                      >
+                        <div className="lag-detail-item">
+                          <span className="lag-detail-marker">
+                            <i className="fas fa-map-marker-alt"></i>
+                          </span>
+                          <span className="lag-detail-info">
+                            {detail.buildingName && (
+                              <span className="lag-building">Корпус {detail.buildingName}</span>
+                            )}
+                            {detail.sectionName && (
+                              <span className="lag-section"> → Секция {detail.sectionName}</span>
+                            )}
+                            <span className="lag-contractor"> → {detail.contractorName}</span>
+                            {detail.contractorWorkType && (
+                              <span className="lag-worktype"> ({detail.contractorWorkType})</span>
+                            )}
+                          </span>
+                          <span className="lag-detail-count">{detail.lag} актов</span>
+                        </div>
+                      </Tooltip>
+                    ))}
+                  </div>
+                )}
               </div>
             )}
 
