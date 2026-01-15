@@ -1042,6 +1042,11 @@ const createSingleTasksPage = (tasks, showTitle = true) => {
 
   // Таблица задач
   if (tasks && tasks.length > 0) {
+    // Группируем задачи по приоритету
+    const criticalTasks = tasks.filter(t => t.priority === 'critical');
+    const nonCriticalTasks = tasks.filter(t => t.priority === 'non-critical' || !t.priority);
+    const userRequestTasks = tasks.filter(t => t.priority === 'user-request');
+    
     // Контейнер для заголовков и таблицы
     const tableWrapper = document.createElement('div');
     tableWrapper.style.width = '100%';
@@ -1050,8 +1055,9 @@ const createSingleTasksPage = (tasks, showTitle = true) => {
     tableWrapper.style.boxSizing = 'border-box';
     
     // Ширины колонок (одинаковые для заголовков и ячеек) - уменьшены для лучшей посадки на странице
-    const columnWidths = [120, 500, 160, 160, 220, 130];
-    const headerTexts = ['ID', 'Описание', 'Дата обнаружения', 'Статус', 'Планируется устранить', 'Критичность'];
+    // Добавлен столбец "№" перед "ID"
+    const columnWidths = [50, 120, 500, 160, 160, 220, 130];
+    const headerTexts = ['№', 'ID', 'Описание', 'Дата обнаружения', 'Статус', 'Планируется устранить', 'Критичность'];
     
     // Отдельный контейнер для заголовков (flexbox)
     const headerContainer = document.createElement('div');
@@ -1072,10 +1078,10 @@ const createSingleTasksPage = (tasks, showTitle = true) => {
       headerCell.style.minWidth = `${columnWidths[index]}px`;
       headerCell.style.maxWidth = `${columnWidths[index]}px`;
       headerCell.style.padding = '10px';
-      // Выравнивание: индекс 5 (Критичность) - center, индексы 2,3,4 (Дата обнаружения, Статус, Планируется устранить) - right, остальные - left
-      if (index === 5) {
+      // Выравнивание: индекс 0 (№) - center, индекс 6 (Критичность) - center, индексы 3,4,5 (Дата обнаружения, Статус, Планируется устранить) - right, остальные - left
+      if (index === 0 || index === 6) {
         headerCell.style.textAlign = 'center';
-      } else if (index >= 2 && index <= 4) {
+      } else if (index >= 3 && index <= 5) {
         headerCell.style.textAlign = 'right';
       } else {
         headerCell.style.textAlign = 'left';
@@ -1108,22 +1114,37 @@ const createSingleTasksPage = (tasks, showTitle = true) => {
 
     // Тело таблицы
     const tbody = document.createElement('tbody');
-    tasks.forEach((task, index) => {
+    
+    // Функция для создания строки задачи
+    const createTaskRow = (task, rowNumber, isEven) => {
       const row = document.createElement('tr');
       row.style.borderBottom = '1px solid #ddd';
       row.style.pageBreakInside = 'avoid'; // Не разрывать строку внутри страницы
       row.style.breakInside = 'avoid';
       row.style.pageBreakAfter = 'auto'; // Автоматический разрыв после строки
       row.style.breakAfter = 'auto';
-      if (index % 2 === 0) {
+      if (isEven) {
         row.style.backgroundColor = '#f8f9fa';
       }
 
+      // № (номер строки в блоке)
+      const numCell = document.createElement('td');
+      numCell.setAttribute('width', columnWidths[0].toString());
+      numCell.textContent = rowNumber;
+      numCell.style.width = `${columnWidths[0]}px`;
+      numCell.style.padding = '10px';
+      numCell.style.textAlign = 'center';
+      numCell.style.verticalAlign = 'middle';
+      numCell.style.wordWrap = 'break-word';
+      numCell.style.boxSizing = 'border-box';
+      numCell.style.margin = '0';
+      row.appendChild(numCell);
+
       // ID
       const idCell = document.createElement('td');
-      idCell.setAttribute('width', columnWidths[0].toString());
+      idCell.setAttribute('width', columnWidths[1].toString());
       idCell.textContent = `DEV-${task.taskNumber || task.id}`;
-      idCell.style.width = `${columnWidths[0]}px`;
+      idCell.style.width = `${columnWidths[1]}px`;
       idCell.style.padding = '10px';
       idCell.style.verticalAlign = 'middle';
       idCell.style.wordWrap = 'break-word';
@@ -1133,9 +1154,9 @@ const createSingleTasksPage = (tasks, showTitle = true) => {
 
       // Описание
       const descCell = document.createElement('td');
-      descCell.setAttribute('width', columnWidths[1].toString());
+      descCell.setAttribute('width', columnWidths[2].toString());
       descCell.textContent = task.description || '';
-      descCell.style.width = `${columnWidths[1]}px`;
+      descCell.style.width = `${columnWidths[2]}px`;
       descCell.style.padding = '10px';
       descCell.style.verticalAlign = 'middle';
       descCell.style.wordWrap = 'break-word';
@@ -1146,11 +1167,11 @@ const createSingleTasksPage = (tasks, showTitle = true) => {
 
       // Дата обнаружения
       const dateCell = document.createElement('td');
-      dateCell.setAttribute('width', columnWidths[2].toString());
+      dateCell.setAttribute('width', columnWidths[3].toString());
       dateCell.textContent = task.discoveryDate 
         ? new Date(task.discoveryDate).toLocaleDateString('ru-RU')
         : '';
-      dateCell.style.width = `${columnWidths[2]}px`;
+      dateCell.style.width = `${columnWidths[3]}px`;
       dateCell.style.padding = '10px';
       dateCell.style.textAlign = 'right';
       dateCell.style.verticalAlign = 'middle';
@@ -1161,9 +1182,9 @@ const createSingleTasksPage = (tasks, showTitle = true) => {
 
       // Статус
       const statusCell = document.createElement('td');
-      statusCell.setAttribute('width', columnWidths[3].toString());
+      statusCell.setAttribute('width', columnWidths[4].toString());
       statusCell.textContent = task.status || '';
-      statusCell.style.width = `${columnWidths[3]}px`;
+      statusCell.style.width = `${columnWidths[4]}px`;
       statusCell.style.padding = '10px';
       statusCell.style.textAlign = 'right';
       statusCell.style.verticalAlign = 'middle';
@@ -1174,7 +1195,7 @@ const createSingleTasksPage = (tasks, showTitle = true) => {
 
       // Планируется устранить
       const plannedCell = document.createElement('td');
-      plannedCell.setAttribute('width', columnWidths[4].toString());
+      plannedCell.setAttribute('width', columnWidths[5].toString());
       if (task.plannedFixMonth && task.plannedFixYear) {
         const monthNames = ['Январь', 'Февраль', 'Март', 'Апрель', 'Май', 'Июнь',
           'Июль', 'Август', 'Сентябрь', 'Октябрь', 'Ноябрь', 'Декабрь'];
@@ -1183,7 +1204,7 @@ const createSingleTasksPage = (tasks, showTitle = true) => {
       } else {
         plannedCell.textContent = '-';
       }
-      plannedCell.style.width = `${columnWidths[4]}px`;
+      plannedCell.style.width = `${columnWidths[5]}px`;
       plannedCell.style.padding = '10px';
       plannedCell.style.textAlign = 'right';
       plannedCell.style.verticalAlign = 'middle';
@@ -1194,8 +1215,8 @@ const createSingleTasksPage = (tasks, showTitle = true) => {
 
       // Критичность
       const priorityCell = document.createElement('td');
-      priorityCell.setAttribute('width', columnWidths[5].toString());
-      priorityCell.style.width = `${columnWidths[5]}px`;
+      priorityCell.setAttribute('width', columnWidths[6].toString());
+      priorityCell.style.width = `${columnWidths[6]}px`;
       priorityCell.style.padding = '10px';
       priorityCell.style.boxSizing = 'border-box';
       priorityCell.style.margin = '0';
@@ -1252,8 +1273,53 @@ const createSingleTasksPage = (tasks, showTitle = true) => {
       priorityCell.appendChild(priorityContainer);
       row.appendChild(priorityCell);
 
+      return row;
+    };
+    
+    // Функция для создания пустой строки-разделителя
+    const createSeparatorRow = () => {
+      const row = document.createElement('tr');
+      row.style.height = '20px';
+      row.style.backgroundColor = '#f0f0f0';
+      row.style.border = 'none';
+      const cell = document.createElement('td');
+      cell.setAttribute('colspan', '7');
+      cell.style.height = '20px';
+      cell.style.padding = '0';
+      cell.style.border = 'none';
+      cell.style.backgroundColor = '#f0f0f0';
+      row.appendChild(cell);
+      return row;
+    };
+    
+    // Критичные задачи
+    criticalTasks.forEach((task, index) => {
+      const row = createTaskRow(task, index + 1, index % 2 === 0);
       tbody.appendChild(row);
     });
+    
+    // Пустая строка между критичными и некритичными
+    if (criticalTasks.length > 0 && (nonCriticalTasks.length > 0 || userRequestTasks.length > 0)) {
+      tbody.appendChild(createSeparatorRow());
+    }
+    
+    // Некритичные задачи
+    nonCriticalTasks.forEach((task, index) => {
+      const row = createTaskRow(task, index + 1, (criticalTasks.length + index) % 2 === 0);
+      tbody.appendChild(row);
+    });
+    
+    // Пустая строка между некритичными и пожеланиями пользователей
+    if (nonCriticalTasks.length > 0 && userRequestTasks.length > 0) {
+      tbody.appendChild(createSeparatorRow());
+    }
+    
+    // Пожелания пользователей
+    userRequestTasks.forEach((task, index) => {
+      const row = createTaskRow(task, index + 1, (criticalTasks.length + nonCriticalTasks.length + index) % 2 === 0);
+      tbody.appendChild(row);
+    });
+    
     table.appendChild(tbody);
     tableWrapper.appendChild(table);
     page.appendChild(tableWrapper);
