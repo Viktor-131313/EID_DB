@@ -3,7 +3,7 @@ import './ObjectsList.css';
 import Tooltip from './Tooltip';
 import { calculatePerformanceMetrics, calculateDetailedLag } from '../utils/performanceMetrics';
 
-const ObjectsList = ({ objects, onEditObject }) => {
+const ObjectsList = ({ objects, onEditObject, onOpenContractor }) => {
   // Состояние для отслеживания развернутых карточек "Детали отставания"
   const [expandedLagDetails, setExpandedLagDetails] = useState(new Set());
 
@@ -240,7 +240,18 @@ const ObjectsList = ({ objects, onEditObject }) => {
                         key={index}
                         text={`${detail.contractorName} (${detail.contractorWorkType || 'Без типа работ'}): ${detail.generated} из ${detail.generatedTotal} актов`}
                       >
-                        <div className="lag-detail-item">
+                        <div 
+                          className="lag-detail-item"
+                          onClick={(e) => {
+                            e.stopPropagation();
+                            if (onOpenContractor && detail.contractorId) {
+                              onOpenContractor(obj, detail);
+                            } else if (onEditObject) {
+                              // Если onOpenContractor не передан, просто открываем объект
+                              onEditObject(obj);
+                            }
+                          }}
+                        >
                           <span className="lag-detail-marker">
                             <i className="fas fa-map-marker-alt"></i>
                           </span>

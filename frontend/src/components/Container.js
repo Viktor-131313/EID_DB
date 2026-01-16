@@ -166,6 +166,38 @@ const Container = ({ container, onUpdate, isAuthenticated = false, openObjectId 
     setContractorModalOpen(true);
   };
 
+  const handleOpenContractor = (object, lagDetail) => {
+    // Открываем объект
+    setEditingObject({ ...object, containerId: container.id, id: object.id });
+    setContractorSelectionModalOpen(true);
+    
+    // Сохраняем информацию о подрядчике для автоматического открытия
+    setTimeout(() => {
+      // Ищем подрядчика в структуре объекта
+      if (object.buildings && Array.isArray(object.buildings)) {
+        object.buildings.forEach(building => {
+          if (building.id === lagDetail.buildingId && building.sections) {
+            building.sections.forEach(section => {
+              if (section.id === lagDetail.sectionId && section.contractors) {
+                const contractor = section.contractors.find(c => c.id === lagDetail.contractorId);
+                if (contractor) {
+                  // Вызываем handleSelectContractor для открытия карточки подрядчика
+                  handleSelectContractor({
+                    ...contractor,
+                    _buildingId: building.id,
+                    _sectionId: section.id,
+                    _buildingName: building.name,
+                    _sectionName: section.name
+                  });
+                }
+              }
+            });
+          }
+        });
+      }
+    }, 100); // Небольшая задержка, чтобы модальное окно успело открыться
+  };
+
   const handleAddContractor = async (updatedContractors) => {
     // Обновляем объект с новыми подрядчиками
     if (editingObject) {
@@ -437,7 +469,7 @@ const Container = ({ container, onUpdate, isAuthenticated = false, openObjectId 
       {loading ? (
         <div className="loading">Загрузка...</div>
       ) : (
-        <ObjectsList objects={objects} onEditObject={handleEditObject} />
+        <ObjectsList objects={objects} onEditObject={handleEditObject} onOpenContractor={handleOpenContractor} />
       )}
 
       {/* Модальное окно выбора подрядчика */}
